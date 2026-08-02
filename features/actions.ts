@@ -14,24 +14,9 @@ const text = (value: FormDataEntryValue | null) => z.string().trim().parse(value
 const optional = (value: FormDataEntryValue | null) => text(value) || null;
 const projectPath = (projectId: string) => `/projects/${projectId}`;
 
-async function activity(
-  projectId: string,
-  actorId: string,
-  recordType: string,
-  eventType: "created" | "updated" | "completed" | "cancelled" | "resolved" | "accepted" | "archived" | "restored",
-  summary: string,
-) {
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("activity_events").insert({
-    project_id: projectId,
-    actor_id: actorId,
-    record_type: recordType,
-    record_id: crypto.randomUUID(),
-    event_type: eventType,
-    summary,
-  });
-  if (error) throw new Error(error.message);
-}
+// Activity events and conversations.last_message_at are written by DB triggers
+// (supabase/migrations/0003_activity_triggers.sql), so mutations are a single
+// atomic round trip.
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -131,7 +116,7 @@ export async function createProject(formData: FormData) {
 }
 
 export async function updateProjectStatus(formData: FormData) {
-  const { user } = await requireActiveUser();
+  await requireActiveUser();
   const projectId = id(formData.get("project_id"));
   const status = z.enum(["active", "paused", "completed", "archived"]).parse(text(formData.get("status")));
   const supabase = await createSupabaseServerClient();
@@ -140,8 +125,6 @@ export async function updateProjectStatus(formData: FormData) {
   if (status === "archived") updates.archived_at = new Date().toISOString();
   const { error } = await supabase.from("projects").update(updates).eq("id", projectId);
   if (error) throw new Error(error.message);
-  const eventType = status === "archived" ? "archived" : status === "completed" ? "completed" : "updated";
-  await activity(projectId, user.id, "project", eventType, `Project marked ${status}`);
   revalidatePath(projectPath(projectId));
   revalidatePath("/projects");
   revalidatePath("/today");
@@ -166,13 +149,12 @@ export async function createTask(formData: FormData) {
     created_by_id: user.id,
   });
   if (error) throw new Error(error.message);
-  await activity(projectId, user.id, "task", "created", `Created task: ${title}`);
   revalidatePath(projectPath(projectId));
   revalidatePath("/today");
 }
 
 export async function updateTaskStatus(formData: FormData) {
-  const { user } = await requireActiveUser();
+  await requireActiveUser();
   const taskId = id(formData.get("task_id"));
   const projectId = id(formData.get("project_id"));
   const status = z.enum(["todo", "in_progress", "blocked", "done", "cancelled"]).parse(
@@ -188,14 +170,12 @@ export async function updateTaskStatus(formData: FormData) {
   }
   const { error } = await supabase.from("tasks").update(updates).eq("id", taskId);
   if (error) throw new Error(error.message);
-  const eventType = status === "done" ? "completed" : status === "cancelled" ? "cancelled" : "updated";
-  await activity(projectId, user.id, "task", eventType, `Task ${status.replace("_", " ")}`);
   revalidatePath(projectPath(projectId));
   revalidatePath("/today");
 }
 
 export async function updateTask(formData: FormData) {
-  const { user } = await requireActiveUser();
+  await requireActiveUser();
   const taskId = id(formData.get("task_id"));
   const projectId = id(formData.get("project_id"));
   const supabase = await createSupabaseServerClient();
@@ -207,7 +187,6 @@ export async function updateTask(formData: FormData) {
     due_at: optional(formData.get("due_at")),
   }).eq("id", taskId);
   if (error) throw new Error(error.message);
-  await activity(projectId, user.id, "task", "updated", "Updated task details");
   revalidatePath(projectPath(projectId));
   revalidatePath("/today");
 }
@@ -228,13 +207,12 @@ export async function createIssue(formData: FormData) {
     created_by_id: user.id,
   });
   if (error) throw new Error(error.message);
-  await activity(projectId, user.id, "issue", "created", `Opened issue: ${title}`);
   revalidatePath(projectPath(projectId));
   revalidatePath("/today");
 }
 
 export async function resolveIssue(formData: FormData) {
-  const { user } = await requireActiveUser();
+  await requireActiveUser();
   const issueId = id(formData.get("issue_id"));
   const projectId = id(formData.get("project_id"));
   const resolution = z.string().min(1).parse(text(formData.get("resolution_summary")));
@@ -246,8 +224,6 @@ export async function resolveIssue(formData: FormData) {
     resolution_summary: resolution,
   }).eq("id", issueId);
   if (error) throw new Error(error.message);
-  const eventType = status === "resolved" ? "resolved" : "accepted";
-  await activity(projectId, user.id, "issue", eventType, `Issue ${status}: ${resolution.slice(0, 80)}`);
   revalidatePath(projectPath(projectId));
   revalidatePath("/today");
 }
@@ -276,7 +252,6 @@ export async function createEntry(formData: FormData) {
     created_by_id: user.id,
   });
   if (error) throw new Error(error.message);
-  await activity(projectId, user.id, "entry", "created", `Added ${type}: ${title}`);
   revalidatePath(projectPath(projectId));
   revalidatePath("/inbox");
   revalidatePath("/today");
@@ -329,7 +304,6 @@ export async function addProjectParticipant(formData: FormData) {
     terms_note: text(formData.get("terms_note")),
   });
   if (error) throw new Error(error.message);
-  await activity(projectId, user.id, "participant", "created", "Added project participant");
   revalidatePath(projectPath(projectId));
 }
 
@@ -352,7 +326,6 @@ export async function createConversation(formData: FormData) {
     .single();
   if (error) throw new Error(error.message);
   if (projectId) {
-    await activity(projectId, user.id, "conversation", "created", "Created conversation");
     revalidatePath(projectPath(projectId));
   }
   redirect(projectId ? projectPath(projectId) : `/clients/${clientId}`);
@@ -391,11 +364,6 @@ export async function createMessage(formData: FormData) {
     created_by_id: user.id,
   });
   if (error) throw new Error(error.message);
-  const { error: updateError } = await supabase
-    .from("conversations")
-    .update({ last_message_at: sentAt })
-    .eq("id", conversationId);
-  if (updateError) throw new Error(updateError.message);
   if (projectId) revalidatePath(projectPath(projectId));
   revalidatePath("/inbox");
   revalidatePath("/today");
