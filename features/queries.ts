@@ -109,54 +109,79 @@ export async function getTodayData(userId: string) {
   };
 }
 
+// Cap message history per conversation; the workspace is a dashboard, not an archive.
+const CONVERSATION_MESSAGE_LIMIT = 100;
+const PROJECT_MESSAGE_LIMIT = 200;
+
 export async function getProjectWorkspace(projectId: string) {
   const supabase = await createSupabaseServerClient();
-  const [project, tasks, issues, entries, participants, conversations, activity, people, users] = await Promise.all([
-    supabase.from("projects").select("*, clients(id, name)").eq("id", projectId).maybeSingle(),
-    supabase
-      .from("tasks")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("status")
-      .order("due_at", { ascending: true, nullsFirst: false }),
-    supabase.from("issues").select("*").eq("project_id", projectId).order("reported_at", { ascending: false }),
-    supabase
-      .from("entries")
-      .select("*")
-      .eq("project_id", projectId)
-      .eq("triage_state", "filed")
-      .order("occurred_at", { ascending: false })
-      .limit(50),
-    supabase
-      .from("project_participants")
-      .select("*, people(id, name, is_partner, email, phone)")
-      .eq("project_id", projectId),
-    supabase
-      .from("conversations")
-      .select(
-        "*, conversation_participants(people(id, name, is_partner)), messages(id, body_md, sent_at, direction, sender_person_id, sender_user_id)",
-      )
-      .eq("project_id", projectId)
-      .order("last_message_at", { ascending: false, nullsFirst: false }),
-    supabase
-      .from("activity_events")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("occurred_at", { ascending: false })
-      .limit(40),
-    supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
-    supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
-  ]);
-  [project, tasks, issues, entries, participants, conversations, activity, people, users].forEach((r) =>
+  const [project, tasks, issues, entries, participants, conversations, recentMessages, activity, people, users] =
+    await Promise.all([
+      supabase.from("projects").select("*, clients(id, name)").eq("id", projectId).maybeSingle(),
+      supabase
+        .from("tasks")
+        .select("id, title, description_md, status, priority, due_at")
+        .eq("project_id", projectId)
+        .order("status")
+        .order("due_at", { ascending: true, nullsFirst: false }),
+      supabase
+        .from("issues")
+        .select("id, title, description_md, status, severity, resolution_summary")
+        .eq("project_id", projectId)
+        .order("reported_at", { ascending: false }),
+      supabase
+        .from("entries")
+        .select("id, title, type, body_md, occurred_at, decision_outcome")
+        .eq("project_id", projectId)
+        .eq("triage_state", "filed")
+        .order("occurred_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("project_participants")
+        .select("person_id, role, role_label, communication_mode, financial_arrangement, financial_value, people(id, name)")
+        .eq("project_id", projectId),
+      supabase
+        .from("conversations")
+        .select("id, title, kind, channel, conversation_participants(people(id, name))")
+        .eq("project_id", projectId)
+        .order("last_message_at", { ascending: false, nullsFirst: false }),
+      supabase
+        .from("messages")
+        .select("id, body_md, sent_at, direction, conversation_id")
+        .eq("conversations.project_id", projectId)
+        .order("sent_at", { ascending: false })
+        .limit(PROJECT_MESSAGE_LIMIT),
+      supabase
+        .from("activity_events")
+        .select("id, event_type, summary, occurred_at")
+        .eq("project_id", projectId)
+        .order("occurred_at", { ascending: false })
+        .limit(40),
+      supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
+      supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
+    ]);
+  [project, tasks, issues, entries, participants, conversations, recentMessages, activity, people, users].forEach((r) =>
     throwOnError(r.error),
   );
+
+  const messagesByConversation = new Map<string, Record<string, unknown>[]>();
+  for (const message of recentMessages.data ?? []) {
+    const list = messagesByConversation.get(message.conversation_id) ?? [];
+    if (list.length < CONVERSATION_MESSAGE_LIMIT) list.push(message);
+    messagesByConversation.set(message.conversation_id, list);
+  }
+  const conversationsWithMessages = (conversations.data ?? []).map((conversation) => ({
+    ...conversation,
+    messages: messagesByConversation.get(conversation.id) ?? [],
+  }));
+
   return {
     project: project.data,
     tasks: tasks.data ?? [],
     issues: issues.data ?? [],
     entries: entries.data ?? [],
     participants: participants.data ?? [],
-    conversations: conversations.data ?? [],
+    conversations: conversationsWithMessages,
     activity: activity.data ?? [],
     people: people.data ?? [],
     users: users.data ?? [],
@@ -200,12 +225,14 @@ export async function getInboxData() {
       .from("messages")
       .select("id, body_md, sent_at, conversation_id, conversations(title, project_id, clients(name))")
       .eq("triage_state", "inbox")
-      .order("sent_at", { ascending: false }),
+      .order("sent_at", { ascending: false })
+      .limit(100),
     supabase
       .from("entries")
       .select("id, title, type, occurred_at, project_id, projects(name)")
       .eq("triage_state", "inbox")
-      .order("occurred_at", { ascending: false }),
+      .order("occurred_at", { ascending: false })
+      .limit(100),
   ]);
   [messages, entries].forEach((r) => throwOnError(r.error));
   return { messages: messages.data ?? [], entries: entries.data ?? [] };

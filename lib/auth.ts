@@ -1,19 +1,18 @@
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function getCurrentUser() {
+// Request-scoped: layout + page + actions all share one getUser() call per request.
+export const getCurrentUser = cache(async () => {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   return user;
-}
+});
 
-export async function requireActiveUser() {
-  // Single client, parallel auth + profile fetch
+export const requireActiveUser = cache(async () => {
   const supabase = await createSupabaseServerClient();
-  const [{ data: { user } }, ] = await Promise.all([
-    supabase.auth.getUser(),
-  ]);
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: profile } = await supabase
     .from("app_users")
@@ -22,4 +21,4 @@ export async function requireActiveUser() {
     .maybeSingle();
   if (!profile?.is_active) redirect("/login?error=not-approved");
   return { user, profile };
-}
+});

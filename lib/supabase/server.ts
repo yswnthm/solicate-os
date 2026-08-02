@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
-export async function createSupabaseServerClient() {
+// Request-scoped: every query/action/auth call in a single request reuses
+// one client and one cookie read instead of constructing a fresh one.
+export const createSupabaseServerClient = cache(async () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) throw new Error("Missing Supabase environment variables.");
@@ -15,4 +18,4 @@ export async function createSupabaseServerClient() {
       },
     },
   });
-}
+});

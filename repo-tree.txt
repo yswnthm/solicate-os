@@ -1,0 +1,71 @@
+.
+├── .gitignore
+├── README.md
+├── app
+│   ├── (app)
+│   │   ├── clients
+│   │   │   ├── [clientId]
+│   │   │   │   ├── loading.tsx
+│   │   │   │   └── page.tsx
+│   │   │   ├── loading.tsx
+│   │   │   └── page.tsx
+│   │   ├── inbox
+│   │   │   ├── loading.tsx
+│   │   │   └── page.tsx
+│   │   ├── layout.tsx
+│   │   ├── people
+│   │   │   ├── loading.tsx
+│   │   │   └── page.tsx
+│   │   ├── projects
+│   │   │   ├── [projectId]
+│   │   │   │   ├── loading.tsx
+│   │   │   │   └── page.tsx
+│   │   │   ├── loading.tsx
+│   │   │   └── page.tsx
+│   │   ├── search
+│   │   │   ├── loading.tsx
+│   │   │   └── page.tsx
+│   │   ├── settings
+│   │   │   └── page.tsx
+│   │   └── today
+│   │       ├── loading.tsx
+│   │       └── page.tsx
+│   ├── (auth)
+│   │   ├── layout.tsx
+│   │   └── login
+│   │       └── page.tsx
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── bun.lock
+├── components
+│   ├── app-shell.tsx
+│   ├── command-menu.tsx
+│   ├── modal-trigger.tsx
+│   ├── modal.tsx
+│   ├── nav-link.tsx
+│   ├── new-project-button.tsx
+│   ├── page-header.tsx
+│   ├── search-trigger-button.tsx
+│   ├── status-controls.tsx
+│   └── status-pill.tsx
+├── features
+│   ├── actions.ts
+│   └── queries.ts
+├── lib
+│   ├── auth.ts
+│   ├── supabase
+│   │   └── server.ts
+│   └── utils.ts
+├── next-env.d.ts
+├── next.config.ts
+├── package.json
+├── public
+├── repo-tree.txt
+├── supabase
+│   └── migrations
+│       └── 0001_initial_schema.sql
+├── tsconfig.json
+└── tsconfig.tsbuildinfo
+
+21 directories, 48 files
