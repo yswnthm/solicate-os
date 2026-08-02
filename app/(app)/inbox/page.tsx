@@ -1,11 +1,14 @@
 export const dynamic = "force-dynamic";
 
-import { getInboxData } from "@/features/queries";
+import { getActiveProjectsForSelect, getInboxData } from "@/features/queries";
 import { PageHeader } from "@/components/page-header";
 import { InboxList } from "@/components/inbox-list";
 
 export default async function InboxPage() {
-  const { messages, entries } = await getInboxData();
+  const [{ messages, entries }, projects] = await Promise.all([
+    getInboxData(),
+    getActiveProjectsForSelect(),
+  ]);
   const total = messages.length + entries.length;
 
   return (
@@ -21,7 +24,7 @@ export default async function InboxPage() {
         )}
       </PageHeader>
 
-      <InboxList entries={entries} messages={messages} />
+      <InboxList entries={entries} messages={messages} projects={projects} />
     </>
   );
 }
