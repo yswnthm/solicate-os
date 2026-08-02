@@ -207,7 +207,7 @@ export async function getProjectWorkspace(projectId: string) {
         .order("last_message_at", { ascending: false, nullsFirst: false }),
       supabase
         .from("messages")
-        .select("id, body_md, sent_at, direction, conversation_id, people(name), app_users(display_name), conversations!inner(project_id)")
+        .select("id, body_md, sent_at, direction, conversation_id, people(name), app_users!sender_user_id(display_name), conversations!inner(project_id)")
         .eq("conversations.project_id", projectId)
         .order("sent_at", { ascending: false })
         .limit(PROJECT_MESSAGE_LIMIT),
