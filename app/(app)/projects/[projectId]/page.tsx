@@ -3,12 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
-  addConversationParticipant,
   addProjectParticipant,
   createConversation,
   createEntry,
   createIssue,
-  createMessage,
   createTask,
   resolveIssue,
 } from "@/features/actions";
@@ -16,6 +14,8 @@ import { getProjectWorkspace } from "@/features/queries";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { ProjectStatusControl, TaskStatusControl } from "@/components/status-controls";
+import { TaskEditButton } from "@/components/task-edit";
+import { ConversationThread } from "@/components/conversation-thread";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { ModalTrigger } from "@/components/modal-trigger";
 
@@ -137,6 +137,7 @@ export default async function ProjectPage({
                     {task.status !== "done" && task.status !== "cancelled" && (
                       <TaskStatusControl taskId={task.id} projectId={projectId} initialStatus={task.status} />
                     )}
+                    <TaskEditButton task={task} projectId={projectId} />
                   </div>
                 </div>
               ))}
@@ -453,78 +454,12 @@ export default async function ProjectPage({
                     </div>
                     <StatusPill value={conversation.channel} />
                   </summary>
-                  <div className="stack" style={{ padding: "16px 20px", border: "1px solid var(--line)", borderTop: "none", borderRadius: "0 0 8px 8px", background: "var(--surface)" }}>
-                    {(conversation.messages ?? [])
-                      .slice()
-                      .sort((a: any, b: any) => a.sent_at.localeCompare(b.sent_at))
-                      .map((message: any) => (
-                        <div className="card" key={message.id} style={{ padding: "12px 14px", borderStyle: "dashed" }}>
-                          <div className="row-meta">
-                            <StatusPill value={message.direction} />
-                            {" "}{formatDateTime(message.sent_at)}
-                          </div>
-                          <div className="prose">{message.body_md}</div>
-                        </div>
-                      ))}
-                    
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <ModalTrigger buttonLabel="+ Log message" title="Log message" buttonClass="button secondary small">
-                        <form className="form" action={createMessage}>
-                          <input type="hidden" name="conversation_id" value={conversation.id} />
-                          <input type="hidden" name="project_id" value={projectId} />
-                          <div className="form-grid">
-                            <div className="field">
-                              <label>Direction</label>
-                              <select name="direction">
-                                <option value="inbound">Inbound</option>
-                                <option value="outbound">Outbound</option>
-                              </select>
-                            </div>
-                            <div className="field">
-                              <label>Sender (inbound)</label>
-                              <select name="sender_person_id">
-                                <option value="">Choose person</option>
-                                {data.people.map((person: any) => (
-                                  <option key={person.id} value={person.id}>
-                                    {person.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                          <div className="field">
-                            <label>Message</label>
-                            <textarea name="body_md" required placeholder="Paste or type the message" />
-                          </div>
-                          <input type="hidden" name="sent_at" value="" />
-                          <button className="button" type="submit" style={{ marginTop: 8 }}>
-                            Log message
-                          </button>
-                        </form>
-                      </ModalTrigger>
-                      
-                      <ModalTrigger buttonLabel="+ Add person" title="Add participant" buttonClass="button ghost small">
-                        <form className="form" action={addConversationParticipant}>
-                          <input type="hidden" name="conversation_id" value={conversation.id} />
-                          <input type="hidden" name="project_id" value={projectId} />
-                          <div className="field">
-                            <label>Add participant</label>
-                            <select name="person_id" required>
-                              <option value="">Choose person</option>
-                              {data.people.map((person: any) => (
-                                <option key={person.id} value={person.id}>
-                                  {person.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <button className="button" type="submit" style={{ marginTop: 8 }}>
-                            Add participant
-                          </button>
-                        </form>
-                      </ModalTrigger>
-                    </div>
-                  </div>
+                  <ConversationThread
+                    conversationId={conversation.id}
+                    projectId={projectId}
+                    initialMessages={conversation.messages ?? []}
+                    people={data.people}
+                  />
                 </details>
               ))}
             </div>
