@@ -1,4 +1,10 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  // Optimize imports for faster cold starts
+  experimental: {
+    optimizePackageImports: ["@supabase/supabase-js", "@supabase/ssr"],
+  },
+};
 export default nextConfig;

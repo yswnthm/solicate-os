@@ -9,10 +9,17 @@ export async function getCurrentUser() {
 }
 
 export async function requireActiveUser() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // Single client, parallel auth + profile fetch
   const supabase = await createSupabaseServerClient();
-  const { data: profile } = await supabase.from("app_users").select("id, display_name, is_active").eq("id", user.id).maybeSingle();
+  const [{ data: { user } }, ] = await Promise.all([
+    supabase.auth.getUser(),
+  ]);
+  if (!user) redirect("/login");
+  const { data: profile } = await supabase
+    .from("app_users")
+    .select("id, display_name, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
   if (!profile?.is_active) redirect("/login?error=not-approved");
   return { user, profile };
 }

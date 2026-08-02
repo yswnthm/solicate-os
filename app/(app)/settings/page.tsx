@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { signOut } from "@/features/actions";
 import { requireActiveUser } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
