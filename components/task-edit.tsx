@@ -4,7 +4,15 @@ import { useState } from "react";
 import { Modal } from "./modal";
 import { updateTask } from "@/features/actions";
 
-export function TaskEditButton({ task, projectId }: { task: any; projectId: string }) {
+export function TaskEditButton({
+  task,
+  projectId,
+  phases = [],
+}: {
+  task: any;
+  projectId: string;
+  phases?: any[];
+}) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -35,6 +43,19 @@ export function TaskEditButton({ task, projectId }: { task: any; projectId: stri
               <input name="due_at" type="date" defaultValue={task.due_at?.slice(0, 10)} />
             </div>
           </div>
+          {phases.length > 0 && (
+            <div className="field">
+              <label>Phase</label>
+              <select name="phase_id" defaultValue={task.phase_id ?? ""}>
+                <option value="">No phase</option>
+                {phases.map((phase: any) => (
+                  <option key={phase.id} value={phase.id}>
+                    {phase.position}. {phase.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="field">
             <label>Description</label>
             <textarea name="description_md" defaultValue={task.description_md ?? ""} />

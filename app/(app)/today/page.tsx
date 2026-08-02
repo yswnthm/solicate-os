@@ -179,6 +179,7 @@ function TaskList({ tasks, empty }: { tasks: any[]; empty: string }) {
           <div className="row-main">
             <div className="row-title">{task.title}</div>
             <div className="row-meta">
+              {task.phases?.name ? `${task.phases.name} · ` : ""}
               {task.projects?.name} · due {formatDate(task.due_at)}
             </div>
           </div>

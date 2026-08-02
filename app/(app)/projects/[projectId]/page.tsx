@@ -7,6 +7,7 @@ import {
   createConversation,
   createEntry,
   createIssue,
+  createPhase,
   createTask,
   resolveIssue,
 } from "@/features/actions";
@@ -76,6 +77,77 @@ export default async function ProjectPage({
 
       {/* Main seamless edge-to-edge layout */}
       <div className="stack">
+        {/* Phases */}
+        <Section
+          title="Phases"
+          count={data.phases.length}
+          action={
+            <ModalTrigger buttonLabel="+ New phase" title="New phase" buttonClass="button ghost small">
+              <form className="form" action={createPhase}>
+                <input type="hidden" name="project_id" value={projectId} />
+                <div className="field">
+                  <label>Phase name</label>
+                  <input name="name" placeholder="e.g. Phase 2 — WordPress trial" required />
+                </div>
+                <div className="field">
+                  <label>Description</label>
+                  <textarea name="description" placeholder="What this phase covers" />
+                </div>
+                <div className="form-grid">
+                  <div className="field">
+                    <label>Position</label>
+                    <input name="position" type="number" min="1" defaultValue={data.phases.length + 1} />
+                  </div>
+                  <div className="field">
+                    <label>Status</label>
+                    <select name="status">
+                      <option value="planned">Planned</option>
+                      <option value="active">Active</option>
+                      <option value="on_hold">On hold</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Start date</label>
+                  <input name="started_on" type="date" />
+                </div>
+                <button className="button" type="submit" style={{ marginTop: 8 }}>
+                  Add phase
+                </button>
+              </form>
+            </ModalTrigger>
+          }
+        >
+          {data.phases.length ? (
+            <div className="list">
+              {data.phases.map((phase: any) => {
+                const phaseOpen = data.tasks.filter(
+                  (t: any) => t.phase_id === phase.id && t.status !== "done" && t.status !== "cancelled",
+                ).length;
+                return (
+                  <div className="row" key={phase.id}>
+                    <StatusPill value={phase.status} />
+                    <div className="row-main">
+                      <div className="row-title">
+                        {phase.position}. {phase.name}
+                      </div>
+                      <div className="row-meta">
+                        {phase.started_on ? `Started ${formatDate(phase.started_on)}` : "Not started"}
+                        {phaseOpen > 0 ? ` · ${phaseOpen} open task${phaseOpen === 1 ? "" : "s"}` : ""}
+                        {phase.description ? ` · ${phase.description.slice(0, 90)}` : ""}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="empty">No phases yet — group tasks into phases as the engagement grows.</div>
+          )}
+        </Section>
+
         {/* Tasks */}
         <Section 
           title="Tasks" 
@@ -104,6 +176,17 @@ export default async function ProjectPage({
                   </div>
                 </div>
                 <div className="field">
+                  <label>Phase</label>
+                  <select name="phase_id">
+                    <option value="">No phase</option>
+                    {data.phases.map((phase: any) => (
+                      <option key={phase.id} value={phase.id}>
+                        {phase.position}. {phase.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
                   <label>Assignee</label>
                   <select name="assignee_id">
                     <option value="">Unassigned</option>
@@ -127,25 +210,44 @@ export default async function ProjectPage({
         >
           {data.tasks.length ? (
             <div className="list">
-              {data.tasks.map((task: any) => (
-                <div className="row" key={task.id}>
-                  <StatusPill value={task.priority} />
-                  <div className="row-main">
-                    <div className="row-title">{task.title}</div>
-                    <div className="row-meta">
-                      {task.due_at ? `Due ${formatDate(task.due_at)}` : "No due date"}
-                      {task.description_md ? ` · ${task.description_md.slice(0, 80)}` : ""}
+              {data.phases.length ? (
+                <>
+                  {data.phases.map((phase: any) => {
+                    const phaseTasks = data.tasks.filter((t: any) => t.phase_id === phase.id);
+                    if (!phaseTasks.length) return null;
+                    return (
+                      <div key={phase.id} className="stack">
+                        <div className="section-title" style={{ marginTop: 8 }}>
+                          <h4 style={{ margin: 0 }}>
+                            {phase.position}. {phase.name}
+                          </h4>
+                          <span>{phaseTasks.length}</span>
+                        </div>
+                        {phaseTasks.map((task: any) => (
+                          <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} />
+                        ))}
+                      </div>
+                    );
+                  })}
+                  {data.tasks.some((t: any) => !t.phase_id) && (
+                    <div className="stack">
+                      <div className="section-title" style={{ marginTop: 8 }}>
+                        <h4 style={{ margin: 0 }}>Ungrouped</h4>
+                        <span>{data.tasks.filter((t: any) => !t.phase_id).length}</span>
+                      </div>
+                      {data.tasks
+                        .filter((t: any) => !t.phase_id)
+                        .map((task: any) => (
+                          <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} />
+                        ))}
                     </div>
-                  </div>
-                  <div className="row-actions-always">
-                    <StatusPill value={task.status} />
-                    {task.status !== "done" && task.status !== "cancelled" && (
-                      <TaskStatusControl taskId={task.id} projectId={projectId} initialStatus={task.status} />
-                    )}
-                    <TaskEditButton task={task} projectId={projectId} />
-                  </div>
-                </div>
-              ))}
+                  )}
+                </>
+              ) : (
+                data.tasks.map((task: any) => (
+                  <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} />
+                ))
+              )}
             </div>
           ) : (
             <div className="empty">No tasks yet.</div>
@@ -497,6 +599,28 @@ export default async function ProjectPage({
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+function TaskRow({ task, projectId, phases }: { task: any; projectId: string; phases: any[] }) {
+  return (
+    <div className="row">
+      <StatusPill value={task.priority} />
+      <div className="row-main">
+        <div className="row-title">{task.title}</div>
+        <div className="row-meta">
+          {task.due_at ? `Due ${formatDate(task.due_at)}` : "No due date"}
+          {task.description_md ? ` · ${task.description_md.slice(0, 80)}` : ""}
+        </div>
+      </div>
+      <div className="row-actions-always">
+        <StatusPill value={task.status} />
+        {task.status !== "done" && task.status !== "cancelled" && (
+          <TaskStatusControl taskId={task.id} projectId={projectId} initialStatus={task.status} />
+        )}
+        <TaskEditButton task={task} projectId={projectId} phases={phases} />
+      </div>
+    </div>
+  );
+}
 
 function Section({
   title,

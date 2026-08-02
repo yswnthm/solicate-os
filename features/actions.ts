@@ -146,6 +146,7 @@ export async function createTask(formData: FormData) {
     priority: z.enum(["low", "normal", "high", "urgent"]).parse(text(formData.get("priority")) || "normal"),
     assignee_id: optional(formData.get("assignee_id")),
     due_at: optional(formData.get("due_at")),
+    phase_id: optional(formData.get("phase_id")),
     created_by_id: user.id,
   });
   if (error) throw new Error(error.message);
@@ -185,10 +186,33 @@ export async function updateTask(formData: FormData) {
     priority: z.enum(["low", "normal", "high", "urgent"]).parse(text(formData.get("priority")) || "normal"),
     assignee_id: optional(formData.get("assignee_id")),
     due_at: optional(formData.get("due_at")),
+    phase_id: optional(formData.get("phase_id")),
   }).eq("id", taskId);
   if (error) throw new Error(error.message);
   revalidatePath(projectPath(projectId));
   revalidatePath("/today");
+}
+
+// ─── Phases ───────────────────────────────────────────────────────────────────
+
+export async function createPhase(formData: FormData) {
+  const { user } = await requireActiveUser();
+  const projectId = id(formData.get("project_id"));
+  const name = z.string().min(1).parse(text(formData.get("name")));
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("phases").insert({
+    project_id: projectId,
+    name,
+    description: text(formData.get("description")),
+    position: z.coerce.number().int().min(1).parse(formData.get("position") ?? 1),
+    status: z.enum(["planned", "active", "on_hold", "completed", "cancelled"]).parse(
+      text(formData.get("status")) || "planned",
+    ),
+    started_on: optional(formData.get("started_on")),
+    created_by_id: user.id,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(projectPath(projectId));
 }
 
 // ─── Issues ───────────────────────────────────────────────────────────────────
