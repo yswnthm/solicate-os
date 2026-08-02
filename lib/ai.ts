@@ -17,22 +17,12 @@ export type TriageDraft = z.infer<typeof triageDraftSchema>;
 
 export type ProjectOption = { id: string; name: string; client?: string | null };
 
-const SYSTEM_PROMPT = `You are the intake analyst for a solo agency operations system called Solicate OS.
-
-The user captures thoughts and client messages into an inbox. Your job is to turn one raw item into a clean, filed project record the operator will approve.
-
-Given the raw item and the list of active projects, return JSON ONLY with these fields:
-- title: a concrete, imperative-or-descriptive summary under 12 words.
-- type: one of note, meeting, decision, document, update, milestone, capture.
-- project_id: the single best-matching project id, or null if none fits. Prefer null over a weak match.
-- body_md: a 2-5 sentence first-person summary: what happened, what it implies, and the next action. No markdown headers, no intro phrases like "Here is the summary".
-
-Respond with only valid JSON. No commentary.`;
-
-export async function draftInboxRecord(
-  rawItem: string,
-  projects: ProjectOption[],
-): Promise<TriageDraft> {
+async function chatJSON<Schema extends z.ZodTypeAny>(
+  system: string,
+  user: unknown,
+  schema: Schema,
+  maxTokens = 1024,
+): Promise<z.infer<Schema>> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY is not configured.");
 
@@ -45,16 +35,11 @@ export async function draftInboxRecord(
     body: JSON.stringify({
       model: MODEL,
       temperature: 0.3,
+      max_tokens: maxTokens,
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: JSON.stringify({
-            raw_item: rawItem,
-            projects: projects.map((p) => ({ id: p.id, name: p.name, client: p.client ?? null })),
-          }),
-        },
+        { role: "system", content: system },
+        { role: "user", content: JSON.stringify(user) },
       ],
     }),
     cache: "no-store",
@@ -71,9 +56,104 @@ export async function draftInboxRecord(
   const content = payload.choices?.[0]?.message?.content;
   if (!content) throw new Error("Groq returned an empty response.");
 
-  const raw = JSON.parse(content);
-  const parsed = triageDraftSchema.safeParse(raw);
+  const parsed = schema.safeParse(JSON.parse(content));
   if (!parsed.success) throw new Error("AI draft failed validation.");
 
-  return { ...parsed.data, project_id: parsed.data.project_id || null };
+  return parsed.data;
+}
+
+const TRIAGE_SYSTEM = `You are the intake analyst for a solo agency operations system called Solicate OS.
+
+The user captures thoughts and client messages into an inbox. Your job is to turn one raw item into a clean, filed project record the operator will approve.
+
+Given the raw item and the list of active projects, return JSON ONLY with these fields:
+- title: a concrete, imperative-or-descriptive summary under 12 words.
+- type: one of note, meeting, decision, document, update, milestone, capture.
+- project_id: the single best-matching project id, or null if none fits. Prefer null over a weak match.
+- body_md: a 2-5 sentence first-person summary: what happened, what it implies, and the next action. No markdown headers, no intro phrases like "Here is the summary".
+
+Respond with only valid JSON. No commentary.`;
+
+export async function draftInboxRecord(
+  rawItem: string,
+  projects: ProjectOption[],
+): Promise<TriageDraft> {
+  return chatJSON(
+    TRIAGE_SYSTEM,
+    {
+      raw_item: rawItem,
+      projects: projects.map((p) => ({ id: p.id, name: p.name, client: p.client ?? null })),
+    },
+    triageDraftSchema,
+  );
+}
+
+const BATCH_SYSTEM = `You are the intake analyst for a solo agency operations system called Solicate OS.
+
+Given a list of raw inbox items (each with an id) and the list of active projects, draft a filed project record for EACH item.
+
+Return JSON ONLY shaped like: { "drafts": [ { "id": "<the item id>", "title": "...", "type": "note|meeting|decision|document|update|milestone|capture", "project_id": "<matching project id or null>", "body_md": "2-5 sentence first-person summary" } ] }
+
+Rules:
+- Draft exactly one entry per provided item, keeping the same id.
+- Prefer null project_id over a weak match.
+- Body in first-person operator voice: what happened, what it implies, next action. No markdown headers.
+
+Respond with only valid JSON. No commentary.`;
+
+const batchDraftsSchema = z.object({
+  drafts: z.array(triageDraftSchema.extend({ id: z.string() })),
+});
+
+export type BatchDraft = z.infer<typeof batchDraftsSchema>["drafts"][number];
+
+export async function draftBatchRecords(
+  items: { id: string; kind: string; content: string }[],
+  projects: ProjectOption[],
+): Promise<BatchDraft[]> {
+  const result = await chatJSON(
+    BATCH_SYSTEM,
+    {
+      items: items.map((i) => ({ id: i.id, kind: i.kind, content: i.content })),
+      projects: projects.map((p) => ({ id: p.id, name: p.name, client: p.client ?? null })),
+    },
+    batchDraftsSchema,
+    2048,
+  );
+  const byId = new Map(result.drafts.map((d) => [d.id, d]));
+  return items
+    .map((i) => byId.get(i.id))
+    .filter((d): d is BatchDraft => Boolean(d))
+    .map((d) => ({ ...d, project_id: d.project_id || null }));
+}
+
+const WEEKLY_SYSTEM = `You are the delivery lead for a solo agency operating system. Draft a concise client-facing weekly update in first person ("I", "we" avoided, "I" only for the operator).
+
+Given the project's past-7-days data, write a markdown summary with these sections:
+## What moved
+## Decisions & outcomes
+## Blockers or risks
+## Next week
+
+Rules:
+- 80-140 words total. Concrete, specific, no fluff, no "this week was productive".
+- Reference real task/entry/issue titles where useful.
+- If there are no blockers, say "None." under that heading.
+- Do not invent facts not present in the data.
+
+Respond with JSON ONLY shaped like: { "summary": "<the markdown>" }`;
+
+const weeklySummarySchema = z.object({ summary: z.string().trim().min(10) });
+
+export async function draftWeeklySummary(input: {
+  projectName: string;
+  clientName: string | null;
+  entries: string[];
+  tasks: string[];
+  issues: string[];
+  messages: string[];
+  activity: string[];
+}): Promise<string> {
+  const result = await chatJSON(WEEKLY_SYSTEM, input, weeklySummarySchema, 1024);
+  return result.summary;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Command } from "cmdk";
 
@@ -13,6 +13,7 @@ import {
   createProject,
   createTask,
   quickCapture,
+  updateProjectStatus,
 } from "@/features/actions";
 import { quickSearch } from "@/features/search";
 
@@ -63,6 +64,7 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
   }>({ entries: [], messages: [], projects: [], people: [] });
   const [searching, setSearching] = useState(false);
   const searchIdRef = useRef(0);
+  const [, startTransition] = useTransition();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -80,6 +82,10 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
     }
     return null;
   })();
+
+  const currentStatus = context?.projectId
+    ? projects.find((p) => p.id === context.projectId)?.status ?? null
+    : null;
 
   const openInMode = useCallback((next: PaletteMode) => {
     setMode(next);
@@ -111,6 +117,18 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
   const go = (href: string) => {
     router.push(href);
     setOpen(false);
+  };
+
+  const setProjectStatus = (next: string) => {
+    const projectId = context?.projectId;
+    if (!projectId) return;
+    const formData = new FormData();
+    formData.set("project_id", projectId);
+    formData.set("status", next);
+    setOpen(false);
+    startTransition(async () => {
+      await updateProjectStatus(formData);
+    });
   };
 
   // Debounced live search while in command mode.
@@ -207,6 +225,7 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                       <span className="cmdk-sub">Note, decision, meeting, milestone…</span>
                     </span>
                   </Command.Item>
+                  <ProjectStatusCommands status={currentStatus} onChange={setProjectStatus} />
                 </Command.Group>
               )}
 
@@ -365,6 +384,43 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
           />
         )}
       </Command.Dialog>
+    </>
+  );
+}
+
+function ProjectStatusCommands({
+  status,
+  onChange,
+}: {
+  status: string | null;
+  onChange: (next: string) => void;
+}) {
+  if (!status) return null;
+  const transitions: Record<string, { label: string; next: string }[]> = {
+    active: [
+      { label: "Pause project", next: "paused" },
+      { label: "Complete project", next: "completed" },
+      { label: "Archive project", next: "archived" },
+    ],
+    paused: [
+      { label: "Reactivate project", next: "active" },
+      { label: "Archive project", next: "archived" },
+    ],
+    completed: [{ label: "Archive project", next: "archived" }],
+  };
+  const options = transitions[status];
+  if (!options) return null;
+  return (
+    <>
+      {options.map((opt) => (
+        <Command.Item key={opt.next} className="cmdk-item" onSelect={() => onChange(opt.next)}>
+          <span className="cmdk-icon">↻</span>
+          <span className="cmdk-item-main">
+            <span>{opt.label}</span>
+            <span className="cmdk-sub">Change project status</span>
+          </span>
+        </Command.Item>
+      ))}
     </>
   );
 }

@@ -16,6 +16,7 @@ import { StatusPill } from "@/components/status-pill";
 import { ProjectStatusControl, TaskStatusControl } from "@/components/status-controls";
 import { TaskEditButton } from "@/components/task-edit";
 import { ConversationThread } from "@/components/conversation-thread";
+import { WeeklySummaryButton } from "@/components/weekly-summary";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { ModalTrigger } from "@/components/modal-trigger";
 
@@ -43,6 +44,7 @@ export default async function ProjectPage({
         description={`${project.clients?.name ?? "Client"} ${project.code ? `· ${project.code}` : ""} · ${project.summary || "No working summary yet."}`}
       >
         <StatusPill value={project.status} />
+        <WeeklySummaryButton projectId={projectId} />
         <ProjectStatusControl projectId={projectId} initialStatus={project.status} />
       </PageHeader>
 

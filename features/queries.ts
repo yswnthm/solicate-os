@@ -242,6 +242,7 @@ export async function getProjectWorkspace(projectId: string) {
     entries: entries.data ?? [],
     participants: participants.data ?? [],
     conversations: conversationsWithMessages,
+    recentMessages: recentMessages.data ?? [],
     activity: activity.data ?? [],
     people: people.data ?? [],
     users: users.data ?? [],
