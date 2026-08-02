@@ -6,6 +6,7 @@ import { getActiveClients } from "@/features/queries";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { ModalTrigger } from "@/components/modal-trigger";
+import { EditClientButton } from "@/components/editing/edit-buttons";
 
 export default async function ClientsPage() {
   const clients = await getActiveClients();
@@ -69,15 +70,16 @@ export default async function ClientsPage() {
           {clients.length ? (
             <div className="list">
               {clients.map((client: any) => (
-                <Link className="row" href={`/clients/${client.id}`} key={client.id}>
-                  <div className="row-main">
+                <div className="row" key={client.id}>
+                  <Link className="row-main" href={`/clients/${client.id}`}>
                     <div className="row-title">{client.name}</div>
                     <div className="row-meta">
                       {client.summary || client.kind}
                     </div>
-                  </div>
+                  </Link>
                   <StatusPill value={client.status} />
-                </Link>
+                  <EditClientButton client={client} />
+                </div>
               ))}
             </div>
           ) : (

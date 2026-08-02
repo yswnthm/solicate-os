@@ -7,11 +7,17 @@ export function Modal({
   onClose,
   title,
   children,
+  footer,
+  size = "md",
+  description,
 }: {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
+  size?: "md" | "lg";
+  description?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -56,14 +62,18 @@ export function Modal({
   }, [onClose]);
 
   return (
-    <dialog ref={dialogRef} className="modal">
+    <dialog ref={dialogRef} className={`modal ${size === "lg" ? "modal-lg" : ""}`}>
       <div className="modal-header">
-        <h2>{title}</h2>
+        <div>
+          <h2>{title}</h2>
+          {description ? <p className="modal-description">{description}</p> : null}
+        </div>
         <button className="button ghost small" onClick={onClose} aria-label="Close modal">
           ✕
         </button>
       </div>
       <div className="modal-body">{children}</div>
+      {footer ? <div className="modal-footer">{footer}</div> : null}
     </dialog>
   );
 }

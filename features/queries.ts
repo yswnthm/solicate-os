@@ -22,7 +22,7 @@ const getActiveClientsCached = unstable_cache(
     const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
       .from("clients")
-      .select("id, name, kind, status, summary")
+      .select("id, name, kind, status, summary, website_url")
       .neq("status", "archived")
       .order("name");
     throwOnError(response.error);
@@ -41,7 +41,7 @@ const getProjectsCached = unstable_cache(
     const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
       .from("projects")
-      .select("id, name, code, status, target_date, updated_at, clients(id, name)")
+      .select("id, name, code, status, target_date, updated_at, started_on, summary, client_id, clients(id, name)")
       .neq("status", "archived")
       .order("updated_at", { ascending: false });
     throwOnError(response.error);
@@ -180,29 +180,29 @@ export async function getProjectWorkspace(projectId: string) {
       supabase.from("projects").select("*, clients(id, name)").eq("id", projectId).maybeSingle(),
       supabase
         .from("tasks")
-        .select("id, title, description_md, status, priority, due_at, phase_id, phases(name)")
+        .select("id, title, description_md, status, priority, due_at, phase_id, assignee_id, phases(name)")
         .eq("project_id", projectId)
         .order("status")
         .order("due_at", { ascending: true, nullsFirst: false }),
       supabase
         .from("issues")
-        .select("id, title, description_md, status, severity, resolution_summary")
+        .select("id, title, description_md, status, severity, resolution_summary, assignee_id")
         .eq("project_id", projectId)
         .order("reported_at", { ascending: false }),
       supabase
         .from("entries")
-        .select("id, title, type, body_md, occurred_at, decision_outcome")
+        .select("id, title, type, body_md, occurred_at, decision_outcome, project_id")
         .eq("project_id", projectId)
         .eq("triage_state", "filed")
         .order("occurred_at", { ascending: false })
         .limit(50),
       supabase
         .from("project_participants")
-        .select("person_id, role, role_label, communication_mode, financial_arrangement, financial_value, people(id, name)")
+        .select("person_id, role, role_label, communication_mode, financial_arrangement, financial_value, is_referral_source, currency_code, payment_status, terms_note, people(id, name)")
         .eq("project_id", projectId),
       supabase
         .from("conversations")
-        .select("id, title, kind, channel, conversation_participants(people(id, name))")
+        .select("id, title, kind, channel, project_id, conversation_participants(people(id, name))")
         .eq("project_id", projectId)
         .order("last_message_at", { ascending: false, nullsFirst: false }),
       supabase
@@ -219,7 +219,7 @@ export async function getProjectWorkspace(projectId: string) {
         .limit(40),
       supabase
         .from("phases")
-        .select("id, name, description, position, status, started_on, target_date, completed_at")
+        .select("id, name, description, position, status, started_on, target_date, completed_at, project_id")
         .eq("project_id", projectId)
         .order("position"),
       supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
@@ -296,7 +296,7 @@ export async function getInboxData() {
       .limit(100),
     supabase
       .from("entries")
-      .select("id, title, type, occurred_at, project_id, projects(name)")
+      .select("id, title, type, body_md, occurred_at, project_id, decision_outcome, projects(name)")
       .eq("triage_state", "inbox")
       .order("occurred_at", { ascending: false })
       .limit(100),

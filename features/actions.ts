@@ -175,24 +175,6 @@ export async function updateTaskStatus(formData: FormData) {
   revalidatePath("/today");
 }
 
-export async function updateTask(formData: FormData) {
-  await requireActiveUser();
-  const taskId = id(formData.get("task_id"));
-  const projectId = id(formData.get("project_id"));
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("tasks").update({
-    title: z.string().min(1).parse(text(formData.get("title"))),
-    description_md: text(formData.get("description_md")),
-    priority: z.enum(["low", "normal", "high", "urgent"]).parse(text(formData.get("priority")) || "normal"),
-    assignee_id: optional(formData.get("assignee_id")),
-    due_at: optional(formData.get("due_at")),
-    phase_id: optional(formData.get("phase_id")),
-  }).eq("id", taskId);
-  if (error) throw new Error(error.message);
-  revalidatePath(projectPath(projectId));
-  revalidatePath("/today");
-}
-
 // ─── Phases ───────────────────────────────────────────────────────────────────
 
 export async function createPhase(formData: FormData) {

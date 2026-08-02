@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { formatDate } from "@/lib/utils";
 import { NewProjectButton } from "@/components/new-project-button";
+import { EditProjectButton } from "@/components/editing/edit-buttons";
 
 export default async function ProjectsPage() {
   const [projects, clients] = await Promise.all([getProjects(), getActiveClients()]);
@@ -44,17 +45,18 @@ export default async function ProjectsPage() {
           {projects.length ? (
             <div className="list">
               {projects.map((project: any) => (
-                <Link className="row" href={`/projects/${project.id}`} key={project.id}>
-                  <div className="row-main">
+                <div className="row" key={project.id}>
+                  <Link className="row-main" href={`/projects/${project.id}`}>
                     <div className="row-title">{project.name}</div>
                     <div className="row-meta">
                       {project.clients?.name}
                       {project.code ? ` · ${project.code}` : ""}
                       {project.target_date ? ` · target ${formatDate(project.target_date)}` : ""}
                     </div>
-                  </div>
+                  </Link>
                   <StatusPill value={project.status} />
-                </Link>
+                  <EditProjectButton project={project} clients={clients} />
+                </div>
               ))}
             </div>
           ) : (

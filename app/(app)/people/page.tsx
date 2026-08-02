@@ -6,6 +6,7 @@ import { getPeople } from "@/features/queries";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { ModalTrigger } from "@/components/modal-trigger";
+import { EditPersonButton } from "@/components/editing/edit-buttons";
 
 export default async function PeoplePage() {
   const people = await getPeople();
@@ -65,17 +66,18 @@ export default async function PeoplePage() {
             </div>
             <div className="list">
               {partners.map((person: any) => (
-                <Link className="row" href={`/people/${person.id}`} key={person.id}>
-                  <div className="row-main">
+                <div className="row" key={person.id}>
+                  <Link className="row-main" href={`/people/${person.id}`}>
                     <div className="row-title">{person.name}</div>
                     <div className="row-meta">
                       {[person.email, person.phone].filter(Boolean).join(" · ") ||
                         person.summary ||
                         "No contact details"}
                     </div>
-                  </div>
+                  </Link>
                   <StatusPill value="partner" />
-                </Link>
+                  <EditPersonButton person={person} />
+                </div>
               ))}
             </div>
           </section>
@@ -90,16 +92,17 @@ export default async function PeoplePage() {
           {contacts.length ? (
             <div className="list">
               {contacts.map((person: any) => (
-                <Link className="row" href={`/people/${person.id}`} key={person.id}>
-                  <div className="row-main">
+                <div className="row" key={person.id}>
+                  <Link className="row-main" href={`/people/${person.id}`}>
                     <div className="row-title">{person.name}</div>
                     <div className="row-meta">
                       {[person.email, person.phone].filter(Boolean).join(" · ") ||
                         person.summary ||
                         "No contact details"}
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                  <EditPersonButton person={person} />
+                </div>
               ))}
             </div>
           ) : (

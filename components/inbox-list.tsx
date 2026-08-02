@@ -7,6 +7,7 @@ import { dismissInboxEntry, dismissInboxMessage, fileInboxEntryToProject, fileIn
 import { approveInboxDraft, draftInboxTriage } from "@/features/ai-actions";
 import { StatusPill } from "@/components/status-pill";
 import { Modal } from "@/components/modal";
+import { EditEntryButton, EditMessageButton } from "@/components/editing/edit-buttons";
 import { formatDateTime } from "@/lib/utils";
 import type { TriageDraft } from "@/lib/ai";
 
@@ -114,6 +115,7 @@ export function InboxList({
           Open project
         </Link>
       )}
+      <EditEntryButton entry={entry} projects={projects} />
       <button
         className="button ghost small"
         type="button"
@@ -151,6 +153,11 @@ export function InboxList({
           Open thread
         </Link>
       )}
+      <EditMessageButton
+        message={message}
+        conversationId={message.conversation_id}
+        projectId={message.conversations?.project_id ?? null}
+      />
       <button
         className="button ghost small"
         type="button"

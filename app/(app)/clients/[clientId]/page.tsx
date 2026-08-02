@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { ModalTrigger } from "@/components/modal-trigger";
+import { EditClientButton, EditConversationButton } from "@/components/editing/edit-buttons";
 
 export default async function ClientPage({
   params,
@@ -41,6 +42,7 @@ export default async function ClientPage({
             Website ↗
           </a>
         )}
+        <EditClientButton client={client} />
       </PageHeader>
 
       <div className="stack">
@@ -203,23 +205,27 @@ export default async function ClientPage({
           {conversations.length ? (
             <div className="list">
               {conversations.map((conversation: any) => (
-                <Link
-                  className="row"
-                  href={
-                    conversation.project_id
-                      ? `/projects/${conversation.project_id}`
-                      : "/inbox"
-                  }
-                  key={conversation.id}
-                >
-                  <StatusPill value={conversation.kind} />
-                  <div className="row-main">
+                <div className="row" key={conversation.id}>
+                  <Link
+                    className="row-main"
+                    href={
+                      conversation.project_id
+                        ? `/projects/${conversation.project_id}`
+                        : "/inbox"
+                    }
+                  >
                     <div className="row-title">{conversation.title}</div>
                     <div className="row-meta">
                       {conversation.channel} · {formatDateTime(conversation.last_message_at)}
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                  <StatusPill value={conversation.kind} />
+                  <EditConversationButton
+                    conversation={conversation}
+                    clientId={clientId}
+                    projects={projects.map((p: any) => ({ id: p.id, name: p.name }))}
+                  />
+                </div>
               ))}
             </div>
           ) : (

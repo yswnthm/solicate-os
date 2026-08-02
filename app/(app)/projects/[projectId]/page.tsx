@@ -11,11 +11,19 @@ import {
   createTask,
   resolveIssue,
 } from "@/features/actions";
-import { getProjectWorkspace } from "@/features/queries";
+import { getActiveClients, getProjectWorkspace } from "@/features/queries";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { ProjectStatusControl, TaskStatusControl } from "@/components/status-controls";
-import { TaskEditButton } from "@/components/task-edit";
+import {
+  EditConversationButton,
+  EditEntryButton,
+  EditIssueButton,
+  EditParticipantButton,
+  EditPhaseButton,
+  EditProjectButton,
+  EditTaskButton,
+} from "@/components/editing/edit-buttons";
 import { ConversationThread } from "@/components/conversation-thread";
 import { WeeklySummaryButton } from "@/components/weekly-summary";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -30,7 +38,7 @@ export default async function ProjectPage({
 }) {
   const { projectId } = await params;
   const { thread } = await searchParams;
-  const data = await getProjectWorkspace(projectId);
+  const [data, clients] = await Promise.all([getProjectWorkspace(projectId), getActiveClients()]);
   if (!data.project) notFound();
   const project: any = data.project;
 
@@ -49,6 +57,7 @@ export default async function ProjectPage({
       >
         <StatusPill value={project.status} />
         <WeeklySummaryButton projectId={projectId} />
+        <EditProjectButton project={project} clients={clients} label="Edit" />
         <ProjectStatusControl projectId={projectId} initialStatus={project.status} />
       </PageHeader>
 
@@ -139,6 +148,9 @@ export default async function ProjectPage({
                         {phase.description ? ` · ${phase.description.slice(0, 90)}` : ""}
                       </div>
                     </div>
+                    <div className="row-actions-always">
+                      <EditPhaseButton phase={phase} />
+                    </div>
                   </div>
                 );
               })}
@@ -224,7 +236,7 @@ export default async function ProjectPage({
                           <span>{phaseTasks.length}</span>
                         </div>
                         {phaseTasks.map((task: any) => (
-                          <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} />
+                          <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} users={data.users} />
                         ))}
                       </div>
                     );
@@ -238,14 +250,14 @@ export default async function ProjectPage({
                       {data.tasks
                         .filter((t: any) => !t.phase_id)
                         .map((task: any) => (
-                          <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} />
+                          <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} users={data.users} />
                         ))}
                     </div>
                   )}
                 </>
               ) : (
                 data.tasks.map((task: any) => (
-                  <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} />
+                  <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} users={data.users} />
                 ))
               )}
             </div>
@@ -312,6 +324,7 @@ export default async function ProjectPage({
                   </div>
                   <div className="row-actions-always">
                     <StatusPill value={issue.status} />
+                    <EditIssueButton issue={issue} projectId={projectId} users={data.users} />
                     {!["resolved", "accepted", "closed"].includes(issue.status) && (
                       <ModalTrigger buttonLabel="Resolve" title="Resolve issue" buttonClass="button small secondary">
                         <form className="form" action={resolveIssue}>
@@ -390,7 +403,10 @@ export default async function ProjectPage({
                 <article className="card" key={entry.id}>
                   <div className="section-title" style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0 }}>
                     <h3 style={{ margin: 0 }}>{entry.title}</h3>
-                    <StatusPill value={entry.type} />
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <StatusPill value={entry.type} />
+                      <EditEntryButton entry={entry} />
+                    </div>
                   </div>
                   <div className="row-meta" style={{ marginTop: 4 }}>
                     {formatDateTime(entry.occurred_at)}
@@ -498,7 +514,10 @@ export default async function ProjectPage({
                         : ""}
                     </div>
                   </div>
-                  <StatusPill value={p.role} />
+                  <div className="row-actions-always">
+                    <StatusPill value={p.role} />
+                    <EditParticipantButton participant={p} projectId={projectId} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -559,7 +578,14 @@ export default async function ProjectPage({
                           .join(", ") || "No participants"}
                       </div>
                     </div>
-                    <StatusPill value={conversation.channel} />
+                    <div className="row-actions-always">
+                      <EditConversationButton
+                        conversation={conversation}
+                        clientId={project.client_id}
+                        projects={[{ id: projectId, name: project.name }]}
+                      />
+                      <StatusPill value={conversation.channel} />
+                    </div>
                   </summary>
                   <ConversationThread
                     conversationId={conversation.id}
@@ -600,7 +626,7 @@ export default async function ProjectPage({
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function TaskRow({ task, projectId, phases }: { task: any; projectId: string; phases: any[] }) {
+function TaskRow({ task, projectId, phases, users }: { task: any; projectId: string; phases: any[]; users: any[] }) {
   return (
     <div className="row">
       <StatusPill value={task.priority} />
@@ -616,7 +642,7 @@ function TaskRow({ task, projectId, phases }: { task: any; projectId: string; ph
         {task.status !== "done" && task.status !== "cancelled" && (
           <TaskStatusControl taskId={task.id} projectId={projectId} initialStatus={task.status} />
         )}
-        <TaskEditButton task={task} projectId={projectId} phases={phases} />
+        <EditTaskButton task={task} projectId={projectId} phases={phases} users={users} />
       </div>
     </div>
   );

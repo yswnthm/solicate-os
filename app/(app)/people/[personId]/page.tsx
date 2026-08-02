@@ -6,6 +6,7 @@ import { getPersonDetail } from "@/features/queries";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { formatDateTime } from "@/lib/utils";
+import { EditPersonButton } from "@/components/editing/edit-buttons";
 
 export default async function PersonDetailPage({
   params,
@@ -29,6 +30,7 @@ export default async function PersonDetailPage({
         }
       >
         <StatusPill value={person.is_partner ? "partner" : "person"} />
+        <EditPersonButton person={person} />
       </PageHeader>
 
       <div className="stack">

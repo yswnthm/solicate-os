@@ -3,12 +3,14 @@ import Link from "next/link";
 
 import { quickCapture } from "@/features/actions";
 import { getActiveProjectsForSelect, getTodayData } from "@/features/queries";
+import { getTaskEditContext } from "@/features/update-actions";
 import { StatusPill } from "@/components/status-pill";
 import { requireActiveUser } from "@/lib/auth";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { ModalTrigger } from "@/components/modal-trigger";
 import { MorningBriefButton } from "@/components/morning-brief";
 import { WeekReviewButton } from "@/components/week-review";
+import { EditTaskButton } from "@/components/editing/edit-buttons";
 
 export default async function TodayPage() {
   const { user, profile } = await requireActiveUser();
@@ -174,17 +176,18 @@ function TaskList({ tasks, empty }: { tasks: any[]; empty: string }) {
   return (
     <div className="list">
       {tasks.map((task) => (
-        <Link className="row" href={`/projects/${task.project_id}`} key={task.id}>
+        <div className="row" key={task.id}>
           <StatusPill value={task.priority} />
-          <div className="row-main">
+          <Link className="row-main" href={`/projects/${task.project_id}`}>
             <div className="row-title">{task.title}</div>
             <div className="row-meta">
               {task.phases?.name ? `${task.phases.name} · ` : ""}
               {task.projects?.name} · due {formatDate(task.due_at)}
             </div>
-          </div>
+          </Link>
           <StatusPill value={task.status} />
-        </Link>
+          <EditTaskButton task={task} projectId={task.project_id} fetchContext={getTaskEditContext} />
+        </div>
       ))}
     </div>
   );
