@@ -5,8 +5,9 @@ import { SearchTriggerButton } from "@/components/search-trigger-button";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { NavLink } from "@/components/nav-link";
 import { SidebarToggle } from "@/components/sidebar-toggle";
+import { getActiveClients, getProjects } from "@/features/queries";
 
-export function AppShell({
+export async function AppShell({
   children,
   displayName,
   inboxCount,
@@ -15,11 +16,12 @@ export function AppShell({
   displayName: string;
   inboxCount: number;
 }) {
+  const [projects, clients] = await Promise.all([getProjects(), getActiveClients()]);
   const userInitial = (displayName || "U").charAt(0).toUpperCase();
 
   return (
     <div className="app-shell">
-      <CommandMenu />
+      <CommandMenu projects={projects} clients={clients} />
       <KeyboardShortcuts />
 
       {/* Persistent Sidebar */}

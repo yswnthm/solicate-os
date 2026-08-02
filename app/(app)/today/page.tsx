@@ -25,9 +25,9 @@ export default async function TodayPage() {
             <p className="muted" style={{ marginBottom: 16 }}>Grab a thought now, triage it from Inbox.</p>
             <form className="form" action={quickCapture}>
               <div className="field">
-                <label htmlFor="capture-project">Project</label>
-                <select id="capture-project" name="project_id" required>
-                  <option value="">Choose project…</option>
+                <label htmlFor="capture-project">Project (optional)</label>
+                <select id="capture-project" name="project_id">
+                  <option value="">Unsorted — triage from Inbox</option>
                   {projects.map((p: any) => (
                     <option key={p.id} value={p.id}>
                       {p.clients?.name ? `${p.clients.name} / ` : ""}{p.name}

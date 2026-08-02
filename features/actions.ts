@@ -258,10 +258,11 @@ export async function createEntry(formData: FormData) {
   revalidatePath("/today");
 }
 
-// Quick capture from Today (always capture type → inbox)
+// Quick capture from Today or the command palette (always capture type → inbox).
+// Project is optional once 0004_optional_entry_project.sql is applied.
 export async function quickCapture(formData: FormData) {
   const { user } = await requireActiveUser();
-  const projectId = id(formData.get("project_id"));
+  const projectId = optional(formData.get("project_id"));
   const title = z.string().min(1).parse(text(formData.get("title")));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("entries").insert({
