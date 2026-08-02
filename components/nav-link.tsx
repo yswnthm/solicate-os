@@ -13,7 +13,15 @@ const NAV_CONFIG: Record<string, { icon: string; shortcut?: string }> = {
   "/settings": { icon: "⚙" },
 };
 
-export function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+export function NavLink({
+  href,
+  children,
+  count,
+}: {
+  href: string;
+  children: React.ReactNode;
+  count?: number;
+}) {
   const pathname = usePathname();
   const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
   const config = NAV_CONFIG[href] ?? { icon: "·" };
@@ -27,6 +35,11 @@ export function NavLink({ href, children }: { href: string; children: React.Reac
       <span className="nav-icon">{config.icon}</span>
       <span className="nav-label">{children}</span>
       {config.shortcut && <span className="nav-shortcut">{config.shortcut}</span>}
+      {count !== undefined && count > 0 && (
+        <span className="nav-count" aria-label={`${count} items to triage`}>
+          {count}
+        </span>
+      )}
     </Link>
   );
 }

@@ -91,6 +91,25 @@ const getPeopleCached = unstable_cache(
   { revalidate: 60, tags: ["people"] },
 );
 
+// Sidebar badge: short-TTL cache, tag-invalidated by inbox mutations.
+export async function getInboxCount() {
+  return getInboxCountCached(await getAccessToken());
+}
+
+const getInboxCountCached = unstable_cache(
+  async (accessToken: string | null) => {
+    const supabase = createSupabaseServerClientWithToken(accessToken);
+    const [messages, entries] = await Promise.all([
+      supabase.from("messages").select("id", { count: "exact", head: true }).eq("triage_state", "inbox"),
+      supabase.from("entries").select("id", { count: "exact", head: true }).eq("triage_state", "inbox"),
+    ]);
+    throwOnError(messages.error ?? entries.error);
+    return (messages.count ?? 0) + (entries.count ?? 0);
+  },
+  ["get-inbox-count"],
+  { revalidate: 30, tags: ["inbox"] },
+);
+
 export async function getTodayData(userId: string) {
   const supabase = await createSupabaseServerClient();
   const now = new Date().toISOString();

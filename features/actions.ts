@@ -254,6 +254,7 @@ export async function createEntry(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath(projectPath(projectId));
   revalidatePath("/inbox");
+  revalidateTag("inbox");
   revalidatePath("/today");
 }
 
@@ -276,6 +277,7 @@ export async function quickCapture(formData: FormData) {
   });
   if (error) throw new Error(error.message);
   revalidatePath("/inbox");
+  revalidateTag("inbox");
   revalidatePath("/today");
 }
 
@@ -366,6 +368,7 @@ export async function createMessage(formData: FormData) {
   if (error) throw new Error(error.message);
   if (projectId) revalidatePath(projectPath(projectId));
   revalidatePath("/inbox");
+  revalidateTag("inbox");
   revalidatePath("/today");
 }
 
@@ -377,6 +380,7 @@ export async function fileInboxMessage(formData: FormData) {
   const { error } = await supabase.from("messages").update({ triage_state: "filed" }).eq("id", id(formData.get("message_id")));
   if (error) throw new Error(error.message);
   revalidatePath("/inbox");
+  revalidateTag("inbox");
   revalidatePath("/today");
 }
 
@@ -386,6 +390,7 @@ export async function dismissInboxMessage(formData: FormData) {
   const { error } = await supabase.from("messages").update({ triage_state: "dismissed" }).eq("id", id(formData.get("message_id")));
   if (error) throw new Error(error.message);
   revalidatePath("/inbox");
+  revalidateTag("inbox");
   revalidatePath("/today");
 }
 
@@ -395,6 +400,7 @@ export async function fileInboxEntry(formData: FormData) {
   const { error } = await supabase.from("entries").update({ triage_state: "filed" }).eq("id", id(formData.get("entry_id")));
   if (error) throw new Error(error.message);
   revalidatePath("/inbox");
+  revalidateTag("inbox");
   revalidatePath("/today");
 }
 
@@ -404,5 +410,6 @@ export async function dismissInboxEntry(formData: FormData) {
   const { error } = await supabase.from("entries").update({ triage_state: "dismissed" }).eq("id", id(formData.get("entry_id")));
   if (error) throw new Error(error.message);
   revalidatePath("/inbox");
+  revalidateTag("inbox");
   revalidatePath("/today");
 }
