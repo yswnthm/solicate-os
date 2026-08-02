@@ -51,35 +51,7 @@ export default async function TodayPage() {
         </div>
       </div>
 
-      {/* Primary Navigation Hub (Bento Grid) */}
-      <div className="bento-grid">
-        <Link href="/projects" className="card card-primary col-span-3">
-          <div className="card-icon">📂</div>
-          <h3 className="card-title">Projects</h3>
-          <p className="card-desc">Manage active client engagements.</p>
-          <div className="metric">{projects.length}</div>
-        </Link>
-        
-        <Link href="/inbox" className="card card-secondary col-span-3">
-          <div className="card-icon">📥</div>
-          <h3 className="card-title">Inbox</h3>
-          <p className="card-desc">Triage new items & requests.</p>
-          <div className="metric" style={{ color: inboxCount > 0 ? "var(--danger)" : "inherit" }}>{inboxCount}</div>
-        </Link>
-        
-        <Link href="/clients" className="card card-tertiary col-span-3">
-          <div className="card-icon">🤝</div>
-          <h3 className="card-title">Clients</h3>
-          <p className="card-desc">View client directory.</p>
-        </Link>
-
-        <Link href="/people" className="card card-quaternary col-span-3">
-          <div className="card-icon">👥</div>
-          <h3 className="card-title">People</h3>
-          <p className="card-desc">Agency directory & roles.</p>
-        </Link>
-      </div>
-
+      {/* Main dashboard */}
       <div className="bento-grid">
         {/* Due & Overdue Items (Spans 8 columns) */}
         <div className="col-span-8" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
