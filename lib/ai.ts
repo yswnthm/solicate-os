@@ -157,3 +157,36 @@ export async function draftWeeklySummary(input: {
   const result = await chatJSON(WEEKLY_SYSTEM, input, weeklySummarySchema, 1024);
   return result.summary;
 }
+
+const MORNING_SYSTEM = `You are the chief-of-staff for a solo agency operator. Draft a short morning brief so they can plan the day.
+
+Given the current dashboard data, write markdown with these sections:
+## Attention first
+## Today & this week
+## Open risks
+## Inbox
+## Project pulse
+
+Rules:
+- 120-180 words total. First person ("I"). No fluff, no "great news".
+- List real task/issue/project titles where useful. Show due dates.
+- If a section has nothing, write "None." under its heading.
+- End with a single line: "Recommended first action:" followed by one concrete task.
+- Do not invent facts not present in the data.
+
+Respond with JSON ONLY shaped like: { "brief": "<the markdown>" }`;
+
+const morningBriefSchema = z.object({ brief: z.string().trim().min(10) });
+
+export async function draftMorningBrief(input: {
+  dayLabel: string;
+  overdue: string[];
+  upcoming: string[];
+  issues: string[];
+  inboxCount: number;
+  inboxTop: string[];
+  projectPulse: string[];
+}): Promise<string> {
+  const result = await chatJSON(MORNING_SYSTEM, input, morningBriefSchema, 1024);
+  return result.brief;
+}

@@ -7,6 +7,7 @@ import { StatusPill } from "@/components/status-pill";
 import { requireActiveUser } from "@/lib/auth";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { ModalTrigger } from "@/components/modal-trigger";
+import { MorningBriefButton } from "@/components/morning-brief";
 
 export default async function TodayPage() {
   const { user, profile } = await requireActiveUser();
@@ -21,7 +22,8 @@ export default async function TodayPage() {
           <p>{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} · Your agency command center.</p>
         </div>
         <div className="page-header-actions">
-          <ModalTrigger buttonLabel="+ Quick capture" title="Quick capture" buttonClass="button">
+          <MorningBriefButton />
+          <ModalTrigger buttonLabel="+ Quick capture" title="Quick capture" buttonClass="button secondary">
             <p className="muted" style={{ marginBottom: 16 }}>Grab a thought now, triage it from Inbox.</p>
             <form className="form" action={quickCapture}>
               <div className="field">

@@ -8,12 +8,18 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   draftBatchRecords,
   draftInboxRecord,
+  draftMorningBrief,
   draftWeeklySummary,
   triageDraftSchema,
   type BatchDraft,
   type TriageDraft,
 } from "@/lib/ai";
-import { getActiveProjectsForSelect, getInboxData, getProjectWorkspace } from "@/features/queries";
+import {
+  getActiveProjectsForSelect,
+  getInboxData,
+  getProjectWorkspace,
+  getTodayData,
+} from "@/features/queries";
 
 const kind = (value: unknown) => z.enum(["entry", "message"]).parse(value);
 const id = (value: unknown) => z.string().uuid().parse(value);
@@ -206,5 +212,54 @@ export async function approveWeeklySummary(projectId: string, summary: string) {
   });
   throwOnError(error);
   revalidatePath(`/projects/${project}`);
+  revalidatePath("/today");
+}
+
+// Morning brief: a read-only AI plan for the day, drafted from dashboard data.
+export async function draftMorningBriefAction(): Promise<string> {
+  const { user } = await requireActiveUser();
+  const data = await getTodayData(user.id);
+  const inbox = await getInboxData();
+
+  const dayLabel = new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
+  const input = {
+    dayLabel,
+    overdue: data.overdue.slice(0, 8).map((t: any) => `- ${t.title} (due ${new Date(t.due_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})`),
+    upcoming: data.upcoming.slice(0, 8).map((t: any) => `- ${t.title} (due ${new Date(t.due_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})`),
+    issues: data.issues.slice(0, 6).map((i: any) => `- ${i.title} [${i.severity}]`),
+    inboxCount: inbox.messages.length + inbox.entries.length,
+    inboxTop: [...inbox.entries, ...inbox.messages]
+      .slice(0, 5)
+      .map((x: any) => `- ${x.title ?? x.conversations?.title ?? "message"}`),
+    projectPulse: data.changedProjects.slice(0, 5).map((p: any) => `- ${p.name} (${p.status})`),
+  };
+
+  return draftMorningBrief(input);
+}
+
+// Optional: file the reviewed brief as a projectless note record.
+export async function saveMorningBrief(brief: string) {
+  const { user } = await requireActiveUser();
+  const body = brief.trim();
+  if (!body) throw new Error("Brief cannot be empty.");
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("entries").insert({
+    project_id: null,
+    type: "note",
+    title: `Morning brief · ${new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}`,
+    body_md: body,
+    occurred_at: new Date().toISOString(),
+    triage_state: "filed",
+    decision_outcome: null,
+    decision_state: null,
+    created_by_id: user.id,
+  });
+  throwOnError(error);
   revalidatePath("/today");
 }
