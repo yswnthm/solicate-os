@@ -298,6 +298,36 @@ export async function getInboxData() {
   return { messages: messages.data ?? [], entries: entries.data ?? [] };
 }
 
+export async function getPersonDetail(personId: string) {
+  const supabase = await createSupabaseServerClient();
+  const [person, participations, clientLinks, conversations] = await Promise.all([
+    supabase.from("people").select("*").eq("id", personId).maybeSingle(),
+    supabase
+      .from("project_participants")
+      .select("role, role_label, financial_arrangement, financial_value, currency_code, projects(id, name, status, code, clients(name))")
+      .eq("person_id", personId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("client_people")
+      .select("role_label, is_primary, clients(id, name, status)")
+      .eq("person_id", personId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("conversation_participants")
+      .select("conversations(id, title, channel, project_id, last_message_at)")
+      .eq("person_id", personId)
+      .is("left_at", null)
+      .order("conversations(last_message_at)", { ascending: false }),
+  ]);
+  [person, participations, clientLinks, conversations].forEach((r) => throwOnError(r.error));
+  return {
+    person: person.data,
+    participations: participations.data ?? [],
+    clientLinks: clientLinks.data ?? [],
+    conversations: conversations.data ?? [],
+  };
+}
+
 export async function searchRecords(query: string) {
   if (!query.trim()) return { entries: [], messages: [], projects: [], people: [] };
   const supabase = await createSupabaseServerClient();

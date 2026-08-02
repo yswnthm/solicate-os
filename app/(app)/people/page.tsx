@@ -65,7 +65,7 @@ export default async function PeoplePage() {
             </div>
             <div className="list">
               {partners.map((person: any) => (
-                <div className="row" key={person.id}>
+                <Link className="row" href={`/people/${person.id}`} key={person.id}>
                   <div className="row-main">
                     <div className="row-title">{person.name}</div>
                     <div className="row-meta">
@@ -75,7 +75,7 @@ export default async function PeoplePage() {
                     </div>
                   </div>
                   <StatusPill value="partner" />
-                </div>
+                </Link>
               ))}
             </div>
           </section>
@@ -90,7 +90,7 @@ export default async function PeoplePage() {
           {contacts.length ? (
             <div className="list">
               {contacts.map((person: any) => (
-                <div className="row" key={person.id}>
+                <Link className="row" href={`/people/${person.id}`} key={person.id}>
                   <div className="row-main">
                     <div className="row-title">{person.name}</div>
                     <div className="row-meta">
@@ -99,7 +99,7 @@ export default async function PeoplePage() {
                         "No contact details"}
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
