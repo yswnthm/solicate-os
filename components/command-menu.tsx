@@ -1,13 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Command } from "cmdk";
 
-import { createClient, createPerson, createProject, quickCapture } from "@/features/actions";
+import {
+  createClient,
+  createConversation,
+  createEntry,
+  createIssue,
+  createPerson,
+  createProject,
+  createTask,
+  quickCapture,
+} from "@/features/actions";
 import { quickSearch } from "@/features/search";
 
-type PaletteMode = "command" | "capture" | "project" | "client" | "person";
+type PaletteMode =
+  | "command"
+  | "capture"
+  | "project"
+  | "client"
+  | "person"
+  | "task"
+  | "issue"
+  | "record"
+  | "conversation";
 
 type Project = {
   id: string;
@@ -27,6 +45,10 @@ const MODE_TITLES: Record<Exclude<PaletteMode, "command">, string> = {
   project: "New project",
   client: "New client",
   person: "New person",
+  task: "Add task",
+  issue: "Log issue",
+  record: "Log project record",
+  conversation: "New conversation",
 };
 
 export function CommandMenu({ projects, clients }: { projects: Project[]; clients: Client[] }) {
@@ -42,6 +64,22 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
   const [searching, setSearching] = useState(false);
   const searchIdRef = useRef(0);
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Contextual actions: on a project page, offer create actions pre-scoped to it.
+  const context = (() => {
+    const projectMatch = pathname.match(/^\/projects\/([0-9a-f-]{36})/);
+    if (projectMatch) {
+      const project = projects.find((p) => p.id === projectMatch[1]);
+      return { projectId: projectMatch[1], projectName: project?.name ?? "this project" };
+    }
+    const clientMatch = pathname.match(/^\/clients\/([0-9a-f-]{36})/);
+    if (clientMatch) {
+      const client = clients.find((c) => c.id === clientMatch[1]);
+      return { clientId: clientMatch[1], clientName: client?.name ?? "this client" };
+    }
+    return null;
+  })();
 
   const openInMode = useCallback((next: PaletteMode) => {
     setMode(next);
@@ -142,6 +180,47 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
               <Command.Empty className="cmdk-empty">
                 {showResults ? `No matches for “${search}”.` : "No results found."}
               </Command.Empty>
+
+              {context?.projectId && (
+                <Command.Group heading={`Actions for ${context.projectName}`} className="cmdk-group-heading">
+                  <Command.Item
+                    className="cmdk-item"
+                    onSelect={() => openInMode("task")}
+                  >
+                    <span className="cmdk-icon">☑</span>
+                    <span className="cmdk-item-main">
+                      <span>Add task to {context.projectName}</span>
+                      <span className="cmdk-sub">New task, pre-scoped to this project</span>
+                    </span>
+                  </Command.Item>
+                  <Command.Item className="cmdk-item" onSelect={() => openInMode("issue")}>
+                    <span className="cmdk-icon">⚠</span>
+                    <span className="cmdk-item-main">
+                      <span>Log issue on {context.projectName}</span>
+                      <span className="cmdk-sub">Problem or risk, pre-scoped to this project</span>
+                    </span>
+                  </Command.Item>
+                  <Command.Item className="cmdk-item" onSelect={() => openInMode("record")}>
+                    <span className="cmdk-icon">§</span>
+                    <span className="cmdk-item-main">
+                      <span>Log record on {context.projectName}</span>
+                      <span className="cmdk-sub">Note, decision, meeting, milestone…</span>
+                    </span>
+                  </Command.Item>
+                </Command.Group>
+              )}
+
+              {context?.clientId && (
+                <Command.Group heading={`Actions for ${context.clientName}`} className="cmdk-group-heading">
+                  <Command.Item className="cmdk-item" onSelect={() => openInMode("conversation")}>
+                    <span className="cmdk-icon">◍</span>
+                    <span className="cmdk-item-main">
+                      <span>New conversation for {context.clientName}</span>
+                      <span className="cmdk-sub">WhatsApp, email, or manual thread</span>
+                    </span>
+                  </Command.Item>
+                </Command.Group>
+              )}
 
               {showResults && (
                 <Command.Group heading="Search results" className="cmdk-group-heading">
@@ -276,7 +355,14 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
             </Command.List>
           </>
         ) : (
-          <CreateForm mode={mode} clients={clients} projects={projects} onBack={reset} onDone={closeAfterSubmit} />
+          <CreateForm
+            mode={mode}
+            clients={clients}
+            projects={projects}
+            context={context}
+            onBack={reset}
+            onDone={closeAfterSubmit}
+          />
         )}
       </Command.Dialog>
     </>
@@ -287,12 +373,14 @@ function CreateForm({
   mode,
   clients,
   projects,
+  context,
   onBack,
   onDone,
 }: {
   mode: Exclude<PaletteMode, "command">;
   clients: Client[];
   projects: Project[];
+  context: { projectId?: string; projectName?: string; clientId?: string; clientName?: string } | null;
   onBack: () => void;
   onDone: () => void;
 }) {
@@ -396,6 +484,127 @@ function CreateForm({
           </div>
           <button className="button" type="submit" style={{ marginTop: 8 }}>
             Add person
+          </button>
+        </form>
+      )}
+
+      {mode === "task" && context?.projectId && (
+        <form className="form" action={createTask} onSubmit={onDone}>
+          <input type="hidden" name="project_id" value={context.projectId} />
+          <p className="muted" style={{ margin: 0 }}>
+            Task will be filed under {context.projectName}.
+          </p>
+          <div className="field">
+            <label htmlFor="palette-task-title">Task title</label>
+            <input id="palette-task-title" name="title" placeholder="What needs to happen" required autoFocus />
+          </div>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="palette-task-priority">Priority</label>
+              <select id="palette-task-priority" name="priority">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="palette-task-due">Due date</label>
+              <input id="palette-task-due" name="due_at" type="date" />
+            </div>
+          </div>
+          <button className="button" type="submit" style={{ marginTop: 8 }}>
+            Add task
+          </button>
+        </form>
+      )}
+
+      {mode === "issue" && context?.projectId && (
+        <form className="form" action={createIssue} onSubmit={onDone}>
+          <input type="hidden" name="project_id" value={context.projectId} />
+          <p className="muted" style={{ margin: 0 }}>
+            Issue will be logged on {context.projectName}.
+          </p>
+          <div className="field">
+            <label htmlFor="palette-issue-title">Issue</label>
+            <input id="palette-issue-title" name="title" placeholder="What is the problem or risk" required autoFocus />
+          </div>
+          <div className="field">
+            <label htmlFor="palette-issue-severity">Severity</label>
+            <select id="palette-issue-severity" name="severity">
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <button className="button" type="submit" style={{ marginTop: 8 }}>
+            Log issue
+          </button>
+        </form>
+      )}
+
+      {mode === "record" && context?.projectId && (
+        <form className="form" action={createEntry} onSubmit={onDone}>
+          <input type="hidden" name="project_id" value={context.projectId} />
+          <p className="muted" style={{ margin: 0 }}>
+            Record will be filed under {context.projectName}.
+          </p>
+          <div className="field">
+            <label htmlFor="palette-record-title">Title</label>
+            <input id="palette-record-title" name="title" placeholder="What happened" required autoFocus />
+          </div>
+          <div className="field">
+            <label htmlFor="palette-record-type">Type</label>
+            <select id="palette-record-type" name="type">
+              <option value="note">Note</option>
+              <option value="meeting">Meeting</option>
+              <option value="decision">Decision</option>
+              <option value="document">Document</option>
+              <option value="update">Update</option>
+              <option value="milestone">Milestone</option>
+              <option value="capture">Capture</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="palette-record-body">Details</label>
+            <textarea id="palette-record-body" name="body_md" placeholder="Context, links, or summary" />
+          </div>
+          <button className="button" type="submit" style={{ marginTop: 8 }}>
+            File record
+          </button>
+        </form>
+      )}
+
+      {mode === "conversation" && context?.clientId && (
+        <form className="form" action={createConversation} onSubmit={onDone}>
+          <input type="hidden" name="client_id" value={context.clientId} />
+          <p className="muted" style={{ margin: 0 }}>
+            Conversation will attach to {context.clientName}.
+          </p>
+          <div className="field">
+            <label htmlFor="palette-conversation-title">Title</label>
+            <input id="palette-conversation-title" name="title" placeholder="Client + Sakshi WhatsApp" required autoFocus />
+          </div>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="palette-conversation-kind">Type</label>
+              <select id="palette-conversation-kind" name="kind">
+                <option value="group">Group</option>
+                <option value="direct">Direct</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="palette-conversation-channel">Channel</label>
+              <select id="palette-conversation-channel" name="channel">
+                <option value="whatsapp">WhatsApp</option>
+                <option value="email">Email</option>
+                <option value="manual">Manual</option>
+              </select>
+            </div>
+          </div>
+          <button className="button" type="submit" style={{ marginTop: 8 }}>
+            Create conversation
           </button>
         </form>
       )}
