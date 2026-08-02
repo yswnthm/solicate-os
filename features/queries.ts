@@ -1,16 +1,25 @@
 import { unstable_cache } from "next/cache";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServerClientWithToken,
+  getAccessToken,
+} from "@/lib/supabase/server";
 
 function throwOnError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
 // Near-static lists: cached for 60s, invalidated by tag from mutating actions.
-// These return the same rows for every active internal user, so caching is safe.
-export const getActiveClients = unstable_cache(
-  async () => {
-    const supabase = await createSupabaseServerClient();
+// cookies() must stay OUTSIDE the cache scope — the token is read per request
+// and passed in, so RLS still scopes rows to the requesting user.
+export async function getActiveClients() {
+  return getActiveClientsCached(await getAccessToken());
+}
+
+const getActiveClientsCached = unstable_cache(
+  async (accessToken: string | null) => {
+    const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
       .from("clients")
       .select("id, name, kind, status, summary")
@@ -23,9 +32,13 @@ export const getActiveClients = unstable_cache(
   { revalidate: 60, tags: ["clients"] },
 );
 
-export const getProjects = unstable_cache(
-  async () => {
-    const supabase = await createSupabaseServerClient();
+export async function getProjects() {
+  return getProjectsCached(await getAccessToken());
+}
+
+const getProjectsCached = unstable_cache(
+  async (accessToken: string | null) => {
+    const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
       .from("projects")
       .select("id, name, code, status, target_date, updated_at, clients(id, name)")
@@ -39,9 +52,13 @@ export const getProjects = unstable_cache(
 );
 
 /** Flat project list for selects — groups by client name */
-export const getActiveProjectsForSelect = unstable_cache(
-  async () => {
-    const supabase = await createSupabaseServerClient();
+export async function getActiveProjectsForSelect() {
+  return getActiveProjectsForSelectCached(await getAccessToken());
+}
+
+const getActiveProjectsForSelectCached = unstable_cache(
+  async (accessToken: string | null) => {
+    const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
       .from("projects")
       .select("id, name, clients(id, name)")
@@ -54,9 +71,13 @@ export const getActiveProjectsForSelect = unstable_cache(
   { revalidate: 60, tags: ["projects"] },
 );
 
-export const getPeople = unstable_cache(
-  async () => {
-    const supabase = await createSupabaseServerClient();
+export async function getPeople() {
+  return getPeopleCached(await getAccessToken());
+}
+
+const getPeopleCached = unstable_cache(
+  async (accessToken: string | null) => {
+    const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
       .from("people")
       .select("id, name, email, phone, is_partner, summary")
