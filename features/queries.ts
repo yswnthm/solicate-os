@@ -1,54 +1,74 @@
+import { unstable_cache } from "next/cache";
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function throwOnError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
-export async function getActiveClients() {
-  const supabase = await createSupabaseServerClient();
-  const response = await supabase
-    .from("clients")
-    .select("id, name, kind, status, summary")
-    .neq("status", "archived")
-    .order("name");
-  throwOnError(response.error);
-  return response.data ?? [];
-}
+// Near-static lists: cached for 60s, invalidated by tag from mutating actions.
+// These return the same rows for every active internal user, so caching is safe.
+export const getActiveClients = unstable_cache(
+  async () => {
+    const supabase = await createSupabaseServerClient();
+    const response = await supabase
+      .from("clients")
+      .select("id, name, kind, status, summary")
+      .neq("status", "archived")
+      .order("name");
+    throwOnError(response.error);
+    return response.data ?? [];
+  },
+  ["get-active-clients"],
+  { revalidate: 60, tags: ["clients"] },
+);
 
-export async function getProjects() {
-  const supabase = await createSupabaseServerClient();
-  const response = await supabase
-    .from("projects")
-    .select("id, name, code, status, target_date, updated_at, clients(id, name)")
-    .neq("status", "archived")
-    .order("updated_at", { ascending: false });
-  throwOnError(response.error);
-  return response.data ?? [];
-}
+export const getProjects = unstable_cache(
+  async () => {
+    const supabase = await createSupabaseServerClient();
+    const response = await supabase
+      .from("projects")
+      .select("id, name, code, status, target_date, updated_at, clients(id, name)")
+      .neq("status", "archived")
+      .order("updated_at", { ascending: false });
+    throwOnError(response.error);
+    return response.data ?? [];
+  },
+  ["get-projects"],
+  { revalidate: 60, tags: ["projects"] },
+);
 
 /** Flat project list for selects — groups by client name */
-export async function getActiveProjectsForSelect() {
-  const supabase = await createSupabaseServerClient();
-  const response = await supabase
-    .from("projects")
-    .select("id, name, clients(id, name)")
-    .in("status", ["active", "paused"])
-    .order("name");
-  throwOnError(response.error);
-  return response.data ?? [];
-}
+export const getActiveProjectsForSelect = unstable_cache(
+  async () => {
+    const supabase = await createSupabaseServerClient();
+    const response = await supabase
+      .from("projects")
+      .select("id, name, clients(id, name)")
+      .in("status", ["active", "paused"])
+      .order("name");
+    throwOnError(response.error);
+    return response.data ?? [];
+  },
+  ["get-active-projects-for-select"],
+  { revalidate: 60, tags: ["projects"] },
+);
 
-export async function getPeople() {
-  const supabase = await createSupabaseServerClient();
-  const response = await supabase
-    .from("people")
-    .select("id, name, email, phone, is_partner, summary")
-    .is("archived_at", null)
-    .order("is_partner", { ascending: false })
-    .order("name");
-  throwOnError(response.error);
-  return response.data ?? [];
-}
+export const getPeople = unstable_cache(
+  async () => {
+    const supabase = await createSupabaseServerClient();
+    const response = await supabase
+      .from("people")
+      .select("id, name, email, phone, is_partner, summary")
+      .is("archived_at", null)
+      .order("is_partner", { ascending: false })
+      .order("name");
+    throwOnError(response.error);
+    return response.data ?? [];
+  },
+  ["get-people"],
+  { revalidate: 60, tags: ["people"] },
+);
 
 export async function getTodayData(userId: string) {
   const supabase = await createSupabaseServerClient();

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -68,6 +68,7 @@ export async function createClient(formData: FormData) {
     .single();
   if (error) throw new Error(error.message);
   revalidatePath("/clients");
+  revalidateTag("clients");
   redirect(`/clients/${data.id}`);
 }
 
@@ -86,6 +87,7 @@ export async function createPerson(formData: FormData) {
   });
   if (error) throw new Error(error.message);
   revalidatePath("/people");
+  revalidateTag("people");
   redirect("/people");
 }
 
@@ -124,6 +126,7 @@ export async function createProject(formData: FormData) {
     .single();
   if (error) throw new Error(error.message);
   revalidatePath("/projects");
+  revalidateTag("projects");
   redirect(projectPath(data.id));
 }
 
@@ -142,6 +145,7 @@ export async function updateProjectStatus(formData: FormData) {
   revalidatePath(projectPath(projectId));
   revalidatePath("/projects");
   revalidatePath("/today");
+  revalidateTag("projects");
   if (status === "archived") redirect("/projects");
 }
 
