@@ -9,6 +9,7 @@ import {
   draftBatchRecords,
   draftInboxRecord,
   draftMorningBrief,
+  draftWeekReview,
   draftWeeklySummary,
   triageDraftSchema,
   type BatchDraft,
@@ -18,6 +19,7 @@ import {
   getActiveProjectsForSelect,
   getInboxData,
   getProjectWorkspace,
+  getProjects,
   getTodayData,
 } from "@/features/queries";
 
@@ -215,6 +217,63 @@ export async function approveWeeklySummary(projectId: string, summary: string) {
   revalidatePath("/today");
 }
 
+// Week-in-review: one agency-level brief drafted from every project's last 7 days.
+export async function draftWeekReviewAction(): Promise<string> {
+  await requireActiveUser();
+  const projects = await getProjects();
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const perProject = await Promise.all(
+    projects.map(async (p: any) => {
+      const w = await getProjectWorkspace(p.id);
+      return {
+        name: w.project?.name ?? p.name,
+        client: (w.project as any)?.clients?.name ?? null,
+        status: w.project?.status ?? p.status,
+        doneTasks: w.tasks
+          .filter((t: any) => t.status === "done")
+          .slice(0, 10)
+          .map((t: any) => `- ${t.title}`),
+        openIssues: w.issues
+          .filter((i: any) => i.status !== "resolved")
+          .slice(0, 5)
+          .map((i: any) => `- ${i.title}`),
+        entries: w.entries
+          .filter((e: any) => new Date(e.occurred_at ?? 0) >= new Date(weekAgo))
+          .slice(0, 8)
+          .map((e: any) => `- ${e.title}`),
+        messages: w.recentMessages
+          .filter((m: any) => new Date(m.sent_at ?? 0) >= new Date(weekAgo))
+          .slice(0, 6)
+          .map((m: any) => `- ${m.body_md.slice(0, 80)}`),
+      };
+    }),
+  );
+
+  return draftWeekReview({ projects: perProject });
+}
+
+// Files the approved week-in-review as a projectless note record.
+export async function saveWeekReview(review: string) {
+  const { user } = await requireActiveUser();
+  const body = review.trim();
+  if (!body) throw new Error("Review cannot be empty.");
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("entries").insert({
+    project_id: null,
+    type: "note",
+    title: `Week in review · week of ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`,
+    body_md: body,
+    occurred_at: new Date().toISOString(),
+    triage_state: "filed",
+    decision_outcome: null,
+    decision_state: null,
+    created_by_id: user.id,
+  });
+  throwOnError(error);
+  revalidatePath("/today");
+}
 // Morning brief: a read-only AI plan for the day, drafted from dashboard data.
 export async function draftMorningBriefAction(): Promise<string> {
   const { user } = await requireActiveUser();

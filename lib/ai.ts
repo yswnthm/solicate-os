@@ -190,3 +190,38 @@ export async function draftMorningBrief(input: {
   const result = await chatJSON(MORNING_SYSTEM, input, morningBriefSchema, 1024);
   return result.brief;
 }
+
+const WEEK_SYSTEM = `You are the chief-of-staff for a solo agency owner. Draft an agency-wide week-in-review in first person ("I").
+
+Given per-project data for the last 7 days, write markdown with these sections:
+## Headline
+## What moved (per project)
+## Decisions & outcomes
+## Blockers / risks
+## Momentum
+
+Rules:
+- 150-220 words total. Concrete and specific; reference real project/task/issue titles.
+- Lead with the single most important thing that happened.
+- Group "What moved" by project name as sub-bullets.
+- If a section has nothing, write "None." under its heading.
+- Do not invent facts not present in the data.
+
+Respond with JSON ONLY shaped like: { "review": "<the markdown>" }`;
+
+const weekReviewSchema = z.object({ review: z.string().trim().min(10) });
+
+export async function draftWeekReview(input: {
+  projects: {
+    name: string;
+    client: string | null;
+    status: string;
+    doneTasks: string[];
+    openIssues: string[];
+    entries: string[];
+    messages: string[];
+  }[];
+}): Promise<string> {
+  const result = await chatJSON(WEEK_SYSTEM, input, weekReviewSchema, 2048);
+  return result.review;
+}

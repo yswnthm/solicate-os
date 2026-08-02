@@ -405,6 +405,22 @@ export async function fileInboxEntry(formData: FormData) {
   revalidatePath("/today");
 }
 
+// File a capture AND route it to a destination project in one step.
+export async function fileInboxEntryToProject(formData: FormData) {
+  await requireActiveUser();
+  const supabase = await createSupabaseServerClient();
+  const projectId = optional(formData.get("project_id"));
+  const { error } = await supabase
+    .from("entries")
+    .update({ triage_state: "filed", project_id: projectId })
+    .eq("id", id(formData.get("entry_id")));
+  if (error) throw new Error(error.message);
+  revalidatePath("/inbox");
+  revalidateTag("inbox");
+  revalidatePath("/today");
+  if (projectId) revalidatePath(`/projects/${projectId}`);
+}
+
 export async function dismissInboxEntry(formData: FormData) {
   await requireActiveUser();
   const supabase = await createSupabaseServerClient();

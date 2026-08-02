@@ -8,6 +8,7 @@ import { requireActiveUser } from "@/lib/auth";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { ModalTrigger } from "@/components/modal-trigger";
 import { MorningBriefButton } from "@/components/morning-brief";
+import { WeekReviewButton } from "@/components/week-review";
 
 export default async function TodayPage() {
   const { user, profile } = await requireActiveUser();
@@ -23,6 +24,7 @@ export default async function TodayPage() {
         </div>
         <div className="page-header-actions">
           <MorningBriefButton />
+          <WeekReviewButton />
           <ModalTrigger buttonLabel="+ Quick capture" title="Quick capture" buttonClass="button secondary">
             <p className="muted" style={{ marginBottom: 16 }}>Grab a thought now, triage it from Inbox.</p>
             <form className="form" action={quickCapture}>

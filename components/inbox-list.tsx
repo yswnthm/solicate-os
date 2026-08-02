@@ -3,7 +3,7 @@
 import { useOptimistic, useTransition, useState } from "react";
 import Link from "next/link";
 
-import { dismissInboxEntry, dismissInboxMessage, fileInboxEntry, fileInboxMessage } from "@/features/actions";
+import { dismissInboxEntry, dismissInboxMessage, fileInboxEntryToProject, fileInboxMessage } from "@/features/actions";
 import { approveInboxDraft, draftInboxTriage } from "@/features/ai-actions";
 import { StatusPill } from "@/components/status-pill";
 import { Modal } from "@/components/modal";
@@ -43,6 +43,7 @@ export function InboxList({
   const [review, setReview] = useState<ReviewState>(null);
   const [draft, setDraft] = useState<TriageDraft | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
+  const [fileTo, setFileTo] = useState<any | null>(null);
 
   const run = (removed: Removed, formData: FormData, action: (fd: FormData) => Promise<void>) => {
     addOptimistic(removed);
@@ -96,6 +97,16 @@ export function InboxList({
     );
   }
 
+  const runFileTo = (formData: FormData) => {
+    const entryId = String(formData.get("entry_id") ?? "");
+    if (!fileTo) return;
+    addOptimistic({ kind: "entry", id: entryId });
+    setFileTo(null);
+    startTransition(async () => {
+      await fileInboxEntryToProject(formData);
+    });
+  };
+
   const entryRowActions = (entry: any) => (
     <div className="row-actions-always">
       {entry.project_id && (
@@ -112,12 +123,14 @@ export function InboxList({
       >
         {drafting?.id === entry.id && drafting?.kind === "entry" ? "Drafting…" : "✨ Draft"}
       </button>
-      <form className="inline-form" action={(fd) => run({ kind: "entry", id: entry.id }, fd, fileInboxEntry)}>
-        <input type="hidden" name="entry_id" value={entry.id} />
-        <button className="button small" type="submit" title="Mark as filed">
-          File
-        </button>
-      </form>
+      <button
+        className="button small"
+        type="button"
+        onClick={() => setFileTo(entry)}
+        title="File and route to a project"
+      >
+        File to…
+      </button>
       <form className="inline-form" action={(fd) => run({ kind: "entry", id: entry.id }, fd, dismissInboxEntry)}>
         <input type="hidden" name="entry_id" value={entry.id} />
         <button className="button ghost small" type="submit" title="Dismiss">
@@ -130,8 +143,12 @@ export function InboxList({
   const messageRowActions = (message: any) => (
     <div className="row-actions-always">
       {message.conversations?.project_id && (
-        <Link className="button secondary small" href={`/projects/${message.conversations.project_id}`}>
-          Open project
+        <Link
+          className="button secondary small"
+          href={`/projects/${message.conversations.project_id}?thread=${message.conversation_id}`}
+          title="Open the conversation thread on the project"
+        >
+          Open thread
         </Link>
       )}
       <button
@@ -289,6 +306,33 @@ export function InboxList({
             </div>
           </>
         )}
+      </Modal>
+      <Modal
+        isOpen={fileTo !== null}
+        onClose={() => setFileTo(null)}
+        title={fileTo ? `File — ${fileTo.title.slice(0, 48)}` : "File capture"}
+      >
+        <p className="muted" style={{ marginBottom: 16 }}>
+          Route this capture to a project, or leave it unsorted. Either way it leaves the inbox.
+        </p>
+        <form className="form" action={runFileTo}>
+          <input type="hidden" name="entry_id" value={fileTo?.id ?? ""} />
+          <div className="field">
+            <label>Destination project</label>
+            <select name="project_id" defaultValue={fileTo?.project_id ?? ""}>
+              <option value="">Unsorted (no project)</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {clientName(p.clients) ? `${clientName(p.clients)} / ` : ""}
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button className="button" type="submit" style={{ marginTop: 8 }}>
+            File capture
+          </button>
+        </form>
       </Modal>
     </>
   );

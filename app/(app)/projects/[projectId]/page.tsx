@@ -22,10 +22,13 @@ import { ModalTrigger } from "@/components/modal-trigger";
 
 export default async function ProjectPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ thread?: string }>;
 }) {
   const { projectId } = await params;
+  const { thread } = await searchParams;
   const data = await getProjectWorkspace(projectId);
   if (!data.project) notFound();
   const project: any = data.project;
@@ -442,7 +445,7 @@ export default async function ProjectPage({
           {data.conversations.length ? (
             <div className="stack">
               {data.conversations.map((conversation: any) => (
-                <details key={conversation.id}>
+                <details key={conversation.id} open={thread === conversation.id}>
                   <summary className="row" style={{ cursor: "pointer", listStyle: "none", border: "1px solid var(--line)", background: "var(--surface)" }}>
                     <div className="row-main">
                       <div className="row-title">{conversation.title}</div>
