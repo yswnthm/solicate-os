@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Modal } from "@/components/modal";
@@ -65,6 +65,7 @@ export function EntityEditModal({
   const router = useRouter();
   const toast = useToast();
   const formRef = useRef<HTMLFormElement>(null);
+  const formId = useId();
 
   const initial = useMemo(() => normalize(record), [record]);
   const [values, setValues] = useState<Values>(initial);
@@ -166,7 +167,7 @@ export function EntityEditModal({
         <button type="button" className="button secondary" onClick={requestClose} disabled={isSaving}>
           {dismissLabel}
         </button>
-        <button type="submit" form="edit-form" className="button" disabled={isSaving || !isDirty}>
+        <button type="submit" form={formId} className="button" disabled={isSaving || !isDirty}>
           {isSaving && <span className="spinner" aria-hidden />}
           {isSaving ? savingLabel : saveLabel}
         </button>
@@ -184,7 +185,7 @@ export function EntityEditModal({
         size={fullWidth ? "lg" : "md"}
         footer={footer}
       >
-        <form ref={formRef} id="edit-form" className="form" onSubmit={handleSubmit} noValidate>
+        <form ref={formRef} id={formId} className="form" onSubmit={handleSubmit} noValidate>
           {saveError && <div className="notice danger">{saveError}</div>}
           <div className="edit-fields">
             {fields.map((field) => (
