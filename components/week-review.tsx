@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
-import { draftWeekReviewAction, saveWeekReview } from "@/features/ai-actions";
+import { draftWeekReviewAction, getWeekReviewPrompt, saveWeekReview } from "@/features/ai-actions";
 import { Modal } from "@/components/modal";
+import { PromptModal } from "@/components/prompt-viewer";
 
 export function WeekReviewButton() {
   const [open, setOpen] = useState(false);
@@ -12,6 +13,25 @@ export function WeekReviewButton() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const [prompt, setPrompt] = useState<string | null>(null);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptBusy, setPromptBusy] = useState(false);
+
+  const onGetPrompt = async () => {
+    setPromptBusy(true);
+    setError(null);
+    setPrompt(null);
+    setPromptOpen(true);
+    try {
+      setPrompt(await getWeekReviewPrompt());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to build the prompt.");
+      setPromptOpen(false);
+    } finally {
+      setPromptBusy(false);
+    }
+  };
 
   const onDraft = async () => {
     setBusy(true);
@@ -54,6 +74,16 @@ export function WeekReviewButton() {
       <button className="button secondary" type="button" onClick={onDraft} disabled={busy}>
         {busy ? "Drafting…" : "✨ Week in review"}
       </button>
+      <button className="button secondary" type="button" onClick={onGetPrompt} disabled={promptBusy}>
+        {promptBusy ? "Building…" : "Copy prompt"}
+      </button>
+
+      <PromptModal
+        open={promptOpen}
+        onClose={() => setPromptOpen(false)}
+        title="Week in review prompt"
+        prompt={prompt}
+      />
 
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Week in review">
         {error && <div className="notice" style={{ marginBottom: 16 }}>{error}</div>}

@@ -114,6 +114,15 @@ p { margin: 0; line-height: 1.5; color: var(--ink-2); }
 
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
 
+.sidebar-group-label {
+  margin: 14px 12px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
 .nav-item {
   display: flex;
   align-items: center;
@@ -397,6 +406,22 @@ a.row:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .pill.waiting_external, .pill.medium { color: var(--warning); background: var(--warning-soft); }
 .pill.done, .pill.resolved, .pill.completed, .pill.paid, .pill.accepted, .pill.closed { color: var(--success); background: var(--success-soft); }
 .pill.paused, .pill.low, .pill.normal, .pill.not_applicable { color: var(--muted); }
+
+/* ─── Chips (multi-select toggles) ───────────────────────────────────────── */
+.chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.chip:hover { border-color: var(--accent); color: var(--ink); }
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 /* ─── Custom Selects, Inputs & Buttons ───────────────────────────────────── */
 .form { display: grid; gap: 20px; }
@@ -731,6 +756,8 @@ a.row:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .button.ghost:hover { background: var(--surface-2); color: var(--ink); transform: none; box-shadow: none; }
 .button.danger { background: var(--danger); }
 .button.danger:hover { background: #dc2626; }
+.button.ghost.danger { color: var(--danger); border-color: var(--line); background: transparent; }
+.button.ghost.danger:hover { background: var(--danger-soft); color: var(--danger); }
 
 .button.small { padding: 7px 14px; font-size: 13px; border-radius: 9999px; }
 .button.secondary.small { padding: 7px 14px; font-size: 13px; }

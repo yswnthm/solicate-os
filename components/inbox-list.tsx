@@ -4,12 +4,13 @@ import { useOptimistic, useTransition, useState } from "react";
 import Link from "next/link";
 
 import { dismissInboxEntry, dismissInboxMessage, fileInboxEntryToProject, fileInboxMessage } from "@/features/actions";
-import { approveInboxDraft, draftInboxTriage } from "@/features/ai-actions";
+import { approveInboxDraft, draftInboxTriage, getInboxTriagePrompt } from "@/features/ai-actions";
 import { StatusPill } from "@/components/status-pill";
 import { Modal } from "@/components/modal";
+import { PromptModal } from "@/components/prompt-viewer";
 import { EditEntryButton, EditMessageButton } from "@/components/editing/edit-buttons";
 import { formatDateTime } from "@/lib/utils";
-import type { TriageDraft } from "@/lib/ai";
+import type { TriageDraft } from "@/lib/ai/schemas";
 
 type InboxState = { entries: any[]; messages: any[] };
 type Removed = { kind: "entry" | "message"; id: string };
@@ -45,6 +46,25 @@ export function InboxList({
   const [draft, setDraft] = useState<TriageDraft | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [fileTo, setFileTo] = useState<any | null>(null);
+
+  const [prompt, setPrompt] = useState<string | null>(null);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptBusy, setPromptBusy] = useState(false);
+
+  const onGetPrompt = async (kind: "entry" | "message", itemId: string) => {
+    setPromptBusy(true);
+    setDraftError(null);
+    setPrompt(null);
+    setPromptOpen(true);
+    try {
+      setPrompt(await getInboxTriagePrompt(kind, itemId));
+    } catch (e) {
+      setDraftError(e instanceof Error ? e.message : "Failed to build the prompt.");
+      setPromptOpen(false);
+    } finally {
+      setPromptBusy(false);
+    }
+  };
 
   const run = (removed: Removed, formData: FormData, action: (fd: FormData) => Promise<void>) => {
     addOptimistic(removed);
@@ -126,6 +146,15 @@ export function InboxList({
         {drafting?.id === entry.id && drafting?.kind === "entry" ? "Drafting…" : "✨ Draft"}
       </button>
       <button
+        className="button ghost small"
+        type="button"
+        onClick={() => onGetPrompt("entry", entry.id)}
+        disabled={promptBusy}
+        title="Copy the AI prompt for ChatGPT"
+      >
+        Prompt
+      </button>
+      <button
         className="button small"
         type="button"
         onClick={() => setFileTo(entry)}
@@ -166,6 +195,15 @@ export function InboxList({
         title="Draft a filed record with AI, then approve"
       >
         {drafting?.id === message.id && drafting?.kind === "message" ? "Drafting…" : "✨ Draft"}
+      </button>
+      <button
+        className="button ghost small"
+        type="button"
+        onClick={() => onGetPrompt("message", message.id)}
+        disabled={promptBusy}
+        title="Copy the AI prompt for ChatGPT"
+      >
+        Prompt
       </button>
       <form className="inline-form" action={(fd) => run({ kind: "message", id: message.id }, fd, fileInboxMessage)}>
         <input type="hidden" name="message_id" value={message.id} />
@@ -341,6 +379,12 @@ export function InboxList({
           </button>
         </form>
       </Modal>
+      <PromptModal
+        open={promptOpen}
+        onClose={() => setPromptOpen(false)}
+        title="Triage prompt"
+        prompt={prompt}
+      />
     </>
   );
 }

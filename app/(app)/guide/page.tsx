@@ -279,6 +279,26 @@ export default function GuidePage() {
           </p>
         </Section>
 
+        <Section title="AI & the message drafter">
+          <div className="prose">
+            <p>
+              Every AI capability runs through the same engine: a <strong>template</strong> (prompt + output rules),
+              automatically gathered <strong>context</strong>, and a <strong>model</strong> resolved from the catalog.
+              This is why the Message Drafter works with zero setup — it reads the project, phase, person, conversation
+              history, records, decisions, and financials by itself.
+            </p>
+          </div>
+          <Table
+            head={["Where", "What it does"]}
+            rows={[
+              ["AI — Message Drafter", "Drafts a message to anyone on a project. Pick project → person, say what it should do, choose length/style, draft. Mark sent to file it as an outbound message (creating the conversation if needed)."],
+              ["AI — Templates", "The versioned prompts behind every AI feature. Editing appends a version — nothing is overwritten."],
+              ["AI — Models", "The model catalog. Toggle models on/off; a template's default falls back to the first active model."],
+              ["AI — Settings", "Provider key status (Groq, Gemini). Keys live in .env.local, never in the database."],
+            ]}
+          />
+        </Section>
+
         <Section title="Operational guidelines">
           <div className="prose">
             <p>

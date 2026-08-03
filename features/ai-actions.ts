@@ -5,23 +5,26 @@ import { z } from "zod";
 
 import { requireActiveUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getActiveModels } from "@/lib/ai";
 import {
-  draftBatchRecords,
-  draftInboxRecord,
-  draftMorningBrief,
-  draftWeekReview,
-  draftWeeklySummary,
+  getBatchInboxContext,
+  getInboxItemContext,
+  getMorningBriefContext,
+  getProjectsForContext,
+  getWeekReviewContext,
+  getWeeklySummaryContext,
+} from "@/lib/ai/context";
+import { runTemplate, prepareTemplate, formatPromptForChat } from "@/lib/ai/executor";
+import {
+  batchDraftsSchema,
+  morningBriefSchema,
   triageDraftSchema,
-  type BatchDraft,
+  weekReviewSchema,
+  weeklySummarySchema,
   type TriageDraft,
-} from "@/lib/ai";
-import {
-  getActiveProjectsForSelect,
-  getInboxData,
-  getProjectWorkspace,
-  getProjects,
-  getTodayData,
-} from "@/features/queries";
+} from "@/lib/ai/schemas";
+import { getTemplateBySlug } from "@/lib/ai/template-store";
+import { getActiveProjectsForSelect, getPeople } from "@/features/queries";
 
 const kind = (value: unknown) => z.enum(["entry", "message"]).parse(value);
 const id = (value: unknown) => z.string().uuid().parse(value);
@@ -30,40 +33,28 @@ function throwOnError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
+// ─── Inbox triage ────────────────────────────────────────────────────────────
 // Step 1 of draft→approve: the model suggests a record; nothing is written.
+
 export async function draftInboxTriage(kindValue: string, itemId: string): Promise<TriageDraft> {
   await requireActiveUser();
   const kindParsed = kind(kindValue);
   const item = id(itemId);
-  const supabase = await createSupabaseServerClient();
 
-  let rawItem: string;
-  if (kindParsed === "entry") {
-    const { data, error } = await supabase
-      .from("entries")
-      .select("title, body_md")
-      .eq("id", item)
-      .maybeSingle();
-    throwOnError(error);
-    rawItem = `Capture: ${(data as any)?.title ?? ""}\n${(data as any)?.body_md ?? ""}`;
-  } else {
-    const { data, error } = await supabase
-      .from("messages")
-      .select("body_md, conversations(title)")
-      .eq("id", item)
-      .maybeSingle();
-    throwOnError(error);
-    rawItem = `Message (${(data as any)?.conversations?.title ?? "conversation"}): ${(data as any)?.body_md ?? ""}`;
-  }
+  const result = await runTemplate({ slug: "inbox-triage", context: await inboxTriageContext(kindParsed, item) });
+  return triageDraftSchema.parse(result.data);
+}
 
-  const projects = await getActiveProjectsForSelect();
-  const options = projects.map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    client: p.clients?.name ?? null,
-  }));
+async function inboxTriageContext(kindValue: "entry" | "message", itemId: string) {
+  return { ...(await getInboxItemContext(kindValue, itemId)), projects: await getProjectsForContext() };
+}
 
-  return draftInboxRecord(rawItem, options);
+// Build the exact prompt that would be sent to the model, for use in ChatGPT.
+export async function getInboxTriagePrompt(kindValue: string, itemId: string): Promise<string> {
+  await requireActiveUser();
+  const kindParsed = kind(kindValue);
+  const item = id(itemId);
+  return formatPromptForChat(await prepareTemplate({ slug: "inbox-triage", context: await inboxTriageContext(kindParsed, item) }));
 }
 
 // Step 2: the operator approves the reviewed draft. Only now do we write.
@@ -117,32 +108,17 @@ const BATCH_LIMIT = 6;
 
 export type BatchTriageItem = { id: string; kind: "entry" | "message"; draft: TriageDraft };
 
-// One Groq call drafts records for every inbox item. Nothing is written.
+// One call drafts records for every inbox item. Nothing is written.
 export async function draftBatchTriage(): Promise<BatchTriageItem[]> {
   await requireActiveUser();
-  const [inbox, projects] = await Promise.all([getInboxData(), getActiveProjectsForSelect()]);
+  const context = await batchTriageContext();
 
-  const entries = inbox.entries.map((e: any) => ({
-    id: e.id,
-    kind: "entry",
-    content: `Capture: ${e.title ?? ""}\n${e.body_md ?? ""}`,
-  }));
-  const messages = inbox.messages.map((m: any) => ({
-    id: m.id,
-    kind: "message",
-    content: `Message (${m.conversations?.title ?? "conversation"}): ${m.body_md ?? ""}`,
-  }));
-  const items = [...entries, ...messages].slice(0, BATCH_LIMIT);
+  const items = (context.items as { id: string; kind: string }[]).slice(0, BATCH_LIMIT);
   if (items.length === 0) return [];
 
-  const options = projects.map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    client: p.clients?.name ?? null,
-  }));
-
-  const drafts = await draftBatchRecords(items, options);
-  const byId = new Map(drafts.map((d) => [d.id, d]));
+  const result = await runTemplate({ slug: "inbox-triage-batch", context });
+  const drafts = batchDraftsSchema.parse({ drafts: result.data });
+  const byId = new Map(drafts.drafts.map((d) => [d.id, d]));
   return items
     .map((i) => {
       const draft = byId.get(i.id);
@@ -161,36 +137,30 @@ export async function draftBatchTriage(): Promise<BatchTriageItem[]> {
     .filter((x): x is BatchTriageItem => x !== null);
 }
 
-// Weekly update: AI drafts from the last 7 days of project activity.
+async function batchTriageContext() {
+  return { ...(await getBatchInboxContext()), projects: await getProjectsForContext() };
+}
+
+// Build the exact prompt that would be sent to the model, for use in ChatGPT.
+export async function getBatchTriagePrompt(): Promise<string> {
+  await requireActiveUser();
+  return formatPromptForChat(await prepareTemplate({ slug: "inbox-triage-batch", context: await batchTriageContext() }));
+}
+
+// ─── Weekly summary ──────────────────────────────────────────────────────────
+
 export async function draftWeeklySummaryForProject(projectId: string): Promise<string> {
   await requireActiveUser();
-  const workspace = await getProjectWorkspace(projectId);
-  if (!workspace.project) throw new Error("Project not found.");
+  const context = await getWeeklySummaryContext(id(projectId));
+  const result = await runTemplate({ slug: "weekly-summary", context });
+  return weeklySummarySchema.parse({ summary: result.data }).summary;
+}
 
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const recent = (list: any[], key = "occurred_at") =>
-    (list ?? [])
-      .filter((x: any) => new Date(x[key] ?? 0) >= new Date(weekAgo))
-      .map((x: any) => `- ${x.title ?? x.summary ?? ""}`)
-      .slice(0, 20);
-
-  const data = {
-    projectName: workspace.project.name,
-    clientName: (workspace.project as any).clients?.name ?? null,
-    entries: recent(workspace.entries),
-    tasks: workspace.tasks
-      .filter((t: any) => t.status === "done")
-      .slice(0, 20)
-      .map((t: any) => `- ${t.title}`),
-    issues: workspace.issues
-      .filter((i: any) => i.status !== "resolved")
-      .slice(0, 10)
-      .map((i: any) => `- ${i.title}`),
-    messages: recent(workspace.recentMessages, "sent_at").slice(0, 10),
-    activity: recent(workspace.activity).slice(0, 20),
-  };
-
-  return draftWeeklySummary(data);
+// Build the exact prompt that would be sent to the model, for use in ChatGPT.
+export async function getWeeklySummaryPrompt(projectId: string): Promise<string> {
+  await requireActiveUser();
+  const context = await getWeeklySummaryContext(id(projectId));
+  return formatPromptForChat(await prepareTemplate({ slug: "weekly-summary", context }));
 }
 
 // Files the approved weekly summary as a project update record.
@@ -217,40 +187,20 @@ export async function approveWeeklySummary(projectId: string, summary: string) {
   revalidatePath("/today");
 }
 
-// Week-in-review: one agency-level brief drafted from every project's last 7 days.
+// ─── Week in review ──────────────────────────────────────────────────────────
+
 export async function draftWeekReviewAction(): Promise<string> {
   await requireActiveUser();
-  const projects = await getProjects();
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const context = await getWeekReviewContext();
+  const result = await runTemplate({ slug: "week-in-review", context });
+  return weekReviewSchema.parse({ review: result.data }).review;
+}
 
-  const perProject = await Promise.all(
-    projects.map(async (p: any) => {
-      const w = await getProjectWorkspace(p.id);
-      return {
-        name: w.project?.name ?? p.name,
-        client: (w.project as any)?.clients?.name ?? null,
-        status: w.project?.status ?? p.status,
-        doneTasks: w.tasks
-          .filter((t: any) => t.status === "done")
-          .slice(0, 10)
-          .map((t: any) => `- ${t.title}`),
-        openIssues: w.issues
-          .filter((i: any) => i.status !== "resolved")
-          .slice(0, 5)
-          .map((i: any) => `- ${i.title}`),
-        entries: w.entries
-          .filter((e: any) => new Date(e.occurred_at ?? 0) >= new Date(weekAgo))
-          .slice(0, 8)
-          .map((e: any) => `- ${e.title}`),
-        messages: w.recentMessages
-          .filter((m: any) => new Date(m.sent_at ?? 0) >= new Date(weekAgo))
-          .slice(0, 6)
-          .map((m: any) => `- ${m.body_md.slice(0, 80)}`),
-      };
-    }),
-  );
-
-  return draftWeekReview({ projects: perProject });
+// Build the exact prompt that would be sent to the model, for use in ChatGPT.
+export async function getWeekReviewPrompt(): Promise<string> {
+  await requireActiveUser();
+  const context = await getWeekReviewContext();
+  return formatPromptForChat(await prepareTemplate({ slug: "week-in-review", context }));
 }
 
 // Files the approved week-in-review as a projectless note record.
@@ -274,31 +224,21 @@ export async function saveWeekReview(review: string) {
   throwOnError(error);
   revalidatePath("/today");
 }
-// Morning brief: a read-only AI plan for the day, drafted from dashboard data.
+
+// ─── Morning brief ───────────────────────────────────────────────────────────
+
 export async function draftMorningBriefAction(): Promise<string> {
   const { user } = await requireActiveUser();
-  const data = await getTodayData(user.id);
-  const inbox = await getInboxData();
+  const context = await getMorningBriefContext(user.id);
+  const result = await runTemplate({ slug: "morning-brief", context });
+  return morningBriefSchema.parse({ brief: result.data }).brief;
+}
 
-  const dayLabel = new Date().toLocaleDateString("en-IN", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-
-  const input = {
-    dayLabel,
-    overdue: data.overdue.slice(0, 8).map((t: any) => `- ${t.title} (due ${new Date(t.due_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})`),
-    upcoming: data.upcoming.slice(0, 8).map((t: any) => `- ${t.title} (due ${new Date(t.due_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})`),
-    issues: data.issues.slice(0, 6).map((i: any) => `- ${i.title} [${i.severity}]`),
-    inboxCount: inbox.messages.length + inbox.entries.length,
-    inboxTop: [...inbox.entries, ...inbox.messages]
-      .slice(0, 5)
-      .map((x: any) => `- ${x.title ?? x.conversations?.title ?? "message"}`),
-    projectPulse: data.changedProjects.slice(0, 5).map((p: any) => `- ${p.name} (${p.status})`),
-  };
-
-  return draftMorningBrief(input);
+// Build the exact prompt that would be sent to the model, for use in ChatGPT.
+export async function getMorningBriefPrompt(): Promise<string> {
+  const { user } = await requireActiveUser();
+  const context = await getMorningBriefContext(user.id);
+  return formatPromptForChat(await prepareTemplate({ slug: "morning-brief", context }));
 }
 
 // Optional: file the reviewed brief as a projectless note record.
@@ -321,4 +261,325 @@ export async function saveMorningBrief(brief: string) {
   });
   throwOnError(error);
   revalidatePath("/today");
+}
+
+// ─── Message Drafter ─────────────────────────────────────────────────────────
+
+export interface DraftFormOptions {
+  projects: { id: string; name: string; client?: string | null }[];
+  people: { id: string; name: string }[];
+  models: { id: string; provider: string; model_id: string; display_name: string }[];
+  template: {
+    name: string;
+    default_model: string;
+    lengths: { id: string; label: string; hint: string }[];
+    styles: string[];
+    enabled_variables: string[];
+  } | null;
+}
+
+export async function getDraftFormOptions(): Promise<DraftFormOptions> {
+  await requireActiveUser();
+  const [projects, people, models, template] = await Promise.all([
+    getActiveProjectsForSelect(),
+    getPeople(),
+    getActiveModels(),
+    getTemplateBySlug("message-drafter"),
+  ]);
+
+  const config = (template?.active.config ?? {}) as { lengths?: { id: string; label: string; hint: string }[]; styles?: string[] };
+
+  return {
+    projects: projects.map((p: any) => ({ id: p.id, name: p.name, client: p.clients?.name ?? null })),
+    people: people.map((p: any) => ({ id: p.id, name: p.name })),
+    models: models.map((m) => ({ id: m.model_id, provider: m.provider, model_id: m.model_id, display_name: m.display_name })),
+    template: template
+      ? {
+          name: template.active.name,
+          default_model: template.active.default_model,
+          lengths: config.lengths ?? [],
+          styles: config.styles ?? [],
+          enabled_variables: template.active.enabled_variables,
+        }
+      : null,
+  };
+}
+
+export interface DraftRecipient {
+  person_id: string;
+  name: string;
+  role: string | null;
+}
+
+export async function getDraftRecipients(projectId: string): Promise<{ participants: DraftRecipient[]; phases: { id: string; name: string; position: number; status: string }[] }> {
+  await requireActiveUser();
+  const project = id(projectId);
+  const supabase = await createSupabaseServerClient();
+  const [participants, phases] = await Promise.all([
+    supabase
+      .from("project_participants")
+      .select("person_id, role, role_label, people(id, name)")
+      .eq("project_id", project),
+    supabase
+      .from("phases")
+      .select("id, name, position, status")
+      .eq("project_id", project)
+      .order("position"),
+  ]);
+  throwOnError(participants.error ?? phases.error);
+
+  return {
+    participants: (participants.data ?? []).map((p) => ({
+      person_id: p.person_id,
+      name: (p.people as any)?.name ?? "",
+      role: (p.role_label as string) || (p.role as string) || null,
+    })),
+    phases: (phases.data ?? []).map((p) => ({ id: p.id, name: p.name, position: p.position, status: p.status })),
+  };
+}
+
+export interface DraftMessageInput {
+  projectId: string;
+  personId: string;
+  phaseId?: string | null;
+  intent: string;
+  length: string;
+  styles: string[];
+  additionalContext: string;
+  direction: string;
+  modelId?: string;
+}
+
+export interface DraftMessageResult {
+  content: string;
+  modelId: string;
+  modelName: string;
+  conversationId: string | null;
+}
+
+export async function draftMessage(input: DraftMessageInput): Promise<DraftMessageResult> {
+  await requireActiveUser();
+  const parsed = z
+    .object({
+      projectId: z.string().uuid(),
+      personId: z.string().uuid(),
+      phaseId: z.string().uuid().nullable().optional(),
+      intent: z.string().trim(),
+      length: z.string().trim(),
+      styles: z.array(z.string()),
+      additionalContext: z.string().trim(),
+      direction: z.string().trim(),
+      modelId: z.string().trim().optional(),
+    })
+    .parse(input);
+
+  const variables = buildDrafterVariables(parsed);
+
+  const [result, conversationId] = await Promise.all([
+    runTemplate({ slug: "message-drafter", variables, modelId: parsed.modelId }),
+    findConversationFor(parsed.projectId, parsed.personId),
+  ]);
+
+  return {
+    content: String(result.data ?? "").trim(),
+    modelId: result.model?.model_id ?? parsed.modelId ?? "",
+    modelName: result.model?.display_name ?? "",
+    conversationId,
+  };
+}
+
+// Build the exact prompt that would be sent to the model, for use in ChatGPT.
+export async function getDraftPrompt(input: DraftMessageInput): Promise<string> {
+  await requireActiveUser();
+  const parsed = z
+    .object({
+      projectId: z.string().uuid(),
+      personId: z.string().uuid(),
+      phaseId: z.string().uuid().nullable().optional(),
+      intent: z.string().trim(),
+      length: z.string().trim(),
+      styles: z.array(z.string()),
+      additionalContext: z.string().trim(),
+      direction: z.string().trim(),
+      modelId: z.string().trim().optional(),
+    })
+    .parse(input);
+
+  return formatPromptForChat(await prepareTemplate({ slug: "message-drafter", variables: buildDrafterVariables(parsed), modelId: parsed.modelId }));
+}
+
+function buildDrafterVariables(parsed: {
+  projectId: string;
+  personId: string;
+  phaseId?: string | null;
+  intent: string;
+  length: string;
+  styles: string[];
+  additionalContext: string;
+  direction: string;
+}) {
+  return {
+    projectId: parsed.projectId,
+    personId: parsed.personId,
+    phaseId: parsed.phaseId ?? null,
+    intent: parsed.intent || "Draft a natural, useful message.",
+    length: parsed.length || "short",
+    styles: parsed.styles.length ? parsed.styles : ["Professional"],
+    additional_context: parsed.additionalContext,
+    direction: parsed.direction,
+  };
+}
+
+async function findConversationFor(projectId: string, personId: string): Promise<string | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("id, conversation_participants!inner(person_id)")
+    .eq("project_id", projectId)
+    .eq("conversation_participants.person_id", personId)
+    .order("last_message_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  throwOnError(error);
+  return data ? String(data.id) : null;
+}
+
+export async function saveMessageDraft(input: DraftMessageInput, content: string): Promise<string> {
+  const { user } = await requireActiveUser();
+  const parsed = z
+    .object({
+      projectId: z.string().uuid(),
+      personId: z.string().uuid(),
+      phaseId: z.string().uuid().nullable().optional(),
+      intent: z.string().trim(),
+      length: z.string().trim(),
+      styles: z.array(z.string()),
+      additionalContext: z.string().trim(),
+      direction: z.string().trim(),
+      modelId: z.string().trim().optional(),
+    })
+    .parse(input);
+  const body = content.trim();
+  if (!body) throw new Error("Cannot save an empty message.");
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("message_drafts")
+    .insert({
+      project_id: parsed.projectId,
+      person_id: parsed.personId,
+      phase_id: parsed.phaseId ?? null,
+      content: body,
+      intent: parsed.intent,
+      length_label: parsed.length,
+      styles: parsed.styles,
+      additional_context: parsed.additionalContext,
+      direction: parsed.direction,
+      model_id: parsed.modelId ?? "",
+      status: "draft",
+      created_by_id: user.id,
+    })
+    .select("id")
+    .single();
+  throwOnError(error);
+  if (!data) throw new Error("Failed to save the draft.");
+  return String(data.id);
+}
+
+export async function sendMessageDraft(draftId: string): Promise<string> {
+  const { user } = await requireActiveUser();
+  const idValue = id(draftId);
+  const supabase = await createSupabaseServerClient();
+
+  const { data: draft, error: draftError } = await supabase
+    .from("message_drafts")
+    .select("id, project_id, person_id, content, status, conversation_id")
+    .eq("id", idValue)
+    .maybeSingle();
+  throwOnError(draftError);
+  if (!draft) throw new Error("Draft not found.");
+  if (draft.status === "sent") throw new Error("This draft is already marked as sent.");
+
+  let conversationId = draft.conversation_id ?? (await findConversationFor(draft.project_id, draft.person_id));
+  if (!conversationId) {
+    conversationId = await createConversationForDraft(draft.project_id, draft.person_id, user.id);
+  }
+
+  const { error: messageError } = await supabase.from("messages").insert({
+    conversation_id: conversationId,
+    sender_user_id: user.id,
+    direction: "outbound",
+    body_md: draft.content,
+    sent_at: new Date().toISOString(),
+    triage_state: "filed",
+    created_by_id: user.id,
+  });
+  throwOnError(messageError);
+
+  const { error: updateError } = await supabase
+    .from("message_drafts")
+    .update({ status: "sent", sent_at: new Date().toISOString(), conversation_id: conversationId })
+    .eq("id", idValue);
+  throwOnError(updateError);
+
+  revalidatePath(`/projects/${draft.project_id}`);
+  revalidatePath("/today");
+  revalidatePath("/inbox");
+  revalidateTag("inbox");
+  return conversationId;
+}
+
+async function createConversationForDraft(projectId: string, personId: string, userId: string): Promise<string> {
+  const supabase = await createSupabaseServerClient();
+  const [project, person] = await Promise.all([
+    supabase.from("projects").select("client_id, name").eq("id", projectId).maybeSingle(),
+    supabase.from("people").select("name").eq("id", personId).maybeSingle(),
+  ]);
+  throwOnError(project.error ?? person.error);
+
+  const { data, error } = await supabase
+    .from("conversations")
+    .insert({
+      client_id: (project.data as any)?.client_id,
+      project_id: projectId,
+      kind: "direct",
+      channel: "manual",
+      title: `${(person.data as any)?.name ?? "Contact"} · ${(project.data as any)?.name ?? "Project"}`,
+      created_by_id: userId,
+    })
+    .select("id")
+    .single();
+  throwOnError(error);
+  if (!data) throw new Error("Failed to create the conversation.");
+
+  const { error: participantError } = await supabase
+    .from("conversation_participants")
+    .insert({ conversation_id: data.id, person_id: personId, created_at: new Date().toISOString() });
+  throwOnError(participantError);
+
+  return String(data.id);
+}
+
+export async function discardMessageDraft(draftId: string) {
+  await requireActiveUser();
+  const idValue = id(draftId);
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("message_drafts")
+    .update({ status: "discarded" })
+    .eq("id", idValue);
+  throwOnError(error);
+}
+
+export async function listMessageDrafts() {
+  await requireActiveUser();
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("message_drafts")
+    .select("id, content, intent, length_label, direction, model_id, status, sent_at, created_at, projects(id, name), people(id, name)")
+    .in("status", ["draft", "sent"])
+    .order("created_at", { ascending: false })
+    .limit(20);
+  throwOnError(error);
+  return data ?? [];
 }

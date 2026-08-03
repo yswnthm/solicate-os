@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { approveInboxDraft, draftBatchTriage, type BatchTriageItem } from "@/features/ai-actions";
+import { approveInboxDraft, draftBatchTriage, getBatchTriagePrompt, type BatchTriageItem } from "@/features/ai-actions";
 import { Modal } from "@/components/modal";
-import type { TriageDraft } from "@/lib/ai";
+import { PromptModal } from "@/components/prompt-viewer";
+import type { TriageDraft } from "@/lib/ai/schemas";
 
 const ENTRY_TYPES = ["note", "meeting", "decision", "document", "update", "milestone", "capture"];
 
@@ -25,6 +26,25 @@ export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const [prompt, setPrompt] = useState<string | null>(null);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptBusy, setPromptBusy] = useState(false);
+
+  const onGetPrompt = async () => {
+    setPromptBusy(true);
+    setError(null);
+    setPrompt(null);
+    setPromptOpen(true);
+    try {
+      setPrompt(await getBatchTriagePrompt());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to build the prompt.");
+      setPromptOpen(false);
+    } finally {
+      setPromptBusy(false);
+    }
+  };
 
   const onDraft = async () => {
     setError(null);
@@ -79,6 +99,16 @@ export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
       <button className="button secondary" type="button" onClick={onDraft}>
         ✨ Triage all with AI
       </button>
+      <button className="button secondary" type="button" onClick={onGetPrompt} disabled={promptBusy}>
+        {promptBusy ? "Building…" : "Copy prompt"}
+      </button>
+
+      <PromptModal
+        open={promptOpen}
+        onClose={() => setPromptOpen(false)}
+        title="Triage all prompt"
+        prompt={prompt}
+      />
 
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Triage all with AI">
         {error && <div className="notice" style={{ marginBottom: 16 }}>{error}</div>}

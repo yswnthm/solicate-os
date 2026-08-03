@@ -10,6 +10,9 @@ const NAV_CONFIG: Record<string, { icon: string; shortcut?: string }> = {
   "/clients": { icon: "◑", shortcut: "G C" },
   "/people": { icon: "◎", shortcut: "G U" },
   "/search": { icon: "⌕", shortcut: "G S" },
+  "/ai/drafter": { icon: "✉" },
+  "/ai/templates": { icon: "▤" },
+  "/ai/models": { icon: "◉" },
   "/guide": { icon: "?", shortcut: "G ?" },
   "/settings": { icon: "⚙" },
 };

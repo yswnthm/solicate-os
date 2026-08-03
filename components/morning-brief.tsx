@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
-import { draftMorningBriefAction, saveMorningBrief } from "@/features/ai-actions";
+import { draftMorningBriefAction, getMorningBriefPrompt, saveMorningBrief } from "@/features/ai-actions";
 import { Modal } from "@/components/modal";
+import { PromptModal } from "@/components/prompt-viewer";
 
 export function MorningBriefButton() {
   const [open, setOpen] = useState(false);
@@ -12,6 +13,25 @@ export function MorningBriefButton() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const [prompt, setPrompt] = useState<string | null>(null);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptBusy, setPromptBusy] = useState(false);
+
+  const onGetPrompt = async () => {
+    setPromptBusy(true);
+    setError(null);
+    setPrompt(null);
+    setPromptOpen(true);
+    try {
+      setPrompt(await getMorningBriefPrompt());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to build the prompt.");
+      setPromptOpen(false);
+    } finally {
+      setPromptBusy(false);
+    }
+  };
 
   const onDraft = async () => {
     setBusy(true);
@@ -54,6 +74,16 @@ export function MorningBriefButton() {
       <button className="button" type="button" onClick={onDraft} disabled={busy}>
         {busy ? "Drafting…" : "✨ Morning brief"}
       </button>
+      <button className="button secondary" type="button" onClick={onGetPrompt} disabled={promptBusy}>
+        {promptBusy ? "Building…" : "Copy prompt"}
+      </button>
+
+      <PromptModal
+        open={promptOpen}
+        onClose={() => setPromptOpen(false)}
+        title="Morning brief prompt"
+        prompt={prompt}
+      />
 
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Morning brief">
         {error && <div className="notice" style={{ marginBottom: 16 }}>{error}</div>}

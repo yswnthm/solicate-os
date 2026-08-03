@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { approveWeeklySummary, draftWeeklySummaryForProject } from "@/features/ai-actions";
+import { approveWeeklySummary, draftWeeklySummaryForProject, getWeeklySummaryPrompt } from "@/features/ai-actions";
 import { Modal } from "@/components/modal";
+import { PromptModal } from "@/components/prompt-viewer";
 
 export function WeeklySummaryButton({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
@@ -13,6 +14,25 @@ export function WeeklySummaryButton({ projectId }: { projectId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const router = useRouter();
+
+  const [prompt, setPrompt] = useState<string | null>(null);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptBusy, setPromptBusy] = useState(false);
+
+  const onGetPrompt = async () => {
+    setPromptBusy(true);
+    setError(null);
+    setPrompt(null);
+    setPromptOpen(true);
+    try {
+      setPrompt(await getWeeklySummaryPrompt(projectId));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to build the prompt.");
+      setPromptOpen(false);
+    } finally {
+      setPromptBusy(false);
+    }
+  };
 
   const onDraft = async () => {
     setBusy(true);
@@ -56,6 +76,16 @@ export function WeeklySummaryButton({ projectId }: { projectId: string }) {
       <button className="button secondary small" type="button" onClick={onDraft} disabled={busy}>
         {busy ? "Drafting…" : "✨ Weekly summary"}
       </button>
+      <button className="button ghost small" type="button" onClick={onGetPrompt} disabled={promptBusy}>
+        {promptBusy ? "Building…" : "Copy prompt"}
+      </button>
+
+      <PromptModal
+        open={promptOpen}
+        onClose={() => setPromptOpen(false)}
+        title="Weekly summary prompt"
+        prompt={prompt}
+      />
 
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Weekly update draft">
         {error && <div className="notice" style={{ marginBottom: 16 }}>{error}</div>}
