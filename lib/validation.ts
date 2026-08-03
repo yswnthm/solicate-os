@@ -81,6 +81,9 @@ export const projectSchema = z
     status: z.enum(["active", "paused", "completed", "archived"]),
     started_on: optDate,
     target_date: optDate,
+    objective: z.string().trim(),
+    success_definition: z.string().trim(),
+    direction: z.string().trim(),
   })
   .superRefine(datesConsistent);
 
@@ -93,6 +96,12 @@ export const phaseSchema = z
     status: z.enum(["planned", "active", "on_hold", "completed", "cancelled"]),
     started_on: optDate,
     target_date: optDate,
+    scope_deliverables: z.string().trim(),
+    scope_requirements: z.string().trim(),
+    scope_acceptance: z.string().trim(),
+    proposal_quotation: z.string().trim(),
+    proposal_pricing: z.string().trim(),
+    proposal_revisions: z.string().trim(),
   })
   .superRefine(datesConsistent);
 
@@ -115,6 +124,7 @@ export const issueSchema = z
     severity: z.enum(["low", "medium", "high", "critical"]),
     status: z.enum(["open", "investigating", "waiting_external", "resolved", "accepted", "closed"]),
     assignee_id: optUuid,
+    phase_id: optUuid,
     resolution_summary: z.string().trim(),
   })
   .superRefine((data, ctx) => {
@@ -131,6 +141,7 @@ export const issueSchema = z
 export const entrySchema = z
   .object({
     project_id: optUuid,
+    phase_id: optUuid,
     title: req("Title is required."),
     type: z.enum(["note", "meeting", "decision", "document", "update", "milestone", "capture"]),
     body_md: z.string().trim(),
@@ -215,3 +226,71 @@ export type EntryInput = z.infer<typeof entrySchema>;
 export type ConversationInput = z.infer<typeof conversationSchema>;
 export type MessageInput = z.infer<typeof messageSchema>;
 export type ParticipantInput = z.infer<typeof participantSchema>;
+
+// ─── Relationships (Level 1) ────────────────────────────────────────────────
+
+const optMode = z
+  .union([
+    z.enum(["solicate_leads", "partner_leads", "shared", "advisory_only"]),
+    z.literal(""),
+    z.null(),
+    z.undefined(),
+  ])
+  .transform((v) => (v === "" || v === undefined ? null : v));
+
+export const relationshipSchema = z
+  .object({
+    client_id: z.string().uuid(),
+    person_id: optUuid,
+    source: z.enum(["referral_partner", "direct_outreach", "existing_client", "marketplace", "internal"]),
+    status: z.enum(["active", "inactive", "archived"]),
+    summary: z.string().trim(),
+    communication_mode: optMode,
+    financial_arrangement: z.enum([
+      "none",
+      "referral_commission",
+      "revenue_share",
+      "delivery_split",
+      "fixed_fee",
+    ]),
+    referral_commission: optNumber,
+    commission_currency: optString,
+    payment_status: z.enum(["not_applicable", "pending", "partially_paid", "paid", "disputed"]),
+    terms_note: z.string().trim(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.referral_commission !== null && data.referral_commission < 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["referral_commission"],
+        message: "Commission can't be negative.",
+      });
+    }
+    if (data.financial_arrangement === "fixed_fee" && !data.commission_currency) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["commission_currency"],
+        message: "Fixed-fee arrangements need a currency code.",
+      });
+    }
+  });
+
+// ─── Finance items (invoices / payments / expenses) ─────────────────────────
+
+const optCurrency = z
+  .union([z.string(), z.null(), z.undefined()])
+  .transform((v) => (typeof v === "string" && v.trim() ? v.trim().toUpperCase() : "INR"));
+
+export const financeItemSchema = z.object({
+  project_id: z.string().uuid(),
+  phase_id: optUuid,
+  kind: z.enum(["invoice", "payment", "expense"]),
+  title: req("Title is required."),
+  amount: z.coerce.number().positive("Enter an amount greater than zero.").finite(),
+  currency_code: optCurrency,
+  occurred_on: optDate,
+  notes: z.string().trim(),
+});
+
+export type RelationshipInput = z.infer<typeof relationshipSchema>;
+export type FinanceItemInput = z.infer<typeof financeItemSchema>;

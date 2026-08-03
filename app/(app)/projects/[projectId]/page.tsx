@@ -1,35 +1,19 @@
-export const dynamic = "force-dynamic";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 
-import {
-  addProjectParticipant,
-  createConversation,
-  createEntry,
-  createIssue,
-  createPhase,
-  createTask,
-  resolveIssue,
-} from "@/features/actions";
-import { getActiveClients, getProjectWorkspace } from "@/features/queries";
-import { PageHeader } from "@/components/page-header";
+import { createConversation, createEntry, createIssue, createPhase, createTask } from "@/features/actions";
+import { getProjectWorkspace } from "@/features/queries";
 import { StatusPill } from "@/components/status-pill";
-import { ProjectStatusControl, TaskStatusControl } from "@/components/status-controls";
-import {
-  EditConversationButton,
-  EditEntryButton,
-  EditIssueButton,
-  EditParticipantButton,
-  EditPhaseButton,
-  EditProjectButton,
-  EditTaskButton,
-} from "@/components/editing/edit-buttons";
-import { ConversationThread } from "@/components/conversation-thread";
-import { WeeklySummaryButton } from "@/components/weekly-summary";
-import { formatDate, formatDateTime } from "@/lib/utils";
 import { ModalTrigger } from "@/components/modal-trigger";
+import { EditPhaseButton } from "@/components/editing/edit-buttons";
+import { ConversationThread } from "@/components/conversation-thread";
+import { Section } from "@/components/shared/section";
+import { ProgressBar } from "@/components/shared/progress-bar";
+import { PhaseHealthPill } from "@/components/shared/health-pill";
+import { TaskRow } from "@/components/execution/task-row";
+import { IssueRow } from "@/components/execution/issue-row";
+import { formatDate, formatDateTime } from "@/lib/utils";
 
-export default async function ProjectPage({
+export default async function ProjectOverviewPage({
   params,
   searchParams,
 }: {
@@ -38,8 +22,7 @@ export default async function ProjectPage({
 }) {
   const { projectId } = await params;
   const { thread } = await searchParams;
-  const [data, clients] = await Promise.all([getProjectWorkspace(projectId), getActiveClients()]);
-  if (!data.project) notFound();
+  const data = await getProjectWorkspace(projectId);
   const project: any = data.project;
 
   const openTasks = data.tasks.filter(
@@ -49,20 +32,31 @@ export default async function ProjectPage({
     (i: any) => !["resolved", "accepted", "closed"].includes(i.status),
   );
 
+  const hasPhases = data.phases.length > 0;
+  const unphasedTasks = data.tasks.filter((t: any) => (hasPhases ? !t.phase_id : true));
+  const unphasedIssues = data.issues.filter((i: any) => (hasPhases ? !i.phase_id : true));
+
+  const strategy = [
+    { title: "Objective", body: project.objective, key: "objective" },
+    { title: "Success definition", body: project.success_definition, key: "success_definition" },
+    { title: "Direction", body: project.direction, key: "direction" },
+  ].filter((b) => b.body);
+
   return (
-    <>
-      <PageHeader
-        title={project.name}
-        description={`${project.clients?.name ?? "Client"} ${project.code ? `· ${project.code}` : ""} · ${project.summary || "No working summary yet."}`}
-      >
-        <StatusPill value={project.status} />
-        <WeeklySummaryButton projectId={projectId} />
-        <EditProjectButton project={project} clients={clients} label="Edit" />
-        <ProjectStatusControl projectId={projectId} initialStatus={project.status} />
-      </PageHeader>
+    <div className="stack">
+      {strategy.length > 0 && (
+        <div className="strategy-grid">
+          {strategy.map((block) => (
+            <div className="strategy-block" key={block.key}>
+              <h4>{block.title}</h4>
+              <div className="prose">{block.body}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Metrics */}
-      <div className="grid three" style={{ marginBottom: 40 }}>
+      <div className="grid three" style={{ marginBottom: 8 }}>
         <div className="card">
           <p className="metric-label">Target date</p>
           <div className="metric" style={{ fontSize: 19 }}>
@@ -84,109 +78,116 @@ export default async function ProjectPage({
         </div>
       </div>
 
-      {/* Main seamless edge-to-edge layout */}
-      <div className="stack">
-        {/* Phases */}
-        <Section
-          title="Phases"
-          count={data.phases.length}
-          action={
-            <ModalTrigger buttonLabel="+ New phase" title="New phase" buttonClass="button ghost small">
-              <form className="form" action={createPhase}>
-                <input type="hidden" name="project_id" value={projectId} />
+      {/* Phases */}
+      <Section
+        title="Phases"
+        count={data.phases.length}
+        action={
+          <ModalTrigger buttonLabel="+ New phase" title="New phase" buttonClass="button ghost small">
+            <form className="form" action={createPhase}>
+              <input type="hidden" name="project_id" value={projectId} />
+              <div className="field">
+                <label>Phase name</label>
+                <input name="name" placeholder="e.g. Phase 2 — WordPress trial" required />
+              </div>
+              <div className="field">
+                <label>Description</label>
+                <textarea name="description" placeholder="What this phase covers" />
+              </div>
+              <div className="form-grid">
                 <div className="field">
-                  <label>Phase name</label>
-                  <input name="name" placeholder="e.g. Phase 2 — WordPress trial" required />
-                </div>
-                <div className="field">
-                  <label>Description</label>
-                  <textarea name="description" placeholder="What this phase covers" />
-                </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label>Position</label>
-                    <input name="position" type="number" min="1" defaultValue={data.phases.length + 1} />
-                  </div>
-                  <div className="field">
-                    <label>Status</label>
-                    <select name="status">
-                      <option value="planned">Planned</option>
-                      <option value="active">Active</option>
-                      <option value="on_hold">On hold</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </div>
+                  <label>Position</label>
+                  <input name="position" type="number" min="1" defaultValue={data.phases.length + 1} />
                 </div>
                 <div className="field">
-                  <label>Start date</label>
-                  <input name="started_on" type="date" />
+                  <label>Status</label>
+                  <select name="status">
+                    <option value="planned">Planned</option>
+                    <option value="active">Active</option>
+                    <option value="on_hold">On hold</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
                 </div>
-                <button className="button" type="submit" style={{ marginTop: 8 }}>
-                  Add phase
-                </button>
-              </form>
-            </ModalTrigger>
-          }
-        >
-          {data.phases.length ? (
-            <div className="list">
-              {data.phases.map((phase: any) => {
-                const phaseOpen = data.tasks.filter(
-                  (t: any) => t.phase_id === phase.id && t.status !== "done" && t.status !== "cancelled",
-                ).length;
-                return (
-                  <div className="row" key={phase.id}>
-                    <StatusPill value={phase.status} />
-                    <div className="row-main">
-                      <div className="row-title">
+              </div>
+              <div className="field">
+                <label>Start date</label>
+                <input name="started_on" type="date" />
+              </div>
+              <button className="button" type="submit" style={{ marginTop: 8 }}>
+                Add phase
+              </button>
+            </form>
+          </ModalTrigger>
+        }
+      >
+        {data.phases.length ? (
+          <div className="list">
+            {data.phases.map((phase: any) => {
+              const phaseTasks = data.tasks.filter((t: any) => t.phase_id === phase.id);
+              const phaseIssues = data.issues.filter((i: any) => i.phase_id === phase.id);
+              const phaseOpen = phaseTasks.filter(
+                (t: any) => t.status !== "done" && t.status !== "cancelled",
+              ).length;
+              return (
+                <div className="row" key={phase.id}>
+                  <StatusPill value={phase.status} />
+                  <div className="row-main">
+                    <div className="row-title">
+                      <Link href={`/projects/${projectId}/phases/${phase.id}`}>
                         {phase.position}. {phase.name}
-                      </div>
-                      <div className="row-meta">
-                        {phase.started_on ? `Started ${formatDate(phase.started_on)}` : "Not started"}
-                        {phaseOpen > 0 ? ` · ${phaseOpen} open task${phaseOpen === 1 ? "" : "s"}` : ""}
-                        {phase.description ? ` · ${phase.description.slice(0, 90)}` : ""}
-                      </div>
+                      </Link>
                     </div>
-                    <div className="row-actions-always">
-                      <EditPhaseButton phase={phase} />
+                    <div className="row-meta" style={{ marginBottom: 8 }}>
+                      {phase.started_on ? `Started ${formatDate(phase.started_on)}` : "Not started"}
+                      {phaseOpen > 0 ? ` · ${phaseOpen} open task${phaseOpen === 1 ? "" : "s"}` : ""}
+                      {phase.description ? ` · ${phase.description.slice(0, 90)}` : ""}
+                    </div>
+                    <div style={{ maxWidth: 280 }}>
+                      <ProgressBar value={phaseTasks.length ? Math.round((phaseTasks.filter((t: any) => t.status === "done" || t.status === "cancelled").length / phaseTasks.length) * 100) : 0} />
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="empty">No phases yet — group tasks into phases as the engagement grows.</div>
-          )}
-        </Section>
+                  <div className="row-actions-always">
+                    <PhaseHealthPill phase={phase} tasks={phaseTasks} issues={phaseIssues} />
+                    <EditPhaseButton phase={phase} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="empty">No phases yet — group work into phases as the engagement grows.</div>
+        )}
+      </Section>
 
-        {/* Tasks */}
-        <Section 
-          title="Tasks" 
-          count={data.tasks.length}
-          action={
-            <ModalTrigger buttonLabel="+ New task" title="New task" buttonClass="button ghost small">
-              <form className="form" action={createTask}>
-                <input type="hidden" name="project_id" value={projectId} />
+      {/* Ungrouped execution */}
+      <Section
+        title={hasPhases ? "Ungrouped execution" : "Tasks"}
+        count={unphasedTasks.length}
+        action={
+          <ModalTrigger buttonLabel="+ New task" title="New task" buttonClass="button ghost small">
+            <form className="form" action={createTask}>
+              <input type="hidden" name="project_id" value={projectId} />
+              <div className="field">
+                <label>Task title</label>
+                <input name="title" placeholder="What needs to happen" required />
+              </div>
+              <div className="form-grid">
                 <div className="field">
-                  <label>Task title</label>
-                  <input name="title" placeholder="What needs to happen" required />
+                  <label>Priority</label>
+                  <select name="priority">
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="low">Low</option>
+                  </select>
                 </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label>Priority</label>
-                    <select name="priority">
-                      <option value="normal">Normal</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                      <option value="low">Low</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Due date</label>
-                    <input name="due_at" type="date" />
-                  </div>
+                <div className="field">
+                  <label>Due date</label>
+                  <input name="due_at" type="date" />
                 </div>
+              </div>
+              {hasPhases && (
                 <div className="field">
                   <label>Phase</label>
                   <select name="phase_id">
@@ -196,6 +197,61 @@ export default async function ProjectPage({
                         {phase.position}. {phase.name}
                       </option>
                     ))}
+                  </select>
+                </div>
+              )}
+              <div className="field">
+                <label>Assignee</label>
+                <select name="assignee_id">
+                  <option value="">Unassigned</option>
+                  {data.users.map((user: any) => (
+                    <option key={user.id} value={user.id}>
+                      {user.display_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>Description</label>
+                <textarea name="description_md" placeholder="Optional context or links" />
+              </div>
+              <button className="button" type="submit" style={{ marginTop: 8 }}>
+                Add task
+              </button>
+            </form>
+          </ModalTrigger>
+        }
+      >
+        {unphasedTasks.length ? (
+          <div className="list">
+            {unphasedTasks.map((task: any) => (
+              <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} users={data.users} />
+            ))}
+          </div>
+        ) : (
+          <div className="empty">No tasks outside a phase — phase them so execution stays scoped.</div>
+        )}
+      </Section>
+
+      <Section
+        title={hasPhases ? "Issues" : "Issues"}
+        count={unphasedIssues.length}
+        action={
+          <ModalTrigger buttonLabel="+ New issue" title="New issue" buttonClass="button ghost small">
+            <form className="form" action={createIssue}>
+              <input type="hidden" name="project_id" value={projectId} />
+              <div className="field">
+                <label>Issue</label>
+                <input name="title" placeholder="What is the problem or risk" required />
+              </div>
+              <div className="form-grid">
+                <div className="field">
+                  <label>Severity</label>
+                  <select name="severity">
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                    <option value="low">Low</option>
                   </select>
                 </div>
                 <div className="field">
@@ -209,466 +265,133 @@ export default async function ProjectPage({
                     ))}
                   </select>
                 </div>
+              </div>
+              {hasPhases && (
                 <div className="field">
-                  <label>Description</label>
-                  <textarea name="description_md" placeholder="Optional context or links" />
-                </div>
-                <button className="button" type="submit" style={{ marginTop: 8 }}>
-                  Add task
-                </button>
-              </form>
-            </ModalTrigger>
-          }
-        >
-          {data.tasks.length ? (
-            <div className="list">
-              {data.phases.length ? (
-                <>
-                  {data.phases.map((phase: any) => {
-                    const phaseTasks = data.tasks.filter((t: any) => t.phase_id === phase.id);
-                    if (!phaseTasks.length) return null;
-                    return (
-                      <div key={phase.id} className="stack">
-                        <div className="section-title" style={{ marginTop: 8 }}>
-                          <h4 style={{ margin: 0 }}>
-                            {phase.position}. {phase.name}
-                          </h4>
-                          <span>{phaseTasks.length}</span>
-                        </div>
-                        {phaseTasks.map((task: any) => (
-                          <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} users={data.users} />
-                        ))}
-                      </div>
-                    );
-                  })}
-                  {data.tasks.some((t: any) => !t.phase_id) && (
-                    <div className="stack">
-                      <div className="section-title" style={{ marginTop: 8 }}>
-                        <h4 style={{ margin: 0 }}>Ungrouped</h4>
-                        <span>{data.tasks.filter((t: any) => !t.phase_id).length}</span>
-                      </div>
-                      {data.tasks
-                        .filter((t: any) => !t.phase_id)
-                        .map((task: any) => (
-                          <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} users={data.users} />
-                        ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                data.tasks.map((task: any) => (
-                  <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} users={data.users} />
-                ))
-              )}
-            </div>
-          ) : (
-            <div className="empty">No tasks yet.</div>
-          )}
-        </Section>
-
-        {/* Issues */}
-        <Section 
-          title="Issues" 
-          count={data.issues.length}
-          action={
-            <ModalTrigger buttonLabel="+ New issue" title="New issue" buttonClass="button ghost small">
-              <form className="form" action={createIssue}>
-                <input type="hidden" name="project_id" value={projectId} />
-                <div className="field">
-                  <label>Issue</label>
-                  <input name="title" placeholder="What is the problem or risk" required />
-                </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label>Severity</label>
-                    <select name="severity">
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="critical">Critical</option>
-                      <option value="low">Low</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Assignee</label>
-                    <select name="assignee_id">
-                      <option value="">Unassigned</option>
-                      {data.users.map((user: any) => (
-                        <option key={user.id} value={user.id}>
-                          {user.display_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="field">
-                  <label>Description</label>
-                  <textarea name="description_md" placeholder="Evidence, risk context, or current state" />
-                </div>
-                <button className="button" type="submit" style={{ marginTop: 8 }}>
-                  Open issue
-                </button>
-              </form>
-            </ModalTrigger>
-          }
-        >
-          {data.issues.length ? (
-            <div className="list">
-              {data.issues.map((issue: any) => (
-                <div className="row" key={issue.id}>
-                  <StatusPill value={issue.severity} />
-                  <div className="row-main">
-                    <div className="row-title">{issue.title}</div>
-                    <div className="row-meta">
-                      {issue.resolution_summary || issue.description_md || "No detail"}
-                    </div>
-                  </div>
-                  <div className="row-actions-always">
-                    <StatusPill value={issue.status} />
-                    <EditIssueButton issue={issue} projectId={projectId} users={data.users} />
-                    {!["resolved", "accepted", "closed"].includes(issue.status) && (
-                      <ModalTrigger buttonLabel="Resolve" title="Resolve issue" buttonClass="button small secondary">
-                        <form className="form" action={resolveIssue}>
-                          <input type="hidden" name="issue_id" value={issue.id} />
-                          <input type="hidden" name="project_id" value={projectId} />
-                          <div className="field">
-                            <label>Resolution outcome</label>
-                            <input name="resolution_summary" placeholder="What was done or decided" required />
-                          </div>
-                          <div className="field">
-                            <label>Close as</label>
-                            <select name="status">
-                              <option value="resolved">Resolved</option>
-                              <option value="accepted">Accepted (risk accepted)</option>
-                              <option value="closed">Closed (won't fix)</option>
-                            </select>
-                          </div>
-                          <button className="button" type="submit" style={{ marginTop: 8 }}>
-                            Confirm
-                          </button>
-                        </form>
-                      </ModalTrigger>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty">No open issues. Good to proceed.</div>
-          )}
-        </Section>
-
-        {/* Knowledge */}
-        <Section 
-          title="Knowledge Base" 
-          count={data.entries.length}
-          action={
-            <ModalTrigger buttonLabel="+ Add record" title="Add project record" buttonClass="button ghost small">
-              <form className="form" action={createEntry}>
-                <input type="hidden" name="project_id" value={projectId} />
-                <div className="field">
-                  <label>Type</label>
-                  <select name="type">
-                    <option value="note">Note</option>
-                    <option value="meeting">Meeting</option>
-                    <option value="decision">Decision</option>
-                    <option value="document">Document</option>
-                    <option value="update">Update</option>
-                    <option value="milestone">Milestone</option>
-                    <option value="capture">Quick capture</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Title</label>
-                  <input name="title" placeholder="Subject of this record" required />
-                </div>
-                <div className="field">
-                  <label>Body</label>
-                  <textarea name="body_md" placeholder="Content, summary, or detail…" />
-                </div>
-                <div className="field">
-                  <label>Decision outcome (decisions only)</label>
-                  <input name="decision_outcome" placeholder="What was decided" />
-                </div>
-                <input type="hidden" name="occurred_at" value="" />
-                <button className="button" type="submit" style={{ marginTop: 8 }}>
-                  Add record
-                </button>
-              </form>
-            </ModalTrigger>
-          }
-        >
-          {data.entries.length ? (
-            <div className="list">
-              {data.entries.map((entry: any) => (
-                <article className="card" key={entry.id}>
-                  <div className="section-title" style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0 }}>
-                    <h3 style={{ margin: 0 }}>{entry.title}</h3>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <StatusPill value={entry.type} />
-                      <EditEntryButton entry={entry} />
-                    </div>
-                  </div>
-                  <div className="row-meta" style={{ marginTop: 4 }}>
-                    {formatDateTime(entry.occurred_at)}
-                    {entry.decision_outcome ? ` · Outcome: ${entry.decision_outcome}` : ""}
-                  </div>
-                  {entry.body_md ? <div className="prose">{entry.body_md}</div> : null}
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="empty">
-              No notes, meetings, or decisions recorded.
-            </div>
-          )}
-        </Section>
-
-        {/* Participants and terms */}
-        <Section 
-          title="Participants & Terms" 
-          count={data.participants.length}
-          action={
-            <ModalTrigger buttonLabel="+ Add participant" title="Add participant" buttonClass="button ghost small">
-              <form className="form" action={addProjectParticipant}>
-                <input type="hidden" name="project_id" value={projectId} />
-                <div className="field">
-                  <label>Person</label>
-                  <select name="person_id" required>
-                    <option value="">Choose person</option>
-                    {data.people.map((person: any) => (
-                      <option key={person.id} value={person.id}>
-                        {person.name}
-                        {person.is_partner ? " (partner)" : ""}
+                  <label>Phase</label>
+                  <select name="phase_id">
+                    <option value="">Project-level (no phase)</option>
+                    {data.phases.map((phase: any) => (
+                      <option key={phase.id} value={phase.id}>
+                        {phase.position}. {phase.name}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label>Role</label>
-                    <select name="role">
-                      <option value="client_contact">Client contact</option>
-                      <option value="partner">Partner</option>
-                      <option value="collaborator">Collaborator</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Communication</label>
-                    <select name="communication_mode">
-                      <option value="">Not set</option>
-                      <option value="solicate_leads">Solicate leads</option>
-                      <option value="partner_leads">Partner leads</option>
-                      <option value="shared">Shared</option>
-                      <option value="advisory_only">Advisory only</option>
-                    </select>
-                  </div>
+              )}
+              <div className="field">
+                <label>Description</label>
+                <textarea name="description_md" placeholder="Evidence, risk context, or current state" />
+              </div>
+              <button className="button" type="submit" style={{ marginTop: 8 }}>
+                Open issue
+              </button>
+            </form>
+          </ModalTrigger>
+        }
+      >
+        {unphasedIssues.length ? (
+          <div className="list">
+            {unphasedIssues.map((issue: any) => (
+              <IssueRow key={issue.id} issue={issue} projectId={projectId} users={data.users} phases={data.phases} />
+            ))}
+          </div>
+        ) : (
+          <div className="empty">No project-level issues. Issues inside phases live on each phase tab.</div>
+        )}
+      </Section>
+
+      {/* Conversations */}
+      <Section
+        title="Conversations"
+        count={data.conversations.length}
+        action={
+          <ModalTrigger buttonLabel="+ New conversation" title="Create conversation" buttonClass="button ghost small">
+            <form className="form" action={createConversation}>
+              <input type="hidden" name="project_id" value={projectId} />
+              <input type="hidden" name="client_id" value={project.client_id} />
+              <div className="field">
+                <label>New conversation</label>
+                <input name="title" placeholder="Client + Sakshi WhatsApp" required />
+              </div>
+              <div className="form-grid">
+                <div className="field">
+                  <label>Type</label>
+                  <select name="kind">
+                    <option value="group">Group</option>
+                    <option value="direct">Direct</option>
+                  </select>
                 </div>
                 <div className="field">
-                  <label>Role detail</label>
-                  <input name="role_label" placeholder="Referrer, operations…" />
+                  <label>Channel</label>
+                  <select name="channel">
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="email">Email</option>
+                    <option value="manual">Manual</option>
+                  </select>
                 </div>
-                <label className="checkbox">
-                  <input name="is_referral_source" type="checkbox" />
-                  Introduced this project
-                </label>
-                <div className="form-grid">
-                  <div className="field">
-                    <label>Financial arrangement</label>
-                    <select name="financial_arrangement">
-                      <option value="none">None</option>
-                      <option value="referral_commission">Referral commission</option>
-                      <option value="revenue_share">Revenue share</option>
-                      <option value="delivery_split">Delivery split</option>
-                      <option value="fixed_fee">Fixed fee</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Value</label>
-                    <input name="financial_value" type="number" min="0" step="0.01" />
-                  </div>
-                </div>
-                <div className="field">
-                  <label>Terms note</label>
-                  <textarea name="terms_note" placeholder="Plain-language agreement context" />
-                </div>
-                <input type="hidden" name="currency_code" value="INR" />
-                <input type="hidden" name="payment_status" value="pending" />
-                <button className="button" type="submit" style={{ marginTop: 8 }}>
-                  Add participant
-                </button>
-              </form>
-            </ModalTrigger>
-          }
-        >
-          {data.participants.length ? (
-            <div className="list">
-              {data.participants.map((p: any) => (
-                <div className="row" key={p.person_id}>
+              </div>
+              <button className="button" type="submit" style={{ marginTop: 8 }}>
+                Create conversation
+              </button>
+            </form>
+          </ModalTrigger>
+        }
+      >
+        {data.conversations.length ? (
+          <div className="stack">
+            {data.conversations.map((conversation: any) => (
+              <details key={conversation.id} open={thread === conversation.id}>
+                <summary
+                  className="row"
+                  style={{ cursor: "pointer", listStyle: "none", border: "1px solid var(--line)", background: "var(--surface)" }}
+                >
                   <div className="row-main">
-                    <div className="row-title">{p.people?.name}</div>
+                    <div className="row-title">{conversation.title}</div>
                     <div className="row-meta">
-                      {p.role_label || p.role}
-                      {p.communication_mode ? ` · ${p.communication_mode.replace(/_/g, " ")}` : ""}
-                      {p.financial_arrangement !== "none"
-                        ? ` · ${p.financial_arrangement.replace(/_/g, " ")} ${p.financial_value ?? ""}`
-                        : ""}
+                      {conversation.kind} · {conversation.channel} ·{" "}
+                      {(conversation.conversation_participants ?? [])
+                        .map((p: any) => p.people?.name)
+                        .filter(Boolean)
+                        .join(", ") || "No participants"}
                     </div>
                   </div>
                   <div className="row-actions-always">
-                    <StatusPill value={p.role} />
-                    <EditParticipantButton participant={p} projectId={projectId} />
+                    <StatusPill value={conversation.channel} />
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty">No participants linked.</div>
-          )}
-        </Section>
-
-        {/* Conversations */}
-        <Section 
-          title="Conversations" 
-          count={data.conversations.length}
-          action={
-            <ModalTrigger buttonLabel="+ New conversation" title="Create conversation" buttonClass="button ghost small">
-              <form className="form" action={createConversation}>
-                <input type="hidden" name="project_id" value={projectId} />
-                <input type="hidden" name="client_id" value={project.client_id} />
-                <div className="field">
-                  <label>New conversation</label>
-                  <input name="title" placeholder="Client + Sakshi WhatsApp" required />
-                </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label>Type</label>
-                    <select name="kind">
-                      <option value="group">Group</option>
-                      <option value="direct">Direct</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Channel</label>
-                    <select name="channel">
-                      <option value="whatsapp">WhatsApp</option>
-                      <option value="email">Email</option>
-                      <option value="manual">Manual</option>
-                    </select>
-                  </div>
-                </div>
-                <button className="button" type="submit" style={{ marginTop: 8 }}>
-                  Create conversation
-                </button>
-              </form>
-            </ModalTrigger>
-          }
-        >
-          {data.conversations.length ? (
-            <div className="stack">
-              {data.conversations.map((conversation: any) => (
-                <details key={conversation.id} open={thread === conversation.id}>
-                  <summary className="row" style={{ cursor: "pointer", listStyle: "none", border: "1px solid var(--line)", background: "var(--surface)" }}>
-                    <div className="row-main">
-                      <div className="row-title">{conversation.title}</div>
-                      <div className="row-meta">
-                        {conversation.kind} · {conversation.channel} ·{" "}
-                        {(conversation.conversation_participants ?? [])
-                          .map((p: any) => p.people?.name)
-                          .filter(Boolean)
-                          .join(", ") || "No participants"}
-                      </div>
-                    </div>
-                    <div className="row-actions-always">
-                      <EditConversationButton
-                        conversation={conversation}
-                        clientId={project.client_id}
-                        projects={[{ id: projectId, name: project.name }]}
-                      />
-                      <StatusPill value={conversation.channel} />
-                    </div>
-                  </summary>
-                  <ConversationThread
-                    conversationId={conversation.id}
-                    projectId={projectId}
-                    initialMessages={conversation.messages ?? []}
-                    people={data.people}
-                  />
-                </details>
-              ))}
-            </div>
-          ) : (
-            <div className="empty">No conversations on this project.</div>
-          )}
-        </Section>
-
-        {/* Activity */}
-        <Section title="Activity" count={data.activity.length}>
-          {data.activity.length ? (
-            <div className="list">
-              {data.activity.map((event: any) => (
-                <div className="row" key={event.id}>
-                  <StatusPill value={event.event_type} />
-                  <div className="row-main">
-                    <div className="row-title">{event.summary}</div>
-                    <div className="row-meta">{formatDateTime(event.occurred_at)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty">Meaningful work changes will appear here as you operate the project.</div>
-          )}
-        </Section>
-      </div>
-    </>
-  );
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function TaskRow({ task, projectId, phases, users }: { task: any; projectId: string; phases: any[]; users: any[] }) {
-  return (
-    <div className="row">
-      <StatusPill value={task.priority} />
-      <div className="row-main">
-        <div className="row-title">{task.title}</div>
-        <div className="row-meta">
-          {task.due_at ? `Due ${formatDate(task.due_at)}` : "No due date"}
-          {task.description_md ? ` · ${task.description_md.slice(0, 80)}` : ""}
-        </div>
-      </div>
-      <div className="row-actions-always">
-        <StatusPill value={task.status} />
-        {task.status !== "done" && task.status !== "cancelled" && (
-          <TaskStatusControl taskId={task.id} projectId={projectId} initialStatus={task.status} />
+                </summary>
+                <ConversationThread
+                  conversationId={conversation.id}
+                  projectId={projectId}
+                  initialMessages={conversation.messages ?? []}
+                  people={data.people}
+                />
+              </details>
+            ))}
+          </div>
+        ) : (
+          <div className="empty">No conversations on this project.</div>
         )}
-        <EditTaskButton task={task} projectId={projectId} phases={phases} users={users} />
-      </div>
-    </div>
-  );
-}
+      </Section>
 
-function Section({
-  title,
-  count,
-  action,
-  children,
-}: {
-  title: string;
-  count: number;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="section">
-      <div className="section-title">
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <h2>{title}</h2>
-          <span>{count}</span>
-        </div>
-        {action && <div>{action}</div>}
-      </div>
-      {children}
-    </section>
+      {/* Activity */}
+      <Section title="Activity" count={data.activity.length}>
+        {data.activity.length ? (
+          <div className="list">
+            {data.activity.map((event: any) => (
+              <div className="row" key={event.id}>
+                <StatusPill value={event.event_type} />
+                <div className="row-main">
+                  <div className="row-title">{event.summary}</div>
+                  <div className="row-meta">{formatDateTime(event.occurred_at)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty">Meaningful work changes will appear here as you operate the project.</div>
+        )}
+      </Section>
+    </div>
   );
 }

@@ -38,6 +38,7 @@ export async function AppShell({
           </NavLink>
           <NavLink href="/projects">Projects</NavLink>
           <NavLink href="/clients">Clients</NavLink>
+          <NavLink href="/relationships">Relationships</NavLink>
           <NavLink href="/people">People</NavLink>
           <NavLink href="/guide">Guide</NavLink>
         </nav>

@@ -11,6 +11,7 @@ import {
   createIssue,
   createPerson,
   createProject,
+  createRelationship,
   createTask,
   quickCapture,
   updateProjectStatus,
@@ -26,7 +27,8 @@ type PaletteMode =
   | "task"
   | "issue"
   | "record"
-  | "conversation";
+  | "conversation"
+  | "relationship";
 
 type Project = {
   id: string;
@@ -50,6 +52,7 @@ const MODE_TITLES: Record<Exclude<PaletteMode, "command">, string> = {
   issue: "Log issue",
   record: "Log project record",
   conversation: "New conversation",
+  relationship: "New relationship",
 };
 
 export function CommandMenu({ projects, clients }: { projects: Project[]; clients: Client[] }) {
@@ -338,6 +341,10 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                       <span className="cmdk-icon">◑</span>
                       <span className="cmdk-item-main"><span>Clients</span></span>
                     </Command.Item>
+                    <Command.Item className="cmdk-item" onSelect={() => go("/relationships")}>
+                      <span className="cmdk-icon">↗</span>
+                      <span className="cmdk-item-main"><span>Relationships</span></span>
+                    </Command.Item>
                     <Command.Item className="cmdk-item" onSelect={() => go("/people")}>
                       <span className="cmdk-icon">◎</span>
                       <span className="cmdk-item-main"><span>People</span></span>
@@ -367,6 +374,10 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                     <Command.Item className="cmdk-item" onSelect={() => openInMode("client")}>
                       <span className="cmdk-icon">✚</span>
                       <span className="cmdk-item-main"><span>New client</span></span>
+                    </Command.Item>
+                    <Command.Item className="cmdk-item" onSelect={() => openInMode("relationship")}>
+                      <span className="cmdk-icon">✚</span>
+                      <span className="cmdk-item-main"><span>New relationship</span></span>
                     </Command.Item>
                     <Command.Item className="cmdk-item" onSelect={() => openInMode("person")}>
                       <span className="cmdk-icon">✚</span>
@@ -529,6 +540,50 @@ function CreateForm({
           <button className="button" type="submit" style={{ marginTop: 8 }}>
             Create client
           </button>
+        </form>
+      )}
+
+      {mode === "relationship" && (
+        <form className="form" action={createRelationship} onSubmit={onDone}>
+          <div className="field">
+            <label htmlFor="palette-relationship-client">Client</label>
+            <select id="palette-relationship-client" name="client_id" required autoFocus>
+              <option value="">Choose client</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="palette-relationship-source">Source</label>
+            <select id="palette-relationship-source" name="source">
+              <option value="direct_outreach">Direct outreach</option>
+              <option value="referral_partner">Referral partner</option>
+              <option value="existing_client">Existing client</option>
+              <option value="marketplace">Marketplace</option>
+              <option value="internal">Internal</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="palette-relationship-arrangement">Financial arrangement</label>
+            <select id="palette-relationship-arrangement" name="financial_arrangement">
+              <option value="none">None</option>
+              <option value="referral_commission">Referral commission</option>
+              <option value="revenue_share">Revenue share</option>
+              <option value="delivery_split">Delivery split</option>
+              <option value="fixed_fee">Fixed fee</option>
+            </select>
+          </div>
+          <button className="button" type="submit" style={{ marginTop: 8 }}>
+            Create relationship
+          </button>
+          {clients.length === 0 && (
+            <p className="notice" style={{ marginTop: 16 }}>
+              No clients yet — add a client first, or use the clients page.
+            </p>
+          )}
         </form>
       )}
 

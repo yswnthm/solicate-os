@@ -7,12 +7,16 @@ import {
   EditClientModal,
   EditConversationModal,
   EditEntryModal,
+  EditFinanceItemModal,
   EditIssueModal,
   EditMessageModal,
   EditParticipantModal,
   EditPersonModal,
   EditPhaseModal,
   EditProjectModal,
+  EditProposalModal,
+  EditRelationshipModal,
+  EditScopeModal,
   EditTaskModal,
 } from "@/components/editing/entity-edit-modals";
 import type { TaskEditContext } from "@/features/update-actions";
@@ -91,6 +95,42 @@ export function EditPhaseButton({
   );
 }
 
+export function EditScopeButton({
+  phase,
+  label = "Edit scope",
+  className = "button ghost small",
+}: {
+  phase: any;
+  label?: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <EditButton onClick={() => setOpen(true)} label={label} className={className} title="Edit scope" />
+      <EditScopeModal phase={phase} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+export function EditProposalButton({
+  phase,
+  label = "Edit proposal",
+  className = "button ghost small",
+}: {
+  phase: any;
+  label?: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <EditButton onClick={() => setOpen(true)} label={label} className={className} title="Edit proposal" />
+      <EditProposalModal phase={phase} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
 export function EditTaskButton({
   task,
   projectId,
@@ -129,12 +169,14 @@ export function EditIssueButton({
   issue,
   projectId,
   users,
+  phases,
   label = "Edit",
   className = "button ghost small",
 }: {
   issue: any;
   projectId: string;
   users?: any[];
+  phases?: { id: string; position: number; name: string }[];
   label?: string;
   className?: string;
 }) {
@@ -142,7 +184,14 @@ export function EditIssueButton({
   return (
     <>
       <EditButton onClick={() => setOpen(true)} label={label} className={className} title="Edit issue" />
-      <EditIssueModal issue={issue} projectId={projectId} users={users} open={open} onOpenChange={setOpen} />
+      <EditIssueModal
+        issue={issue}
+        projectId={projectId}
+        users={users}
+        phases={phases}
+        open={open}
+        onOpenChange={setOpen}
+      />
     </>
   );
 }
@@ -150,11 +199,13 @@ export function EditIssueButton({
 export function EditEntryButton({
   entry,
   projects,
+  phases,
   label = "Edit",
   className = "button ghost small",
 }: {
   entry: any;
   projects?: { id: string; name: string }[];
+  phases?: { id: string; position: number; name: string }[];
   label?: string;
   className?: string;
 }) {
@@ -162,7 +213,57 @@ export function EditEntryButton({
   return (
     <>
       <EditButton onClick={() => setOpen(true)} label={label} className={className} title="Edit record" />
-      <EditEntryModal entry={entry} projects={projects} open={open} onOpenChange={setOpen} />
+      <EditEntryModal entry={entry} projects={projects} phases={phases} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+export function EditRelationshipButton({
+  relationship,
+  clients,
+  people,
+  label = "Edit",
+  className = "button ghost small",
+}: {
+  relationship: any;
+  clients: { id: string; name: string }[];
+  people?: { id: string; name: string; is_partner: boolean }[];
+  label?: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <EditButton onClick={() => setOpen(true)} label={label} className={className} title="Edit relationship" />
+      <EditRelationshipModal
+        relationship={relationship}
+        clients={clients}
+        people={people}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
+  );
+}
+
+export function EditFinanceItemButton({
+  item,
+  projectId,
+  phases,
+  label = "Edit",
+  className = "button ghost small",
+}: {
+  item: any;
+  projectId: string;
+  phases?: { id: string; position: number; name: string }[];
+  label?: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <EditButton onClick={() => setOpen(true)} label={label} className={className} title="Edit finance item" />
+      <EditFinanceItemModal item={item} projectId={projectId} phases={phases} open={open} onOpenChange={setOpen} />
     </>
   );
 }

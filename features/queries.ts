@@ -41,7 +41,7 @@ const getProjectsCached = unstable_cache(
     const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
       .from("projects")
-      .select("id, name, code, status, target_date, updated_at, started_on, summary, client_id, clients(id, name)")
+      .select("id, name, code, status, target_date, updated_at, started_on, summary, objective, client_id, clients(id, name)")
       .neq("status", "archived")
       .order("updated_at", { ascending: false });
     throwOnError(response.error);
@@ -173,29 +173,41 @@ export async function getTodayData(userId: string) {
 const CONVERSATION_MESSAGE_LIMIT = 100;
 const PROJECT_MESSAGE_LIMIT = 200;
 
+// Slim project fetch for layouts/headers — the tabs render their own workspace.
+export async function getProjectHeader(projectId: string) {
+  const supabase = await createSupabaseServerClient();
+  const response = await supabase
+    .from("projects")
+    .select("*, clients(id, name)")
+    .eq("id", projectId)
+    .maybeSingle();
+  throwOnError(response.error);
+  return response.data;
+}
+
 export async function getProjectWorkspace(projectId: string) {
   const supabase = await createSupabaseServerClient();
-  const [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, people, users] =
+  const [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, finance, people, users] =
     await Promise.all([
       supabase.from("projects").select("*, clients(id, name)").eq("id", projectId).maybeSingle(),
       supabase
         .from("tasks")
-        .select("id, title, description_md, status, priority, due_at, phase_id, assignee_id, phases(name)")
+        .select("id, title, description_md, status, priority, due_at, phase_id, assignee_id, phases(id, name, position)")
         .eq("project_id", projectId)
         .order("status")
         .order("due_at", { ascending: true, nullsFirst: false }),
       supabase
         .from("issues")
-        .select("id, title, description_md, status, severity, resolution_summary, assignee_id")
+        .select("id, title, description_md, status, severity, resolution_summary, assignee_id, phase_id, phases(id, name)")
         .eq("project_id", projectId)
         .order("reported_at", { ascending: false }),
       supabase
         .from("entries")
-        .select("id, title, type, body_md, occurred_at, decision_outcome, project_id")
+        .select("id, title, type, body_md, occurred_at, decision_outcome, decision_state, project_id, phase_id, phases(id, name)")
         .eq("project_id", projectId)
         .eq("triage_state", "filed")
         .order("occurred_at", { ascending: false })
-        .limit(50),
+        .limit(200),
       supabase
         .from("project_participants")
         .select("person_id, role, role_label, communication_mode, financial_arrangement, financial_value, is_referral_source, currency_code, payment_status, terms_note, people(id, name)")
@@ -219,13 +231,18 @@ export async function getProjectWorkspace(projectId: string) {
         .limit(40),
       supabase
         .from("phases")
-        .select("id, name, description, position, status, started_on, target_date, completed_at, project_id")
+        .select("id, name, description, position, status, started_on, target_date, completed_at, project_id, scope_deliverables, scope_requirements, scope_acceptance, proposal_quotation, proposal_pricing, proposal_revisions")
         .eq("project_id", projectId)
         .order("position"),
+      supabase
+        .from("finance_items")
+        .select("id, kind, title, amount, currency_code, occurred_on, notes, phase_id, phases(id, name)")
+        .eq("project_id", projectId)
+        .order("occurred_on", { ascending: false }),
       supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
       supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
     ]);
-  [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, people, users].forEach((r) =>
+  [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, finance, people, users].forEach((r) =>
     throwOnError(r.error),
   );
 
@@ -250,14 +267,148 @@ export async function getProjectWorkspace(projectId: string) {
     recentMessages: recentMessages.data ?? [],
     activity: activity.data ?? [],
     phases: phases.data ?? [],
+    finance: finance.data ?? [],
     people: people.data ?? [],
     users: users.data ?? [],
   };
 }
 
+// ─── Phase workspace ─────────────────────────────────────────────────────────
+// A phase owns its execution: tasks, issues, records, finance, and activity
+// that reference the phase's records. Everything the phase tabs render comes
+// from this single workspace.
+
+// Slim fetch for phase layouts/headers — the tabs render their own workspace.
+export async function getPhaseHeader(phaseId: string) {
+  const supabase = await createSupabaseServerClient();
+  const [phase, project] = await Promise.all([
+    supabase.from("phases").select("id, name, position, status, description, project_id").eq("id", phaseId).maybeSingle(),
+    supabase
+      .from("phases")
+      .select("projects(id, name, code)")
+      .eq("id", phaseId)
+      .maybeSingle(),
+  ]);
+  throwOnError(phase.error ?? project.error);
+  const rawProject = project.data?.projects as unknown;
+  const headerProject =
+    Array.isArray(rawProject) && rawProject.length > 0 ? (rawProject[0] as { id: string; name: string; code: string }) : rawProject;
+  return phase.data
+    ? { phase: phase.data, project: (headerProject as { id: string; name: string; code: string } | null) ?? null }
+    : { phase: null, project: null };
+}
+
+export async function getPhaseWorkspace(phaseId: string) {
+  const supabase = await createSupabaseServerClient();
+  const phaseResult = await supabase.from("phases").select("*").eq("id", phaseId).maybeSingle();
+  throwOnError(phaseResult.error);
+  const phase = phaseResult.data;
+  if (!phase) {
+    return { phase: null, project: null, tasks: [], issues: [], entries: [], finance: [], activity: [], phases: [], users: [] };
+  }
+
+  const [project, tasks, issues, entries, finance, phases, users] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, name, code, status, summary, objective, client_id, clients(id, name)")
+      .eq("id", phase.project_id)
+      .maybeSingle(),
+    supabase
+      .from("tasks")
+      .select("id, title, description_md, status, priority, due_at, phase_id, assignee_id, phases(id, name, position)")
+      .eq("phase_id", phaseId)
+      .order("status")
+      .order("due_at", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("issues")
+      .select("id, title, description_md, status, severity, resolution_summary, assignee_id, phase_id, phases(id, name)")
+      .eq("phase_id", phaseId)
+      .order("reported_at", { ascending: false }),
+    supabase
+      .from("entries")
+      .select("id, title, type, body_md, occurred_at, decision_outcome, decision_state, project_id, phase_id, phases(id, name)")
+      .eq("phase_id", phaseId)
+      .eq("triage_state", "filed")
+      .order("occurred_at", { ascending: false })
+      .limit(200),
+    supabase
+      .from("finance_items")
+      .select("id, kind, title, amount, currency_code, occurred_on, notes, phase_id, phases(id, name)")
+      .eq("phase_id", phaseId)
+      .order("occurred_on", { ascending: false }),
+    supabase
+      .from("phases")
+      .select("id, name, description, position, status, started_on, target_date, completed_at, project_id")
+      .eq("project_id", phase.project_id)
+      .order("position"),
+    supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
+  ]);
+  [project, tasks, issues, entries, finance, phases, users].forEach((r) => throwOnError(r.error));
+
+  const recordIds = [
+    phase.id,
+    ...(tasks.data ?? []).map((t) => t.id),
+    ...(issues.data ?? []).map((i) => i.id),
+    ...(entries.data ?? []).map((e) => e.id),
+  ];
+  const activity = await supabase
+    .from("activity_events")
+    .select("id, event_type, summary, occurred_at")
+    .eq("project_id", phase.project_id)
+    .in("record_id", recordIds)
+    .order("occurred_at", { ascending: false })
+    .limit(80);
+  throwOnError(activity.error);
+
+  return {
+    phase,
+    project: project.data,
+    tasks: tasks.data ?? [],
+    issues: issues.data ?? [],
+    entries: entries.data ?? [],
+    finance: finance.data ?? [],
+    activity: activity.data ?? [],
+    phases: phases.data ?? [],
+    users: users.data ?? [],
+  };
+}
+
+// ─── Relationships (Level 1) ──────────────────────────────────────────────────
+
+export async function getRelationships() {
+  const supabase = await createSupabaseServerClient();
+  const response = await supabase
+    .from("relationships")
+    .select("*, clients(id, name, status, summary), people(id, name, is_partner)")
+    .order("created_at", { ascending: false });
+  throwOnError(response.error);
+  return response.data ?? [];
+}
+
+export async function getRelationshipDetail(relationshipId: string) {
+  const supabase = await createSupabaseServerClient();
+  const relationshipResult = await supabase
+    .from("relationships")
+    .select("*, clients(id, name, status, summary, website_url), people(id, name, email, phone, is_partner)")
+    .eq("id", relationshipId)
+    .maybeSingle();
+  throwOnError(relationshipResult.error);
+  const relationship = relationshipResult.data;
+  if (!relationship) return { relationship: null, projects: [] };
+
+  const projects = await supabase
+    .from("projects")
+    .select("id, name, code, status, target_date, summary, updated_at")
+    .eq("client_id", relationship.client_id)
+    .order("updated_at", { ascending: false });
+  throwOnError(projects.error);
+
+  return { relationship, projects: projects.data ?? [] };
+}
+
 export async function getClientDetail(clientId: string) {
   const supabase = await createSupabaseServerClient();
-  const [client, contacts, projects, conversations, people] = await Promise.all([
+  const [client, contacts, projects, conversations, people, relationships] = await Promise.all([
     supabase.from("clients").select("*").eq("id", clientId).maybeSingle(),
     supabase
       .from("client_people")
@@ -273,15 +424,21 @@ export async function getClientDetail(clientId: string) {
       .select("id, title, kind, channel, project_id, last_message_at")
       .eq("client_id", clientId)
       .order("last_message_at", { ascending: false, nullsFirst: false }),
-    supabase.from("people").select("id, name").is("archived_at", null).order("name"),
+    supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
+    supabase
+      .from("relationships")
+      .select("*, people(id, name, is_partner)")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false }),
   ]);
-  [client, contacts, projects, conversations, people].forEach((r) => throwOnError(r.error));
+  [client, contacts, projects, conversations, people, relationships].forEach((r) => throwOnError(r.error));
   return {
     client: client.data,
     contacts: contacts.data ?? [],
     projects: projects.data ?? [],
     conversations: conversations.data ?? [],
     people: people.data ?? [],
+    relationships: relationships.data ?? [],
   };
 }
 
@@ -307,7 +464,7 @@ export async function getInboxData() {
 
 export async function getPersonDetail(personId: string) {
   const supabase = await createSupabaseServerClient();
-  const [person, participations, clientLinks, conversations] = await Promise.all([
+  const [person, participations, clientLinks, conversations, relationships] = await Promise.all([
     supabase.from("people").select("*").eq("id", personId).maybeSingle(),
     supabase
       .from("project_participants")
@@ -325,13 +482,19 @@ export async function getPersonDetail(personId: string) {
       .eq("person_id", personId)
       .is("left_at", null)
       .order("conversations(last_message_at)", { ascending: false }),
+    supabase
+      .from("relationships")
+      .select("id, source, status, summary, financial_arrangement, referral_commission, commission_currency, clients(id, name, status)")
+      .eq("person_id", personId)
+      .order("created_at", { ascending: false }),
   ]);
-  [person, participations, clientLinks, conversations].forEach((r) => throwOnError(r.error));
+  [person, participations, clientLinks, conversations, relationships].forEach((r) => throwOnError(r.error));
   return {
     person: person.data,
     participations: participations.data ?? [],
     clientLinks: clientLinks.data ?? [],
     conversations: conversations.data ?? [],
+    relationships: relationships.data ?? [],
   };
 }
 

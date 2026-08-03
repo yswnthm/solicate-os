@@ -210,6 +210,7 @@ export async function createIssue(formData: FormData) {
     description_md: text(formData.get("description_md")),
     severity: z.enum(["low", "medium", "high", "critical"]).parse(text(formData.get("severity")) || "medium"),
     assignee_id: optional(formData.get("assignee_id")),
+    phase_id: optional(formData.get("phase_id")),
     created_by_id: user.id,
   });
   if (error) throw new Error(error.message);
@@ -248,6 +249,7 @@ export async function createEntry(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("entries").insert({
     project_id: projectId,
+    phase_id: optional(formData.get("phase_id")),
     type,
     title,
     body_md: text(formData.get("body_md")),
@@ -434,5 +436,68 @@ export async function dismissInboxEntry(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/inbox");
   revalidateTag("inbox");
+  revalidatePath("/today");
+}
+
+// ─── Relationships (Level 1) ─────────────────────────────────────────────────
+
+export async function createRelationship(formData: FormData) {
+  const { user } = await requireActiveUser();
+  const clientId = id(formData.get("client_id"));
+  const personId = optional(formData.get("person_id"));
+  const commission = optional(formData.get("referral_commission"));
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("relationships")
+    .insert({
+      client_id: clientId,
+      person_id: personId,
+      source: z.enum(["referral_partner", "direct_outreach", "existing_client", "marketplace", "internal"]).parse(
+        text(formData.get("source")) || "direct_outreach",
+      ),
+      status: z.enum(["active", "inactive", "archived"]).parse(text(formData.get("status")) || "active"),
+      summary: text(formData.get("summary")),
+      communication_mode: optional(formData.get("communication_mode")),
+      financial_arrangement: z.enum(["none", "referral_commission", "revenue_share", "delivery_split", "fixed_fee"]).parse(
+        text(formData.get("financial_arrangement")) || "none",
+      ),
+      referral_commission: commission ? z.coerce.number().nonnegative().parse(commission) : null,
+      commission_currency: optional(formData.get("commission_currency")),
+      payment_status: z.enum(["not_applicable", "pending", "partially_paid", "paid", "disputed"]).parse(
+        text(formData.get("payment_status")) || "not_applicable",
+      ),
+      terms_note: text(formData.get("terms_note")),
+      created_by_id: user.id,
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath("/relationships");
+  revalidatePath(`/clients/${clientId}`);
+  if (personId) revalidatePath(`/people/${personId}`);
+  redirect(`/relationships/${data.id}`);
+}
+
+// ─── Finance ─────────────────────────────────────────────────────────────────
+
+export async function createFinanceItem(formData: FormData) {
+  const { user } = await requireActiveUser();
+  const projectId = id(formData.get("project_id"));
+  const phaseId = optional(formData.get("phase_id"));
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("finance_items").insert({
+    project_id: projectId,
+    phase_id: phaseId,
+    kind: z.enum(["invoice", "payment", "expense"]).parse(text(formData.get("kind"))),
+    title: z.string().min(1).parse(text(formData.get("title"))),
+    amount: z.coerce.number().positive().finite().parse(formData.get("amount")),
+    currency_code: (text(formData.get("currency_code")) || "INR").toUpperCase(),
+    occurred_on: optional(formData.get("occurred_on")) ?? new Date().toISOString().slice(0, 10),
+    notes: text(formData.get("notes")),
+    created_by_id: user.id,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(projectPath(projectId));
+  if (phaseId) revalidatePath(`/projects/${projectId}/phases/${phaseId}`);
   revalidatePath("/today");
 }

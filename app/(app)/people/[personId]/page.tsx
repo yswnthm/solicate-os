@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { getPersonDetail } from "@/features/queries";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
-import { formatDateTime } from "@/lib/utils";
+import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { EditPersonButton } from "@/components/editing/edit-buttons";
 
 export default async function PersonDetailPage({
@@ -14,7 +14,7 @@ export default async function PersonDetailPage({
   params: Promise<{ personId: string }>;
 }) {
   const { personId } = await params;
-  const { person, participations, clientLinks, conversations } = await getPersonDetail(personId);
+  const { person, participations, clientLinks, conversations, relationships } = await getPersonDetail(personId);
   if (!person) notFound();
 
   const contactMeta = [person.email, person.phone].filter(Boolean).join(" · ");
@@ -82,7 +82,7 @@ export default async function PersonDetailPage({
                       {p.role_label || p.role}
                       {p.projects?.clients?.name ? ` · ${p.projects.clients.name}` : ""}
                       {p.financial_arrangement !== "none"
-                        ? ` · ${p.financial_arrangement.replace(/_/g, " ")}${p.financial_value ? ` ${p.financial_value} ${p.currency_code ?? ""}` : ""}`
+                        ? ` · ${p.financial_arrangement.replace(/_/g, " ")}${p.financial_value ? ` ${formatCurrency(p.financial_value, p.currency_code ?? "INR")}` : ""}`
                         : ""}
                     </div>
                   </div>
@@ -125,9 +125,35 @@ export default async function PersonDetailPage({
           </section>
         )}
 
-        {participations.length === 0 && clientLinks.length === 0 && conversations.length === 0 && (
+        {relationships.length > 0 && (
+          <section className="section">
+            <div className="section-title">
+              <h2>Relationships</h2>
+              <span>{relationships.length}</span>
+            </div>
+            <div className="list">
+              {relationships.map((r: any) => (
+                <Link className="row" href={`/relationships/${r.id}`} key={r.id}>
+                  <StatusPill value={r.source} />
+                  <div className="row-main">
+                    <div className="row-title">{r.clients?.name}</div>
+                    <div className="row-meta">
+                      {r.summary || r.financial_arrangement.replaceAll("_", " ") || "Relationship record"}
+                      {r.referral_commission != null
+                        ? ` · ${formatCurrency(r.referral_commission, r.commission_currency ?? "INR")}`
+                        : ""}
+                    </div>
+                  </div>
+                  <StatusPill value={r.status} />
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {participations.length === 0 && clientLinks.length === 0 && conversations.length === 0 && relationships.length === 0 && (
           <div className="empty">
-            No linked projects, clients, or conversations yet.
+            No linked projects, clients, relationships, or conversations yet.
           </div>
         )}
       </div>

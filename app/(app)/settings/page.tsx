@@ -46,7 +46,7 @@ export default async function SettingsPage() {
           <div className="stack" style={{ marginTop: 12, gap: 12, fontSize: 13, color: "var(--muted)" }}>
             <p>
               <strong style={{ color: "var(--ink-2)" }}>Capture first, triage later.</strong> Use the Inbox or
-              quick capture on Today. Don't leave things in your head.
+              quick capture on Today. Don&apos;t leave things in your head.
             </p>
             <p>
               <strong style={{ color: "var(--ink-2)" }}>Projects are the unit of work.</strong> Tasks, issues,
@@ -54,10 +54,10 @@ export default async function SettingsPage() {
             </p>
             <p>
               <strong style={{ color: "var(--ink-2)" }}>Tasks vs issues.</strong> A task is work to do. An issue is
-              a problem, risk, or unresolved concern. Don't conflate them.
+              a problem, risk, or unresolved concern. Don&apos;t conflate them.
             </p>
             <p>
-              <strong style={{ color: "var(--ink-2)" }}>Archive, don't delete.</strong> Completed and closed
+              <strong style={{ color: "var(--ink-2)" }}>Archive, don&apos;t delete.</strong> Completed and closed
               projects remain searchable.
             </p>
             <p>

@@ -30,10 +30,22 @@ export default function GuidePage() {
           <div className="list">
             <div className="row">
               <div className="row-main">
-                <div className="row-title">Clients → Projects → everything else</div>
+                <div className="row-title">Relationship → Client → Project → Phase → Work</div>
                 <div className="row-meta">
-                  Clients are the relationships you serve. Projects are the unit of work. Tasks, issues, records,
-                  conversations, and participants all live <em>inside</em> a project.
+                  A <em>relationship</em> records how a client entered Solicate and the terms attached. A{" "}
+                  <em>client</em> is the business you serve. A <em>project</em> holds the strategy — the objective,
+                  success definition, and direction. A <em>phase</em> owns the execution: scope, proposal, tasks,
+                  issues, records, and finance.
+                </div>
+              </div>
+            </div>
+            <div className="row">
+              <div className="row-main">
+                <div className="row-title">Projects set direction, phases do the work</div>
+                <div className="row-meta">
+                  Projects answer &quot;what are we trying to achieve&quot; — never &quot;what are we doing
+                  today.&quot; Daily work, records, decisions, and finance live inside phases. Project-level tasks
+                  and issues only exist when they haven&apos;t been phased yet.
                 </div>
               </div>
             </div>
@@ -74,6 +86,7 @@ export default function GuidePage() {
               ["Inbox", "G I", "Triage untriaged captures and messages; file or dismiss."],
               ["Projects", "G P", "All delivery work with active/paused counts."],
               ["Clients", "G C", "Businesses and individuals Solicate serves."],
+              ["Relationships", "—", "How each client came in, referrals, and relationship-level terms."],
               ["People", "G U", "Client contacts, partners, and referrers."],
               ["Search", "G S", "Find the original record, not a summary."],
               ["Settings", "—", "Account, sign out, and operational guidelines."],
@@ -158,15 +171,18 @@ export default function GuidePage() {
         <Section title="Running a project">
           <div className="prose">
             <p>
-              Open a project to see its full workspace: <strong>Phases</strong>, <strong>Tasks</strong> (grouped by
-              phase), <strong>Issues</strong>, <strong>Knowledge Base</strong> records,{" "}
-              <strong>Participants &amp; Terms</strong>, <strong>Conversations</strong>, and an{" "}
-              <strong>Activity</strong> audit trail.
+              Open a project to its tabbed workspace: <strong>Overview</strong> (strategy, financials, counts,
+              activity), <strong>Timeline</strong>, <strong>Documents</strong>, <strong>Decisions</strong>,{" "}
+              <strong>Finances</strong>, <strong>Milestones</strong>, <strong>Participants</strong>, and{" "}
+              <strong>Phases</strong>. Projects set strategy — the objective, success definition, and direction —
+              while the day-to-day lives in phases.
             </p>
             <p>
+              Each <strong>phase</strong> has its own workspace: Dashboard (health, progress, open work), Scope,
+              Proposal, Finance, Timeline, Tasks, Issues, Decisions, Notes, Documents, Milestones, and Records.
               Move a project through its life — <em>active → paused / completed → archived</em> — from the header
-              status controls or the command palette. Group tasks into phases as the engagement grows. Log risks as
-              issues with a severity, and close them with an outcome.
+              status controls or the command palette. Group tasks into phases as the engagement grows, and log risks
+              as issues with a severity.
             </p>
             <p>
               On the project page, <Kbd>✨ Weekly summary</Kbd> drafts an update from the last 7 days of activity;
@@ -176,7 +192,15 @@ export default function GuidePage() {
         </Section>
 
         <Section title="Status reference">
-          <h3 style={{ margin: "0 0 8px" }}>Projects &amp; phases</h3>
+          <h3 style={{ margin: "0 0 8px" }}>Relationships</h3>
+          <Table
+            head={["Field", "Options"]}
+            rows={[
+              ["Source", "inbound, outbound, referral, existing, other"],
+              ["Status", "active, dormant, churned"],
+            ]}
+          />
+          <h3 style={{ margin: "20px 0 8px" }}>Projects &amp; phases</h3>
           <Table
             head={["Entity", "Statuses"]}
             rows={[
@@ -228,9 +252,10 @@ export default function GuidePage() {
         <Section title="Editing & history">
           <div className="prose">
             <p>
-              Every row has an edit button that opens a reusable modal — projects, clients, people, phases, tasks,
-              issues, records, participants, and conversations. Edits record who made them, and the{" "}
-              <strong>Activity</strong> section on each project keeps a readable trail of meaningful changes.
+              Every row has an edit button that opens a reusable modal — relationships, clients, projects, people,
+              phases, tasks, issues, records, participants, and conversations. Finance items in the Finance tab can
+              be edited too. Edits record who made them, and the <strong>Activity</strong> section on each project
+              keeps a readable trail of meaningful changes.
             </p>
             <p>
               Anything logged anywhere is reachable from <Link href="/search">Search</Link> — which covers record
@@ -260,8 +285,12 @@ export default function GuidePage() {
               <strong>Capture first, triage later.</strong> Don&apos;t leave things in your head.
             </p>
             <p>
-              <strong>Projects are the unit of work.</strong> Tasks, issues, entries, and conversations all live
-              inside a project.
+              <strong>Relationship → Client → Project → Phase → Work.</strong> Track how clients came in and the
+              terms attached, then work down the chain.
+            </p>
+            <p>
+              <strong>Projects set direction, phases do the work.</strong> Strategy lives on the project; execution
+              lives in phases.
             </p>
             <p>
               <strong>Tasks vs issues.</strong> A task is work to do. An issue is a problem, risk, or unresolved

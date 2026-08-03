@@ -10,12 +10,14 @@ import {
   clientSchema,
   conversationSchema,
   entrySchema,
+  financeItemSchema,
   issueSchema,
   messageSchema,
   participantSchema,
   personSchema,
   phaseSchema,
   projectSchema,
+  relationshipSchema,
   taskSchema,
 } from "@/lib/validation";
 
@@ -142,7 +144,11 @@ export async function updatePhase(id: string, input: unknown): Promise<EditResul
     }
     const { error } = await supabase.from("phases").update(updates).eq("id", id);
     if (error) return uniqueError(error, "A phase with this name already exists in this project.");
-    refresh([`/projects/${parsed.data.project_id}`, "/today"]);
+    refresh([
+      `/projects/${parsed.data.project_id}`,
+      `/projects/${parsed.data.project_id}/phases/${id}`,
+      "/today",
+    ]);
   });
 }
 
@@ -181,7 +187,7 @@ export async function updateIssue(id: string, input: unknown): Promise<EditResul
     const supabase = await createSupabaseServerClient();
     const { data: existing } = await supabase
       .from("issues")
-      .select("status, resolved_at")
+      .select("status, resolved_at, project_id, phase_id")
       .eq("id", id)
       .maybeSingle();
     const closed = ["resolved", "accepted", "closed"].includes(parsed.data.status);
@@ -194,7 +200,12 @@ export async function updateIssue(id: string, input: unknown): Promise<EditResul
     }
     const { error } = await supabase.from("issues").update(updates).eq("id", id);
     if (error) return { ok: false, error: error.message };
-    refresh([`/projects/${parsed.data.project_id}`, "/today"]);
+    const paths = [`/projects/${parsed.data.project_id}`, "/today"];
+    if (parsed.data.phase_id) paths.push(`/projects/${parsed.data.project_id}/phases/${parsed.data.phase_id}`);
+    if (existing?.phase_id && existing.phase_id !== parsed.data.phase_id) {
+      paths.push(`/projects/${parsed.data.project_id}/phases/${existing.phase_id}`);
+    }
+    refresh(paths);
   });
 }
 
@@ -208,7 +219,7 @@ export async function updateEntry(id: string, input: unknown): Promise<EditResul
     const supabase = await createSupabaseServerClient();
     const { data: existing } = await supabase
       .from("entries")
-      .select("project_id, decision_state")
+      .select("project_id, phase_id, decision_state")
       .eq("id", id)
       .maybeSingle();
     const updates: Record<string, unknown> = { ...parsed.data };
@@ -222,9 +233,16 @@ export async function updateEntry(id: string, input: unknown): Promise<EditResul
     const { error } = await supabase.from("entries").update(updates).eq("id", id);
     if (error) return { ok: false, error: error.message };
     const paths = ["/inbox", "/today"];
-    if (parsed.data.project_id) paths.push(`/projects/${parsed.data.project_id}`);
+    if (parsed.data.project_id) {
+      paths.push(`/projects/${parsed.data.project_id}`);
+      if (parsed.data.phase_id) paths.push(`/projects/${parsed.data.project_id}/phases/${parsed.data.phase_id}`);
+      if (existing?.phase_id && existing.phase_id !== parsed.data.phase_id) {
+        paths.push(`/projects/${parsed.data.project_id}/phases/${existing.phase_id}`);
+      }
+    }
     if (existing?.project_id && existing.project_id !== parsed.data.project_id) {
       paths.push(`/projects/${existing.project_id}`);
+      if (existing.phase_id) paths.push(`/projects/${existing.project_id}/phases/${existing.phase_id}`);
     }
     refresh(paths, ["inbox"]);
   });
@@ -312,4 +330,57 @@ export async function getTaskEditContext(taskId: string, projectId: string): Pro
   const workspace = await getProjectWorkspace(projectId);
   const task = workspace.tasks.find((t) => t.id === taskId) ?? null;
   return { task, phases: workspace.phases, users: workspace.users, projectId };
+}
+
+// ─── Relationships (Level 1) ──────────────────────────────────────────────────
+
+export async function updateRelationship(id: string, input: unknown): Promise<EditResult> {
+  return runMutation(async () => {
+    await requireActiveUser();
+    const parsed = relationshipSchema.safeParse(input);
+    if (!parsed.success) return validationResult(parsed.error);
+    const supabase = await createSupabaseServerClient();
+    const { data: existing } = await supabase
+      .from("relationships")
+      .select("client_id, person_id")
+      .eq("id", id)
+      .maybeSingle();
+    const { error } = await supabase
+      .from("relationships")
+      .update(parsed.data)
+      .eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    const paths = [`/relationships/${id}`, `/clients/${parsed.data.client_id}`, "/relationships"];
+    if (parsed.data.person_id) paths.push(`/people/${parsed.data.person_id}`);
+    if (existing?.person_id && existing.person_id !== parsed.data.person_id) {
+      paths.push(`/people/${existing.person_id}`);
+    }
+    refresh(paths);
+  });
+}
+
+// ─── Finance items ────────────────────────────────────────────────────────────
+
+export async function updateFinanceItem(id: string, input: unknown): Promise<EditResult> {
+  return runMutation(async () => {
+    await requireActiveUser();
+    const parsed = financeItemSchema.safeParse(input);
+    if (!parsed.success) return validationResult(parsed.error);
+    const supabase = await createSupabaseServerClient();
+    const { data: existing } = await supabase
+      .from("finance_items")
+      .select("project_id, phase_id")
+      .eq("id", id)
+      .maybeSingle();
+    const { error } = await supabase.from("finance_items").update(parsed.data).eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    const projectId = parsed.data.project_id ?? existing?.project_id;
+    if (!projectId) return { ok: true };
+    const paths = [`/projects/${projectId}`];
+    if (parsed.data.phase_id) paths.push(`/projects/${projectId}/phases/${parsed.data.phase_id}`);
+    if (existing?.phase_id && existing.phase_id !== parsed.data.phase_id) {
+      paths.push(`/projects/${projectId}/phases/${existing.phase_id}`);
+    }
+    refresh(paths, ["projects"]);
+  });
 }

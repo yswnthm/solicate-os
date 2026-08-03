@@ -9,12 +9,14 @@ import {
   updateClient,
   updateConversation,
   updateEntry,
+  updateFinanceItem,
   updateIssue,
   updateMessage,
   updatePerson,
   updatePhase,
   updateProject,
   updateProjectParticipant,
+  updateRelationship,
   updateTask,
   type TaskEditContext,
 } from "@/features/update-actions";
@@ -58,6 +60,14 @@ const PAYMENT_STATUS_OPTIONS = ["not_applicable", "pending", "partially_paid", "
   value: v,
   label: label(v),
 }));
+const RELATIONSHIP_SOURCE_OPTIONS = ["referral_partner", "direct_outreach", "existing_client", "marketplace", "internal"].map(
+  (v) => ({ value: v, label: label(v) }),
+);
+const RELATIONSHIP_STATUS_OPTIONS = ["active", "inactive", "archived"].map((v) => ({
+  value: v,
+  label: label(v),
+}));
+const FINANCE_KIND_OPTIONS = ["invoice", "payment", "expense"].map((v) => ({ value: v, label: label(v) }));
 
 function toLocalDateTimeInput(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -149,6 +159,27 @@ export function EditProjectModal({
     { kind: "select", name: "status", label: "Status", options: PROJECT_STATUS_OPTIONS, width: "half" },
     { kind: "date", name: "started_on", label: "Start date", width: "half" },
     { kind: "date", name: "target_date", label: "Target date", width: "half" },
+    {
+      kind: "textarea",
+      name: "objective",
+      label: "Objective",
+      hint: "What this project is trying to achieve.",
+      minHeight: 100,
+    },
+    {
+      kind: "textarea",
+      name: "success_definition",
+      label: "Success definition",
+      hint: "How we know this worked.",
+      minHeight: 100,
+    },
+    {
+      kind: "textarea",
+      name: "direction",
+      label: "Direction",
+      hint: "Strategy, positioning, or guardrails for this engagement.",
+      minHeight: 100,
+    },
     { kind: "textarea", name: "summary", label: "Working summary", minHeight: 120 },
   ];
   return (
@@ -163,7 +194,10 @@ export function EditProjectModal({
         status: project.status,
         started_on: project.started_on ?? "",
         target_date: project.target_date ?? "",
-        summary: project.summary,
+        summary: project.summary ?? "",
+        objective: project.objective ?? "",
+        success_definition: project.success_definition ?? "",
+        direction: project.direction ?? "",
       }}
       fields={fields}
       successMessage="Project updated."
@@ -190,24 +224,202 @@ export function EditPhaseModal({
     { kind: "date", name: "started_on", label: "Start date", width: "half" },
     { kind: "date", name: "target_date", label: "Target date", width: "half" },
     { kind: "textarea", name: "description", label: "Description", minHeight: 110 },
+    {
+      kind: "textarea",
+      name: "scope_deliverables",
+      label: "Scope · deliverables",
+      hint: "What this phase produces.",
+      minHeight: 90,
+    },
+    {
+      kind: "textarea",
+      name: "scope_requirements",
+      label: "Scope · requirements",
+      hint: "Constraints and requirements in scope.",
+      minHeight: 90,
+    },
+    {
+      kind: "textarea",
+      name: "scope_acceptance",
+      label: "Scope · acceptance",
+      hint: "How the phase is accepted / signed off.",
+      minHeight: 90,
+    },
+    {
+      kind: "textarea",
+      name: "proposal_quotation",
+      label: "Proposal · quotation",
+      hint: "What was quoted for this phase.",
+      minHeight: 90,
+    },
+    {
+      kind: "textarea",
+      name: "proposal_pricing",
+      label: "Proposal · pricing",
+      hint: "Pricing structure and amount.",
+      minHeight: 90,
+    },
+    {
+      kind: "textarea",
+      name: "proposal_revisions",
+      label: "Proposal · revisions",
+      hint: "Quotation history / change log.",
+      minHeight: 90,
+    },
   ];
+  const record = {
+    project_id: phase.project_id,
+    name: phase.name,
+    description: phase.description ?? "",
+    position: phase.position ?? 1,
+    status: phase.status,
+    started_on: phase.started_on ?? "",
+    target_date: phase.target_date ?? "",
+    scope_deliverables: phase.scope_deliverables ?? "",
+    scope_requirements: phase.scope_requirements ?? "",
+    scope_acceptance: phase.scope_acceptance ?? "",
+    proposal_quotation: phase.proposal_quotation ?? "",
+    proposal_pricing: phase.proposal_pricing ?? "",
+    proposal_revisions: phase.proposal_revisions ?? "",
+  };
   return (
     <EntityEditModal
       open={open}
       onOpenChange={onOpenChange}
       title="Edit phase"
-      record={{
-        project_id: phase.project_id,
-        name: phase.name,
-        description: phase.description ?? "",
-        position: phase.position ?? 1,
-        status: phase.status,
-        started_on: phase.started_on ?? "",
-        target_date: phase.target_date ?? "",
-      }}
+      record={record}
       fields={fields}
       successMessage="Phase updated."
       onSave={async (values) => updatePhase(phase.id, values)}
+    />
+  );
+}
+
+// Focused variants: scope and proposal each get their own edit surface so the
+// phase workspace tabs don't force users through the whole phase form.
+const SCOPE_FIELDS: FieldConfig[] = [
+  {
+    kind: "textarea",
+    name: "scope_deliverables",
+    label: "Deliverables",
+    hint: "What this phase produces.",
+    minHeight: 120,
+  },
+  {
+    kind: "textarea",
+    name: "scope_requirements",
+    label: "Requirements",
+    hint: "Constraints and requirements in scope.",
+    minHeight: 120,
+  },
+  {
+    kind: "textarea",
+    name: "scope_acceptance",
+    label: "Acceptance criteria",
+    hint: "How the phase is accepted / signed off.",
+    minHeight: 120,
+  },
+];
+
+const PROPOSAL_FIELDS: FieldConfig[] = [
+  {
+    kind: "textarea",
+    name: "proposal_quotation",
+    label: "Quotation",
+    hint: "What was quoted for this phase.",
+    minHeight: 120,
+  },
+  {
+    kind: "textarea",
+    name: "proposal_pricing",
+    label: "Pricing",
+    hint: "Pricing structure and amount.",
+    minHeight: 120,
+  },
+  {
+    kind: "textarea",
+    name: "proposal_revisions",
+    label: "Revisions",
+    hint: "Quotation history / change log.",
+    minHeight: 120,
+  },
+];
+
+function PhaseFieldsModal({
+  phase,
+  fields,
+  open,
+  onOpenChange,
+  title,
+  successMessage,
+}: {
+  phase: any;
+  fields: FieldConfig[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  successMessage: string;
+}) {
+  const record = {
+    project_id: phase.project_id,
+    scope_deliverables: phase.scope_deliverables ?? "",
+    scope_requirements: phase.scope_requirements ?? "",
+    scope_acceptance: phase.scope_acceptance ?? "",
+    proposal_quotation: phase.proposal_quotation ?? "",
+    proposal_pricing: phase.proposal_pricing ?? "",
+    proposal_revisions: phase.proposal_revisions ?? "",
+  };
+  return (
+    <EntityEditModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      record={record}
+      fields={fields}
+      successMessage={successMessage}
+      onSave={async (values) => updatePhase(phase.id, values)}
+    />
+  );
+}
+
+export function EditScopeModal({
+  phase,
+  open,
+  onOpenChange,
+}: {
+  phase: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <PhaseFieldsModal
+      phase={phase}
+      fields={SCOPE_FIELDS}
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Edit scope"
+      successMessage="Scope updated."
+    />
+  );
+}
+
+export function EditProposalModal({
+  phase,
+  open,
+  onOpenChange,
+}: {
+  phase: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <PhaseFieldsModal
+      phase={phase}
+      fields={PROPOSAL_FIELDS}
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Edit proposal"
+      successMessage="Proposal updated."
     />
   );
 }
@@ -337,12 +549,14 @@ export function EditIssueModal({
   issue,
   projectId,
   users,
+  phases,
   open,
   onOpenChange,
 }: {
   issue: any;
   projectId: string;
   users?: any[];
+  phases?: { id: string; position: number; name: string }[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -374,6 +588,18 @@ export function EditIssueModal({
           } as FieldConfig,
         ]
       : []),
+    ...(phases && phases.length > 0
+      ? [
+          {
+            kind: "select",
+            name: "phase_id",
+            label: "Phase",
+            options: phases.map((p) => ({ value: p.id, label: `${p.position}. ${p.name}` })),
+            placeholder: "Project-level (no phase)",
+            width: "half",
+          } as FieldConfig,
+        ]
+      : []),
     { kind: "textarea", name: "description_md", label: "Description", minHeight: 110 },
     {
       kind: "textarea",
@@ -395,6 +621,7 @@ export function EditIssueModal({
         severity: issue.severity,
         status: issue.status,
         assignee_id: issue.assignee_id ?? "",
+        phase_id: issue.phase_id ?? "",
         resolution_summary: issue.resolution_summary ?? "",
       }}
       fields={fields}
@@ -409,11 +636,13 @@ export function EditIssueModal({
 export function EditEntryModal({
   entry,
   projects,
+  phases,
   open,
   onOpenChange,
 }: {
   entry: any;
   projects?: { id: string; name: string }[];
+  phases?: { id: string; position: number; name: string }[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -438,6 +667,17 @@ export function EditEntryModal({
           } as FieldConfig,
         ]
       : []),
+    ...(phases && phases.length > 0
+      ? [
+          {
+            kind: "select",
+            name: "phase_id",
+            label: "Phase",
+            options: phases.map((p) => ({ value: p.id, label: `${p.position}. ${p.name}` })),
+            placeholder: "Project-level (no phase)",
+          } as FieldConfig,
+        ]
+      : []),
     { kind: "textarea", name: "body_md", label: "Body", minHeight: 130 },
     {
       kind: "custom",
@@ -459,6 +699,7 @@ export function EditEntryModal({
       title="Edit record"
       record={{
         project_id: entry.project_id ?? "",
+        phase_id: entry.phase_id ?? "",
         title: entry.title,
         type: entry.type,
         body_md: entry.body_md ?? "",
@@ -625,6 +866,197 @@ export function EditParticipantModal({
       fields={fields}
       successMessage="Participant updated."
       onSave={async (values) => updateProjectParticipant(projectId, participant.person_id, values)}
+    />
+  );
+}
+
+// ─── Relationships (Level 1) ─────────────────────────────────────────────────
+
+export function EditRelationshipModal({
+  relationship,
+  clients,
+  people,
+  open,
+  onOpenChange,
+}: {
+  relationship: any;
+  clients: { id: string; name: string }[];
+  people?: { id: string; name: string; is_partner: boolean }[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const fields: FieldConfig[] = [
+    {
+      kind: "select",
+      name: "client_id",
+      label: "Client",
+      options: clients.map((c) => ({ value: c.id, label: c.name })),
+      required: true,
+      width: "half",
+      autoFocus: true,
+    },
+    {
+      kind: "select",
+      name: "person_id",
+      label: "Referral partner",
+      options: (people ?? []).map((p) => ({ value: p.id, label: `${p.name}${p.is_partner ? " (partner)" : ""}` })),
+      placeholder: "No linked person",
+      width: "half",
+    },
+    {
+      kind: "select",
+      name: "source",
+      label: "Source",
+      options: RELATIONSHIP_SOURCE_OPTIONS,
+      width: "half",
+    },
+    {
+      kind: "select",
+      name: "status",
+      label: "Status",
+      options: RELATIONSHIP_STATUS_OPTIONS,
+      width: "half",
+    },
+    {
+      kind: "select",
+      name: "communication_mode",
+      label: "Communication",
+      options: COMMUNICATION_MODE_OPTIONS,
+      placeholder: "Not set",
+      width: "half",
+    },
+    {
+      kind: "select",
+      name: "financial_arrangement",
+      label: "Financial arrangement",
+      options: FINANCIAL_ARRANGEMENT_OPTIONS,
+      width: "half",
+    },
+    {
+      kind: "number",
+      name: "referral_commission",
+      label: "Referral commission",
+      min: 0,
+      step: "0.01",
+      width: "half",
+    },
+    {
+      kind: "text",
+      name: "commission_currency",
+      label: "Commission currency",
+      placeholder: "INR",
+      hint: "Required for fixed-fee arrangements",
+      width: "half",
+    },
+    {
+      kind: "select",
+      name: "payment_status",
+      label: "Payment status",
+      options: PAYMENT_STATUS_OPTIONS,
+      width: "half",
+    },
+    { kind: "textarea", name: "summary", label: "Relationship summary", minHeight: 90 },
+    { kind: "textarea", name: "terms_note", label: "Terms note", minHeight: 90 },
+  ];
+  return (
+    <EntityEditModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Edit relationship"
+      record={{
+        client_id: relationship.client_id,
+        person_id: relationship.person_id ?? "",
+        source: relationship.source,
+        status: relationship.status,
+        summary: relationship.summary ?? "",
+        communication_mode: relationship.communication_mode ?? "",
+        financial_arrangement: relationship.financial_arrangement ?? "none",
+        referral_commission: relationship.referral_commission ?? "",
+        commission_currency: relationship.commission_currency ?? "",
+        payment_status: relationship.payment_status ?? "not_applicable",
+        terms_note: relationship.terms_note ?? "",
+      }}
+      fields={fields}
+      successMessage="Relationship updated."
+      onSave={async (values) => updateRelationship(relationship.id, values)}
+    />
+  );
+}
+
+// ─── Finance items (invoices / payments / expenses) ─────────────────────────
+
+export function EditFinanceItemModal({
+  item,
+  projectId,
+  phases,
+  open,
+  onOpenChange,
+}: {
+  item: any;
+  projectId: string;
+  phases?: { id: string; position: number; name: string }[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const fields: FieldConfig[] = [
+    {
+      kind: "select",
+      name: "kind",
+      label: "Type",
+      options: FINANCE_KIND_OPTIONS,
+      width: "half",
+    },
+    { kind: "date", name: "occurred_on", label: "Date", width: "half" },
+    { kind: "text", name: "title", label: "Title", required: true, autoFocus: true },
+    {
+      kind: "number",
+      name: "amount",
+      label: "Amount",
+      min: 0,
+      step: "0.01",
+      width: "half",
+      required: true,
+    },
+    {
+      kind: "text",
+      name: "currency_code",
+      label: "Currency",
+      placeholder: "INR",
+      hint: "3-letter code",
+      width: "half",
+    },
+    ...(phases && phases.length > 0
+      ? [
+          {
+            kind: "select",
+            name: "phase_id",
+            label: "Phase",
+            options: phases.map((p) => ({ value: p.id, label: `${p.position}. ${p.name}` })),
+            placeholder: "Project-level",
+            width: "half",
+          } as FieldConfig,
+        ]
+      : []),
+    { kind: "textarea", name: "notes", label: "Notes", minHeight: 80 },
+  ];
+  return (
+    <EntityEditModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Edit finance item"
+      record={{
+        project_id: projectId,
+        phase_id: item.phase_id ?? "",
+        kind: item.kind,
+        title: item.title,
+        amount: item.amount ?? "",
+        currency_code: item.currency_code ?? "INR",
+        occurred_on: item.occurred_on ? String(item.occurred_on).slice(0, 10) : "",
+        notes: item.notes ?? "",
+      }}
+      fields={fields}
+      successMessage="Finance item updated."
+      onSave={async (values) => updateFinanceItem(item.id, values)}
     />
   );
 }
