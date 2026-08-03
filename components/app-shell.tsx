@@ -39,6 +39,7 @@ export async function AppShell({
           <NavLink href="/projects">Projects</NavLink>
           <NavLink href="/clients">Clients</NavLink>
           <NavLink href="/people">People</NavLink>
+          <NavLink href="/guide">Guide</NavLink>
         </nav>
 
         <div className="sidebar-footer">

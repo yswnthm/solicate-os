@@ -12,6 +12,7 @@ const GO_TO: Record<string, string> = {
   c: "/clients",
   u: "/people",
   s: "/search",
+  "?": "/guide",
 };
 
 export function KeyboardShortcuts() {
