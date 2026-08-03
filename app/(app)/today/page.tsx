@@ -1,20 +1,18 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 
-import { quickCapture } from "@/features/actions";
-import { getActiveProjectsForSelect, getTodayData } from "@/features/queries";
+import { getTodayData } from "@/features/queries";
 import { getTaskEditContext } from "@/features/update-actions";
 import { StatusPill } from "@/components/status-pill";
 import { requireActiveUser } from "@/lib/auth";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import { ModalTrigger } from "@/components/modal-trigger";
 import { MorningBriefButton } from "@/components/morning-brief";
 import { WeekReviewButton } from "@/components/week-review";
 import { EditTaskButton } from "@/components/editing/edit-buttons";
 
 export default async function TodayPage() {
   const { user, profile } = await requireActiveUser();
-  const [data, projects] = await Promise.all([getTodayData(user.id), getActiveProjectsForSelect()]);
+  const data = await getTodayData(user.id);
   const inboxCount = data.inboxMessages.length + data.inboxEntries.length;
 
   return (
@@ -27,33 +25,9 @@ export default async function TodayPage() {
         <div className="page-header-actions">
           <MorningBriefButton />
           <WeekReviewButton />
-          <ModalTrigger buttonLabel="+ Quick capture" title="Quick capture" buttonClass="button secondary">
-            <p className="muted" style={{ marginBottom: 16 }}>Grab a thought now, triage it from Inbox.</p>
-            <form className="form" action={quickCapture}>
-              <div className="field">
-                <label htmlFor="capture-project">Project (optional)</label>
-                <select id="capture-project" name="project_id">
-                  <option value="">Unsorted — triage from Inbox</option>
-                  {projects.map((p: any) => (
-                    <option key={p.id} value={p.id}>
-                      {p.clients?.name ? `${p.clients.name} / ` : ""}{p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="capture-title">What to capture</label>
-                <input id="capture-title" name="title" placeholder="Client asked about…" required />
-              </div>
-              <div className="field">
-                <label>Detail (optional)</label>
-                <textarea name="body_md" placeholder="Context, links, or raw text" />
-              </div>
-              <button className="button" type="submit" style={{ marginTop: 8 }}>
-                Capture → Inbox
-              </button>
-            </form>
-          </ModalTrigger>
+          <Link href="/capture" className="button secondary">
+            + Capture
+          </Link>
         </div>
       </div>
 

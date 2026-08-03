@@ -498,8 +498,7 @@ export async function getPersonDetail(personId: string) {
   };
 }
 
-export async function searchRecords(query: string) {
-  if (!query.trim()) return { entries: [], messages: [], projects: [], people: [] };
+export async function searchRecords(query: string) {  if (!query.trim()) return { entries: [], messages: [], projects: [], people: [] };
   const supabase = await createSupabaseServerClient();
   const search = query.trim();
   const [entries, messages, projects, people] = await Promise.all([
@@ -522,5 +521,43 @@ export async function searchRecords(query: string) {
     messages: messages.data ?? [],
     projects: projects.data ?? [],
     people: people.data ?? [],
+  };
+}
+
+// Options for the AI Capture page. Not cached — the form should always show
+// the current project/phase catalog the moment a capture starts.
+export async function getCaptureFormOptions() {
+  const supabase = await createSupabaseServerClient();
+  const [projects, phases, clients, people] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, name, status, clients(id, name)")
+      .in("status", ["active", "paused"])
+      .order("name"),
+    supabase
+      .from("phases")
+      .select("id, project_id, name, position, status")
+      .order("position"),
+    supabase.from("clients").select("id, name").neq("status", "archived").order("name"),
+    supabase.from("people").select("id, name").is("archived_at", null).order("name"),
+  ]);
+  [projects, phases, clients, people].forEach((r) => throwOnError(r.error));
+
+  return {
+    projects: (projects.data ?? []).map((p) => ({
+      id: String(p.id),
+      name: String(p.name),
+      client: String((p.clients as { name?: unknown } | null | undefined)?.name ?? "") || null,
+      phases: (phases.data ?? [])
+        .filter((ph) => ph.project_id === p.id)
+        .map((ph) => ({
+          id: String(ph.id),
+          name: String(ph.name),
+          position: Number(ph.position),
+          status: String(ph.status),
+        })),
+    })),
+    clients: (clients.data ?? []).map((c) => ({ id: String(c.id), name: String(c.name) })),
+    people: (people.data ?? []).map((p) => ({ id: String(p.id), name: String(p.name) })),
   };
 }

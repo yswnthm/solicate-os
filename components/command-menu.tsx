@@ -13,14 +13,12 @@ import {
   createProject,
   createRelationship,
   createTask,
-  quickCapture,
   updateProjectStatus,
 } from "@/features/actions";
 import { quickSearch } from "@/features/search";
 
 type PaletteMode =
   | "command"
-  | "capture"
   | "project"
   | "client"
   | "person"
@@ -44,7 +42,6 @@ const clientName = (c: Project["clients"]) =>
 type Client = { id: string; name: string };
 
 const MODE_TITLES: Record<Exclude<PaletteMode, "command">, string> = {
-  capture: "Quick capture",
   project: "New project",
   client: "New client",
   person: "New person",
@@ -96,13 +93,14 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
     setOpen(true);
   }, []);
 
-  // ⌘K / Ctrl+K toggles the palette; ⌘⇧X opens straight into quick capture.
+  // ⌘K / Ctrl+K toggles the palette; ⌘⇧X opens the AI Capture flow.
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.shiftKey && (e.key === "X" || e.key === "x")) {
         e.preventDefault();
-        openInMode("capture");
+        setOpen(false);
+        router.push("/capture");
         return;
       }
       if (mod && e.key === "k") {
@@ -115,7 +113,7 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
     };
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, [openInMode]);
+  }, [openInMode, router]);
 
   const go = (href: string) => {
     router.push(href);
@@ -375,11 +373,11 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                   </Command.Group>
 
                   <Command.Group heading="Create" className="cmdk-group-heading">
-                    <Command.Item className="cmdk-item" onSelect={() => openInMode("capture")}>
+                    <Command.Item className="cmdk-item" onSelect={() => go("/capture")}>
                       <span className="cmdk-icon">✚</span>
                       <span className="cmdk-item-main">
-                        <span>Quick capture</span>
-                        <span className="cmdk-sub">⌘⇧X · a thought now, triage from Inbox</span>
+                        <span>Capture (AI)</span>
+                        <span className="cmdk-sub">⌘⇧X · explain what happened, AI proposes the updates</span>
                       </span>
                     </Command.Item>
                     <Command.Item className="cmdk-item" onSelect={() => openInMode("project")}>
@@ -407,7 +405,6 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
           <CreateForm
             mode={mode}
             clients={clients}
-            projects={projects}
             context={context}
             onBack={reset}
             onDone={closeAfterSubmit}
@@ -458,14 +455,12 @@ function ProjectStatusCommands({
 function CreateForm({
   mode,
   clients,
-  projects,
   context,
   onBack,
   onDone,
 }: {
   mode: Exclude<PaletteMode, "command">;
   clients: Client[];
-  projects: Project[];
   context: { projectId?: string; projectName?: string; clientId?: string; clientName?: string } | null;
   onBack: () => void;
   onDone: () => void;
@@ -478,34 +473,6 @@ function CreateForm({
         </button>
         <span className="cmdk-form-title">{MODE_TITLES[mode]}</span>
       </div>
-
-      {mode === "capture" && (
-        <form className="form" action={quickCapture} onSubmit={onDone}>
-          <div className="field">
-            <label htmlFor="palette-capture-title">What to capture</label>
-            <input id="palette-capture-title" name="title" placeholder="Client asked about…" required autoFocus />
-          </div>
-          <div className="field">
-            <label htmlFor="palette-capture-project">Project (optional)</label>
-            <select id="palette-capture-project" name="project_id">
-              <option value="">Unsorted — triage from Inbox</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {clientName(p.clients) ? `${clientName(p.clients)} / ` : ""}
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="palette-capture-detail">Detail (optional)</label>
-            <textarea id="palette-capture-detail" name="body_md" placeholder="Context, links, or raw text" />
-          </div>
-          <button className="button" type="submit" style={{ marginTop: 8 }}>
-            Capture → Inbox
-          </button>
-        </form>
-      )}
 
       {mode === "project" && (
         <form className="form" action={createProject} onSubmit={onDone}>
