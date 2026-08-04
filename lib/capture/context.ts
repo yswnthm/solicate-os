@@ -1,13 +1,24 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getActiveProjectsForSelect, getPeople, getProjectWorkspace } from "@/features/queries";
+import { getActiveProjectsForSelect, getPeople } from "@/features/queries";
 import type { CaptureInput, ClarificationAnswers } from "@/lib/capture/types";
 
 // Context retrieval for the capture templates. Like every other feature, the
 // model receives a structured memory package — the operator never re-explains
 // existing context.
+//
+// Retrieval is intentionally bounded with TARGETED queries — only the 6 data
+// types the capture templates actually need are fetched. Participants,
+// conversations, messages, activity, global people/users are not fetched here
+// (capture gets people from the cached getPeople() catalog instead).
 
 function throwOnError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
+}
+
+/** Truncate a string to at most maxChars characters. */
+function truncate(text: string | null | undefined, maxChars: number): string {
+  if (!text) return "";
+  return text.length <= maxChars ? text : text.slice(0, maxChars) + "…";
 }
 
 export interface CaptureContext {
@@ -40,17 +51,84 @@ function clientNameOf(relation: unknown): string | null {
 }
 
 /**
- * Build the full memory package for a capture session. Existing-project
- * captures pull the live workspace; new-project and projectless captures get
- * the project/people catalog so the model can resolve references and detect
- * collisions.
+ * Build the full memory package for a capture session. Uses targeted direct
+ * queries — only the 6 data types actually consumed by the capture templates
+ * are fetched. Skips participants, conversations, messages, activity, and
+ * global people/users (those aren't needed for capture analysis/proposal).
+ *
+ * All text body fields are truncated in this layer to keep JSON payload small.
  */
 export async function getCaptureContext(input: CaptureInput): Promise<CaptureContext> {
   const supabase = await createSupabaseServerClient();
 
-  const [projects, people] = await Promise.all([getActiveProjectsForSelect(), getPeople()]);
+  // Fetch catalog (cached, 60s TTL) + project-scoped data in parallel.
+  // If no project_id, skip the project queries entirely.
+  const catalogPromise = Promise.all([getActiveProjectsForSelect(), getPeople()]);
 
-  const project = input.project_id ? await getProjectWorkspace(input.project_id) : null;
+  let projectData: {
+    project: Record<string, unknown> | null;
+    phases: Record<string, unknown>[];
+    tasks: Record<string, unknown>[];
+    issues: Record<string, unknown>[];
+    finance: Record<string, unknown>[];
+    entries: Record<string, unknown>[];
+  } | null = null;
+
+  if (input.project_id) {
+    const pid = input.project_id;
+    // 6 targeted parallel queries — exactly what capture needs, nothing more.
+    const [project, phases, tasks, issues, entries, finance] = await Promise.all([
+      supabase
+        .from("projects")
+        .select("*, clients(id, name)")
+        .eq("id", pid)
+        .maybeSingle(),
+      supabase
+        .from("phases")
+        .select("id, name, description, position, status, started_on, target_date, completed_at, project_id")
+        .eq("project_id", pid)
+        .order("position"),
+      supabase
+        .from("tasks")
+        // No description_md — title+status+id is all the proposer needs
+        .select("id, title, status, priority, due_at, phase_id, phases(id, name, position)")
+        .eq("project_id", pid)
+        .order("status")
+        .order("due_at", { ascending: true, nullsFirst: false })
+        .limit(60),
+      supabase
+        .from("issues")
+        // No description_md
+        .select("id, title, status, severity, resolution_summary, phase_id, phases(id, name)")
+        .eq("project_id", pid)
+        .order("reported_at", { ascending: false })
+        .limit(30),
+      supabase
+        .from("entries")
+        .select("id, title, type, body_md, occurred_at, decision_outcome, decision_state, phase_id, phases(id, name)")
+        .eq("project_id", pid)
+        .eq("triage_state", "filed")
+        .order("occurred_at", { ascending: false })
+        .limit(40),
+      supabase
+        .from("finance_items")
+        .select("id, kind, title, amount, currency_code, occurred_on, payment_status, phase_id, phases(id, name)")
+        .eq("project_id", pid)
+        .order("occurred_on", { ascending: false })
+        .limit(25),
+    ]);
+    [project, phases, tasks, issues, entries, finance].forEach((r) => throwOnError(r.error));
+    projectData = {
+      project: project.data as Record<string, unknown> | null,
+      phases: (phases.data ?? []) as unknown as Record<string, unknown>[],
+      tasks: (tasks.data ?? []) as unknown as Record<string, unknown>[],
+      issues: (issues.data ?? []) as unknown as Record<string, unknown>[],
+      finance: (finance.data ?? []) as unknown as Record<string, unknown>[],
+      entries: (entries.data ?? []) as unknown as Record<string, unknown>[],
+    };
+  }
+
+  const [[projects, people]] = await Promise.all([catalogPromise]);
 
   let client: { id: string | null; name: string } | null = null;
   if (input.scope === "new_project") {
@@ -64,12 +142,11 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
     }
   }
 
-  const raw = project;
-  const phases = (raw?.phases ?? []) as unknown as Record<string, unknown>[];
-  const tasks = (raw?.tasks ?? []) as unknown as Record<string, unknown>[];
-  const issues = (raw?.issues ?? []) as unknown as Record<string, unknown>[];
-  const finance = (raw?.finance ?? []) as unknown as Record<string, unknown>[];
-  const entries = (raw?.entries ?? []) as unknown as Record<string, unknown>[];
+  const phases = projectData?.phases ?? [];
+  const tasks = projectData?.tasks ?? [];
+  const issues = projectData?.issues ?? [];
+  const finance = projectData?.finance ?? [];
+  const entries = projectData?.entries ?? [];
 
   const openTasks = tasks.filter((t) => !["done", "cancelled"].includes(String(t.status)));
   const doneTasks = tasks.filter((t) => t.status === "done");
@@ -81,9 +158,7 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
       new_phase_name: input.new_phase_name ?? null,
       new_client_name: input.new_client_name ?? null,
     },
-    project: raw?.project
-      ? (raw.project as Record<string, unknown>)
-      : null,
+    project: projectData?.project ?? null,
     phases: phases.map((p) => ({
       id: p.id,
       name: p.name,
@@ -121,14 +196,16 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
       amount: Number(f.amount),
       currency: f.currency_code,
       date: f.occurred_on,
-      payment_status: f.payment_status ?? null,
+      payment_status: (f.payment_status as string) ?? null,
       phase: (f.phases as unknown as Record<string, unknown> | undefined)?.name ?? null,
     })),
+    // Body truncated to 300 chars — enough for the model to understand
+    // what each entry is about without burning tokens on full prose.
     recent_entries: entries.slice(0, 40).map((e) => ({
       title: e.title,
       type: e.type,
       date: e.occurred_at,
-      body: String(e.body_md ?? "").slice(0, 400),
+      body: truncate(String(e.body_md ?? ""), 300),
     })),
     decisions: entries
       .filter((e) => e.type === "decision")

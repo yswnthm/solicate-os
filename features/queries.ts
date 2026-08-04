@@ -175,6 +175,11 @@ export async function getTodayData(userId: string) {
 const CONVERSATION_MESSAGE_LIMIT = 100;
 const PROJECT_MESSAGE_LIMIT = 200;
 
+// AI-only caps — purpose-built for prompt payloads. UI queries use the
+// constants above and are NOT affected by these.
+const AI_CONVERSATION_MESSAGE_LIMIT = 20;
+const AI_PROJECT_MESSAGE_LIMIT = 40;
+
 // Slim project fetch for layouts/headers — the tabs render their own workspace.
 export async function getProjectHeader(projectId: string) {
   const supabase = await createSupabaseServerClient();
@@ -252,6 +257,116 @@ export async function getProjectWorkspace(projectId: string) {
   for (const message of recentMessages.data ?? []) {
     const list = messagesByConversation.get(message.conversation_id) ?? [];
     if (list.length < CONVERSATION_MESSAGE_LIMIT) list.push(message);
+    messagesByConversation.set(message.conversation_id, list);
+  }
+  const conversationsWithMessages = (conversations.data ?? []).map((conversation) => ({
+    ...conversation,
+    messages: messagesByConversation.get(conversation.id) ?? [],
+  }));
+
+  return {
+    project: project.data,
+    tasks: tasks.data ?? [],
+    issues: issues.data ?? [],
+    entries: entries.data ?? [],
+    participants: participants.data ?? [],
+    conversations: conversationsWithMessages,
+    recentMessages: recentMessages.data ?? [],
+    activity: activity.data ?? [],
+    phases: phases.data ?? [],
+    finance: finance.data ?? [],
+    people: people.data ?? [],
+    users: users.data ?? [],
+  };
+}
+
+/**
+ * AI-only slim workspace — same shape as getProjectWorkspace but with tight
+ * DB-level limits so the JSON payload fits inside the model's context window.
+ *
+ * Changes vs the UI workspace:
+ *   - entries      limit 40   (was 200), body_md truncated in context builders
+ *   - messages     limit 40   (was 200), per-conversation cap = 20 (was 100)
+ *   - tasks        limit 60   (was unbounded), no description_md
+ *   - issues       limit 30   (was unbounded), no description_md
+ *   - finance      limit 25   (was unbounded)
+ *   - phases       only id/name/position/status/started_on/target_date (no scope_x/proposal_x)
+ *   - people/users same (catalog only, already small)
+ *
+ * IMPORTANT: getProjectWorkspace is NOT modified — the UI keeps full fidelity.
+ */
+export async function getProjectWorkspaceForAI(projectId: string) {
+  const supabase = await createSupabaseServerClient();
+  const [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, finance, people, users] =
+    await Promise.all([
+      supabase.from("projects").select("*, clients(id, name)").eq("id", projectId).maybeSingle(),
+      supabase
+        .from("tasks")
+        // No description_md — saves significant tokens; capture context uses title+status+id
+        .select("id, title, status, priority, due_at, phase_id, assignee_id, phases(id, name, position)")
+        .eq("project_id", projectId)
+        .order("status")
+        .order("due_at", { ascending: true, nullsFirst: false })
+        .limit(60),
+      supabase
+        .from("issues")
+        // No description_md — saves significant tokens
+        .select("id, title, status, severity, resolution_summary, assignee_id, phase_id, phases(id, name)")
+        .eq("project_id", projectId)
+        .order("reported_at", { ascending: false })
+        .limit(30),
+      supabase
+        .from("entries")
+        // body_md IS included — context builders truncate it to 300 chars
+        .select("id, title, type, body_md, occurred_at, decision_outcome, decision_state, project_id, phase_id, phases(id, name)")
+        .eq("project_id", projectId)
+        .eq("triage_state", "filed")
+        .order("occurred_at", { ascending: false })
+        .limit(40),
+      supabase
+        .from("project_participants")
+        .select("person_id, role, role_label, communication_mode, financial_arrangement, financial_value, is_referral_source, currency_code, payment_status, terms_note, people(id, name)")
+        .eq("project_id", projectId),
+      supabase
+        .from("conversations")
+        .select("id, title, kind, channel, project_id, conversation_participants(people(id, name))")
+        .eq("project_id", projectId)
+        .order("last_message_at", { ascending: false, nullsFirst: false }),
+      supabase
+        .from("messages")
+        .select("id, body_md, sent_at, direction, conversation_id, people(name), app_users!sender_user_id(display_name), conversations!inner(project_id)")
+        .eq("conversations.project_id", projectId)
+        .order("sent_at", { ascending: false })
+        .limit(AI_PROJECT_MESSAGE_LIMIT),
+      supabase
+        .from("activity_events")
+        .select("id, event_type, summary, occurred_at")
+        .eq("project_id", projectId)
+        .order("occurred_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("phases")
+        // No scope_*/proposal_* fields — save ~30-60 tokens per phase
+        .select("id, name, description, position, status, started_on, target_date, completed_at, project_id")
+        .eq("project_id", projectId)
+        .order("position"),
+      supabase
+        .from("finance_items")
+        .select("id, kind, title, amount, currency_code, occurred_on, notes, phase_id, phases(id, name)")
+        .eq("project_id", projectId)
+        .order("occurred_on", { ascending: false })
+        .limit(25),
+      supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
+      supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
+    ]);
+  [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, finance, people, users].forEach((r) =>
+    throwOnError(r.error),
+  );
+
+  const messagesByConversation = new Map<string, Record<string, unknown>[]>();
+  for (const message of recentMessages.data ?? []) {
+    const list = messagesByConversation.get(message.conversation_id) ?? [];
+    if (list.length < AI_CONVERSATION_MESSAGE_LIMIT) list.push(message);
     messagesByConversation.set(message.conversation_id, list);
   }
   const conversationsWithMessages = (conversations.data ?? []).map((conversation) => ({
