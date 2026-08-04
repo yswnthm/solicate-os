@@ -115,24 +115,46 @@ const getInboxCountCached = unstable_cache(
 
 export async function getTodayData(userId: string) {
   const supabase = await createSupabaseServerClient();
-  const now = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
   const endOfWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  const [overdue, upcoming, issues, inboxMessages, inboxEntries, changedProjects] = await Promise.all([
+  const endOf30d = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const ACTIVE = "active";
+  const DAY_MS = 86_400_000;
+
+  const [
+    overdue,
+    upcoming,
+    issues,
+    inboxMessages,
+    inboxEntries,
+    changedProjects,
+    unassignedRes,
+    preparingInvoicesRes,
+    recentTransactionsRes,
+    milestoneEntriesRes,
+    phaseDeadlinesRes,
+    activeProjectsRes,
+    activityRes,
+    weekDecisionsRes,
+    weekRecordsRes,
+  ] = await Promise.all([
     supabase
       .from("tasks")
-      .select("id, title, due_at, priority, status, project_id, projects(name), phases(name)")
+      .select("id, title, due_at, priority, status, project_id, projects(name)")
       .eq("assignee_id", userId)
       .in("status", ["todo", "in_progress", "blocked"])
       .not("due_at", "is", null)
-      .lt("due_at", now)
+      .lt("due_at", nowIso)
       .order("due_at"),
     supabase
       .from("tasks")
-      .select("id, title, due_at, priority, status, project_id, projects(name), phases(name)")
+      .select("id, title, due_at, priority, status, project_id, projects(name)")
       .eq("assignee_id", userId)
       .in("status", ["todo", "in_progress", "blocked"])
       .not("due_at", "is", null)
-      .gte("due_at", now)
+      .gte("due_at", nowIso)
       .lte("due_at", endOfWeek)
       .order("due_at"),
     supabase
@@ -156,12 +178,120 @@ export async function getTodayData(userId: string) {
     supabase
       .from("projects")
       .select("id, name, status, updated_at, clients(name)")
-      .eq("status", "active")
+      .eq("status", ACTIVE)
       .order("updated_at", { ascending: false })
+      .limit(6),
+    // Open tasks on active projects with no assignee — work that is real but
+    // has no owner, so a blank assignee never hides it from the dashboard.
+    supabase
+      .from("tasks")
+      .select("id, title, due_at, priority, status, project_id, projects!inner(name, status)")
+      .eq("assignee_id", null)
+      .in("status", ["todo", "in_progress", "blocked"])
+      .eq("projects.status", ACTIVE)
+      .order("due_at", { ascending: true, nullsFirst: false })
+      .limit(12),
+    // Invoices stuck in "preparing" — the money you still need to send.
+    supabase
+      .from("transactions")
+      .select("id, amount, invoice_number, transaction_date, from_person:people!transactions_from_person_id_fkey(id, name)")
+      .eq("type", "income")
+      .eq("invoice_status", "preparing")
+      .order("transaction_date", { ascending: true })
+      .limit(8),
+    // Recent non-cancelled transactions with allocations → compute what is
+    // still unallocated so money without a home is visible.
+    supabase
+      .from("transactions")
+      .select(`id, type, amount, status, transaction_date, invoice_status,
+               from_person:people!transactions_from_person_id_fkey(id, name),
+               to_person:people!transactions_to_person_id_fkey(id, name),
+               transaction_allocations(amount)`)
+      .neq("status", "cancelled")
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(30),
+    // Upcoming milestone entries (records of type milestone with a future date).
+    supabase
+      .from("entries")
+      .select("id, title, occurred_at, project_id, projects!inner(name, status)")
+      .eq("type", "milestone")
+      .eq("triage_state", "filed")
+      .gte("occurred_at", nowIso)
+      .eq("projects.status", ACTIVE)
+      .order("occurred_at", { ascending: true })
+      .limit(8),
+    // Phase target dates landing in the next 30 days.
+    supabase
+      .from("phases")
+      .select("id, name, target_date, status, project_id, projects!inner(name, status)")
+      .not("target_date", "is", null)
+      .gte("target_date", nowIso)
+      .lte("target_date", endOf30d)
+      .in("status", ["planned", "active", "on_hold"])
+      .eq("projects.status", ACTIVE)
+      .order("target_date", { ascending: true })
+      .limit(8),
+    // Active projects + their most recent activity → stalled detection.
+    supabase
+      .from("projects")
+      .select("id, name, created_at, clients(name)")
+      .eq("status", ACTIVE)
+      .order("updated_at", { ascending: false })
+      .limit(200),
+    supabase
+      .from("activity_events")
+      .select("project_id, occurred_at")
+      .order("occurred_at", { ascending: false })
+      .limit(500),
+    // Decisions recorded this week.
+    supabase
+      .from("entries")
+      .select("id, title, decision_outcome, occurred_at, project_id, projects!inner(name)")
+      .eq("type", "decision")
+      .eq("decision_state", "active")
+      .gte("occurred_at", weekAgo)
+      .order("occurred_at", { ascending: false })
+      .limit(8),
+    // Other records filed this week (notes, meetings, updates…).
+    supabase
+      .from("entries")
+      .select("id, title, type, occurred_at, project_id, projects!inner(name)")
+      .eq("triage_state", "filed")
+      .gte("occurred_at", weekAgo)
+      .neq("type", "capture")
+      .neq("type", "decision")
+      .order("occurred_at", { ascending: false })
       .limit(6),
   ]);
 
-  [overdue, upcoming, issues, inboxMessages, inboxEntries, changedProjects].forEach((r) => throwOnError(r.error));
+  [overdue, upcoming, issues, inboxMessages, inboxEntries, changedProjects, unassignedRes, preparingInvoicesRes, recentTransactionsRes, milestoneEntriesRes, phaseDeadlinesRes, activeProjectsRes, activityRes, weekDecisionsRes, weekRecordsRes].forEach((r) => throwOnError(r.error));
+
+  // Under-allocated money, computed in JS from the recent transaction batch.
+  const underAllocated = (recentTransactionsRes.data ?? [])
+    .map((t) => {
+      const allocated = (t.transaction_allocations ?? []).reduce((s: number, a: any) => s + Number(a.amount), 0);
+      return { ...t, allocated, unallocated: Number(t.amount) - allocated };
+    })
+    .filter((t) => t.unallocated > 0)
+    .slice(0, 5);
+
+  // Stalled = active project whose most recent activity (or creation, if never
+  // active) is 7+ days old. Brand-new projects are not flagged.
+  const lastActivityByProject = new Map<string, string>();
+  for (const ev of activityRes.data ?? []) {
+    if (!lastActivityByProject.has(ev.project_id)) lastActivityByProject.set(ev.project_id, ev.occurred_at);
+  }
+  const stalled = (activeProjectsRes.data ?? [])
+    .map((p) => {
+      const last = lastActivityByProject.get(p.id) ?? p.created_at;
+      const daysSince = Math.max(0, Math.floor((now.getTime() - new Date(last).getTime()) / DAY_MS));
+      return { ...p, daysSince };
+    })
+    .filter((p) => p.daysSince >= 7)
+    .sort((a, b) => b.daysSince - a.daysSince)
+    .slice(0, 6);
+
   return {
     overdue: overdue.data ?? [],
     upcoming: upcoming.data ?? [],
@@ -169,6 +299,14 @@ export async function getTodayData(userId: string) {
     inboxMessages: inboxMessages.data ?? [],
     inboxEntries: inboxEntries.data ?? [],
     changedProjects: changedProjects.data ?? [],
+    unassigned: unassignedRes.data ?? [],
+    preparingInvoices: preparingInvoicesRes.data ?? [],
+    underAllocated,
+    milestones: milestoneEntriesRes.data ?? [],
+    phaseDeadlines: phaseDeadlinesRes.data ?? [],
+    stalled,
+    weekDecisions: weekDecisionsRes.data ?? [],
+    weekRecords: weekRecordsRes.data ?? [],
   };
 }
 
