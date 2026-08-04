@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Special+Elite&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
   /* Premium Light Canvas */
@@ -182,12 +182,9 @@ body.desktop-sidebar-collapsed .signout-btn {
   display: block;
 }
 .brand-text {
-  font-family: 'Special Elite', monospace;
-  font-size: 20px;
-  font-weight: 400;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--island-ink);
-  letter-spacing: 0.05em;
-  margin-top: 2px;
 }
 
 .sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
