@@ -118,7 +118,7 @@ async function loadSession(sessionId: string): Promise<SessionRow> {
 // ─── Analysis + proposal ──────────────────────────────────────────────────────
 
 /** Run the capture-analyze template. Stores the outcome on the session. */
-export async function runCaptureAnalysis(sessionId: string) {
+export async function runCaptureAnalysis(sessionId: string, modelId?: string) {
   const supabase = await createSupabaseServerClient();
   const session = await loadSession(sessionId);
   const input = toInput(session);
@@ -128,6 +128,7 @@ export async function runCaptureAnalysis(sessionId: string) {
     slug: "capture-analyze",
     context,
     variables: { capture: input.text, scope: input.scope, answers: {} },
+    modelId,
   });
 
   let analyze: ReturnType<typeof captureAnalyzeSchema.parse>;
@@ -163,7 +164,7 @@ export async function runCaptureAnalysis(sessionId: string) {
  * proposed row. Invalid model output is preserved on the session for audit
  * and surfaced to the reviewer.
  */
-export async function runCaptureProposal(sessionId: string, answers: ClarificationAnswers = {}) {
+export async function runCaptureProposal(sessionId: string, answers: ClarificationAnswers = {}, modelId?: string) {
   const supabase = await createSupabaseServerClient();
   const session = await loadSession(sessionId);
   const input = toInput(session);
@@ -179,6 +180,7 @@ export async function runCaptureProposal(sessionId: string, answers: Clarificati
       answers,
       action_id_prefix: `${sessionId.slice(0, 4)}-`,
     },
+    modelId,
   });
 
   const raw = result.data;

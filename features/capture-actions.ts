@@ -30,23 +30,28 @@ function throwOnError(error: { message: string } | null) {
 /**
  * Step 1. Submit a capture. The engine files the raw capture, understands it,
  * and — when confidence is high enough — proposes actions immediately. Low
- * confidence returns to the clarification step first.
+ * confidence returns to the clarification step first. modelId overrides the
+ * template default for both the analyze and propose calls.
  */
-export async function submitCapture(input: unknown): Promise<CaptureSessionState> {
+export async function submitCapture(input: unknown, modelId?: string): Promise<CaptureSessionState> {
   const { user } = await requireActiveUser();
   const sessionId = await createCaptureSession(user.id, input);
-  const { status, confidence } = await runCaptureAnalysis(sessionId);
+  const { status, confidence } = await runCaptureAnalysis(sessionId, modelId);
 
   if (status === "proposals_ready" && confidence >= CLARIFICATION_CONFIDENCE) {
-    return runCaptureProposal(sessionId);
+    return runCaptureProposal(sessionId, {}, modelId);
   }
   return loadCaptureState(sessionId);
 }
 
 /** Step 2. Answer the clarifying questions; the engine proposes actions. */
-export async function answerClarifications(sessionId: string, answers: ClarificationAnswers): Promise<CaptureSessionState> {
+export async function answerClarifications(
+  sessionId: string,
+  answers: ClarificationAnswers,
+  modelId?: string,
+): Promise<CaptureSessionState> {
   await requireActiveUser();
-  return runCaptureProposal(sessionIdOf(sessionId), answers);
+  return runCaptureProposal(sessionIdOf(sessionId), answers, modelId);
 }
 
 /** Resume a session from its id (e.g. after refresh, or from the URL). */

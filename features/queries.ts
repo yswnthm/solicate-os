@@ -5,6 +5,8 @@ import {
   createSupabaseServerClientWithToken,
   getAccessToken,
 } from "@/lib/supabase/server";
+import { getActiveModels } from "@/lib/ai";
+import { getTemplateBySlug } from "@/lib/ai/template-store";
 
 function throwOnError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
@@ -528,7 +530,7 @@ export async function searchRecords(query: string) {  if (!query.trim()) return 
 // the current project/phase catalog the moment a capture starts.
 export async function getCaptureFormOptions() {
   const supabase = await createSupabaseServerClient();
-  const [projects, phases, clients, people] = await Promise.all([
+  const [projects, phases, clients, people, models, template] = await Promise.all([
     supabase
       .from("projects")
       .select("id, name, status, clients(id, name)")
@@ -540,6 +542,8 @@ export async function getCaptureFormOptions() {
       .order("position"),
     supabase.from("clients").select("id, name").neq("status", "archived").order("name"),
     supabase.from("people").select("id, name").is("archived_at", null).order("name"),
+    getActiveModels(),
+    getTemplateBySlug("capture-analyze"),
   ]);
   [projects, phases, clients, people].forEach((r) => throwOnError(r.error));
 
@@ -559,5 +563,7 @@ export async function getCaptureFormOptions() {
     })),
     clients: (clients.data ?? []).map((c) => ({ id: String(c.id), name: String(c.name) })),
     people: (people.data ?? []).map((p) => ({ id: String(p.id), name: String(p.name) })),
+    models: models.map((m) => ({ id: m.model_id, provider: m.provider, display_name: m.display_name })),
+    default_model: template?.active.default_model ?? "",
   };
 }

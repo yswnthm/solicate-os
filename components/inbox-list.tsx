@@ -1,14 +1,15 @@
 "use client";
 
-import { useOptimistic, useTransition, useState } from "react";
+import { useEffect, useOptimistic, useTransition, useState } from "react";
 import Link from "next/link";
 
 import { dismissInboxEntry, dismissInboxMessage, fileInboxEntryToProject, fileInboxMessage } from "@/features/actions";
-import { approveInboxDraft, draftInboxTriage, getInboxTriagePrompt } from "@/features/ai-actions";
+import { approveInboxDraft, draftInboxTriage, getInboxTriagePrompt, getModelPickerOptions, type ModelPickerOptions } from "@/features/ai-actions";
 import { StatusPill } from "@/components/status-pill";
 import { Modal } from "@/components/modal";
 import { PromptModal } from "@/components/prompt-viewer";
 import { EditEntryButton, EditMessageButton } from "@/components/editing/edit-buttons";
+import { ModelPicker } from "@/components/model-picker";
 import { formatDateTime } from "@/lib/utils";
 import type { TriageDraft } from "@/lib/ai/schemas";
 
@@ -51,6 +52,15 @@ export function InboxList({
   const [promptOpen, setPromptOpen] = useState(false);
   const [promptBusy, setPromptBusy] = useState(false);
 
+  const [modelOptions, setModelOptions] = useState<ModelPickerOptions>({ models: [], default_model: "" });
+  const [modelId, setModelId] = useState("");
+
+  useEffect(() => {
+    getModelPickerOptions("inbox-triage")
+      .then(setModelOptions)
+      .catch(() => {});
+  }, []);
+
   const onGetPrompt = async (kind: "entry" | "message", itemId: string) => {
     setPromptBusy(true);
     setDraftError(null);
@@ -77,7 +87,7 @@ export function InboxList({
     setDrafting({ kind, id: itemId });
     setDraftError(null);
     try {
-      const result = await draftInboxTriage(kind, itemId);
+      const result = await draftInboxTriage(kind, itemId, modelId || undefined);
       setDraft({ ...result, project_id: result.project_id ?? "" });
       setReview({ kind, id: itemId });
     } catch (e) {
@@ -225,6 +235,18 @@ export function InboxList({
       {draftError && (
         <div className="notice" style={{ marginBottom: 16 }}>
           {draftError}
+        </div>
+      )}
+
+      {modelOptions.models.length > 0 && (
+        <div style={{ maxWidth: 340, marginBottom: 20 }}>
+          <ModelPicker
+            models={modelOptions.models}
+            value={modelId}
+            onChange={setModelId}
+            defaultModel={modelOptions.default_model}
+            fieldId="inbox-model"
+          />
         </div>
       )}
 

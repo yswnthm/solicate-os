@@ -12,11 +12,14 @@ import {
 } from "@/features/capture-actions";
 import type { CaptureSessionState, ClarificationQuestion } from "@/lib/capture/types";
 import { ACTION_SPECS, KIND_LABELS } from "@/components/capture/action-fields";
+import { ModelPicker, type ModelPickerOption } from "@/components/model-picker";
 
 export interface CaptureFormOptions {
   projects: { id: string; name: string; client: string | null; phases: { id: string; name: string; position: number; status: string }[] }[];
   clients: { id: string; name: string }[];
   people: { id: string; name: string }[];
+  models: ModelPickerOption[];
+  default_model: string;
 }
 
 type Step = "form" | "analyzing" | "clarify" | "review" | "done";
@@ -41,6 +44,7 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
   const [clientId, setClientId] = useState("");
   const [newClientName, setNewClientName] = useState("");
   const [text, setText] = useState("");
+  const [modelId, setModelId] = useState("");
 
   const run = (label: string, fn: () => Promise<CaptureSessionState>) => {
     setError("");
@@ -61,22 +65,25 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
 
   const onSubmit = () => {
     run("submit", () =>
-      submitCapture({
-        scope,
-        project_id: scope === "existing_project" && projectId ? projectId : null,
-        phase_id: phaseId || null,
-        person_id: personId || null,
-        client_id: clientId || null,
-        new_client_name: newClientName || null,
-        new_phase_name: newPhaseName || null,
-        text,
-      }),
+      submitCapture(
+        {
+          scope,
+          project_id: scope === "existing_project" && projectId ? projectId : null,
+          phase_id: phaseId || null,
+          person_id: personId || null,
+          client_id: clientId || null,
+          new_client_name: newClientName || null,
+          new_phase_name: newPhaseName || null,
+          text,
+        },
+        modelId || undefined,
+      ),
     );
   };
 
   const onAnswers = (answers: Record<string, string>) => {
     if (!state) return;
-    run("propose", () => answerClarifications(state.sessionId, answers));
+    run("propose", () => answerClarifications(state.sessionId, answers, modelId || undefined));
   };
 
   const onApprove = (decisions: CaptureDecision[]) => {
@@ -120,6 +127,8 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
           setNewClientName={setNewClientName}
           text={text}
           setText={setText}
+          modelId={modelId}
+          setModelId={setModelId}
           onSubmit={onSubmit}
         />
       )}
@@ -161,6 +170,8 @@ function CaptureForm(props: {
   setNewClientName: (v: string) => void;
   text: string;
   setText: (v: string) => void;
+  modelId: string;
+  setModelId: (v: string) => void;
   onSubmit: () => void;
 }) {
   const { options, scope } = props;
@@ -253,6 +264,16 @@ function CaptureForm(props: {
             ))}
           </select>
         </div>
+      </section>
+
+      <section className="capture-section">
+        <ModelPicker
+          models={options.models}
+          value={props.modelId}
+          onChange={props.setModelId}
+          defaultModel={options.default_model}
+          fieldId="cap-model"
+        />
       </section>
 
       <section className="capture-section">

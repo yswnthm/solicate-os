@@ -14,6 +14,7 @@ import {
   type DraftFormOptions,
 } from "@/features/ai-actions";
 import { PromptModal } from "@/components/prompt-viewer";
+import { ModelPicker } from "@/components/model-picker";
 
 type Recipients = Awaited<ReturnType<typeof getDraftRecipients>>;
 type DraftListEntry = Awaited<ReturnType<typeof listMessageDrafts>>[number];
@@ -366,18 +367,13 @@ export function MessageDrafter() {
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="drafter-model">Model (advanced)</label>
-            <select id="drafter-model" value={modelId} onChange={(e) => setModelId(e.target.value)}>
-              <option value="">Template default</option>
-              {options.models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.display_name}
-                </option>
-              ))}
-            </select>
-            <p className="field-hint">Default: {options.template?.default_model ?? "unset"}.</p>
-          </div>
+          <ModelPicker
+            models={options.models}
+            value={modelId}
+            onChange={setModelId}
+            defaultModel={options.template?.default_model}
+            fieldId="drafter-model"
+          />
 
           <button className="button" type="button" onClick={onDraft} disabled={busy || !canDraft} style={{ marginTop: 4 }}>
             {busy ? "Drafting…" : "Draft message"}

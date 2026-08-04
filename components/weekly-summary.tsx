@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { approveWeeklySummary, draftWeeklySummaryForProject, getWeeklySummaryPrompt } from "@/features/ai-actions";
+import { approveWeeklySummary, draftWeeklySummaryForProject, getWeeklySummaryPrompt, getModelPickerOptions, type ModelPickerOptions } from "@/features/ai-actions";
 import { Modal } from "@/components/modal";
 import { PromptModal } from "@/components/prompt-viewer";
+import { ModelPicker } from "@/components/model-picker";
 
 export function WeeklySummaryButton({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
@@ -18,6 +19,15 @@ export function WeeklySummaryButton({ projectId }: { projectId: string }) {
   const [prompt, setPrompt] = useState<string | null>(null);
   const [promptOpen, setPromptOpen] = useState(false);
   const [promptBusy, setPromptBusy] = useState(false);
+
+  const [modelOptions, setModelOptions] = useState<ModelPickerOptions>({ models: [], default_model: "" });
+  const [modelId, setModelId] = useState("");
+
+  useEffect(() => {
+    getModelPickerOptions("weekly-summary")
+      .then(setModelOptions)
+      .catch(() => {});
+  }, []);
 
   const onGetPrompt = async () => {
     setPromptBusy(true);
@@ -38,7 +48,7 @@ export function WeeklySummaryButton({ projectId }: { projectId: string }) {
     setBusy(true);
     setError(null);
     try {
-      const summary = await draftWeeklySummaryForProject(projectId);
+      const summary = await draftWeeklySummaryForProject(projectId, modelId || undefined);
       setDraft(summary);
       setOpen(true);
     } catch (e) {
@@ -73,12 +83,25 @@ export function WeeklySummaryButton({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <button className="button secondary small" type="button" onClick={onDraft} disabled={busy}>
-        {busy ? "Drafting…" : "✨ Weekly summary"}
-      </button>
-      <button className="button ghost small" type="button" onClick={onGetPrompt} disabled={promptBusy}>
-        {promptBusy ? "Building…" : "Copy prompt"}
-      </button>
+      {modelOptions.models.length > 0 && (
+        <div style={{ maxWidth: 320, marginBottom: 12 }}>
+          <ModelPicker
+            models={modelOptions.models}
+            value={modelId}
+            onChange={setModelId}
+            defaultModel={modelOptions.default_model}
+            fieldId="weekly-summary-model"
+          />
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <button className="button secondary small" type="button" onClick={onDraft} disabled={busy}>
+          {busy ? "Drafting…" : "✨ Weekly summary"}
+        </button>
+        <button className="button ghost small" type="button" onClick={onGetPrompt} disabled={promptBusy}>
+          {promptBusy ? "Building…" : "Copy prompt"}
+        </button>
+      </div>
 
       <PromptModal
         open={promptOpen}

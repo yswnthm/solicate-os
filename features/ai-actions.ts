@@ -36,12 +36,12 @@ function throwOnError(error: { message: string } | null) {
 // ─── Inbox triage ────────────────────────────────────────────────────────────
 // Step 1 of draft→approve: the model suggests a record; nothing is written.
 
-export async function draftInboxTriage(kindValue: string, itemId: string): Promise<TriageDraft> {
+export async function draftInboxTriage(kindValue: string, itemId: string, modelId?: string): Promise<TriageDraft> {
   await requireActiveUser();
   const kindParsed = kind(kindValue);
   const item = id(itemId);
 
-  const result = await runTemplate({ slug: "inbox-triage", context: await inboxTriageContext(kindParsed, item) });
+  const result = await runTemplate({ slug: "inbox-triage", context: await inboxTriageContext(kindParsed, item), modelId });
   return triageDraftSchema.parse(result.data);
 }
 
@@ -109,14 +109,14 @@ const BATCH_LIMIT = 6;
 export type BatchTriageItem = { id: string; kind: "entry" | "message"; draft: TriageDraft };
 
 // One call drafts records for every inbox item. Nothing is written.
-export async function draftBatchTriage(): Promise<BatchTriageItem[]> {
+export async function draftBatchTriage(modelId?: string): Promise<BatchTriageItem[]> {
   await requireActiveUser();
   const context = await batchTriageContext();
 
   const items = (context.items as { id: string; kind: string }[]).slice(0, BATCH_LIMIT);
   if (items.length === 0) return [];
 
-  const result = await runTemplate({ slug: "inbox-triage-batch", context });
+  const result = await runTemplate({ slug: "inbox-triage-batch", context, modelId });
   const drafts = batchDraftsSchema.parse({ drafts: result.data });
   const byId = new Map(drafts.drafts.map((d) => [d.id, d]));
   return items
@@ -149,10 +149,10 @@ export async function getBatchTriagePrompt(): Promise<string> {
 
 // ─── Weekly summary ──────────────────────────────────────────────────────────
 
-export async function draftWeeklySummaryForProject(projectId: string): Promise<string> {
+export async function draftWeeklySummaryForProject(projectId: string, modelId?: string): Promise<string> {
   await requireActiveUser();
   const context = await getWeeklySummaryContext(id(projectId));
-  const result = await runTemplate({ slug: "weekly-summary", context });
+  const result = await runTemplate({ slug: "weekly-summary", context, modelId });
   return weeklySummarySchema.parse({ summary: result.data }).summary;
 }
 
@@ -189,10 +189,10 @@ export async function approveWeeklySummary(projectId: string, summary: string) {
 
 // ─── Week in review ──────────────────────────────────────────────────────────
 
-export async function draftWeekReviewAction(): Promise<string> {
+export async function draftWeekReviewAction(modelId?: string): Promise<string> {
   await requireActiveUser();
   const context = await getWeekReviewContext();
-  const result = await runTemplate({ slug: "week-in-review", context });
+  const result = await runTemplate({ slug: "week-in-review", context, modelId });
   return weekReviewSchema.parse({ review: result.data }).review;
 }
 
@@ -227,10 +227,10 @@ export async function saveWeekReview(review: string) {
 
 // ─── Morning brief ───────────────────────────────────────────────────────────
 
-export async function draftMorningBriefAction(): Promise<string> {
+export async function draftMorningBriefAction(modelId?: string): Promise<string> {
   const { user } = await requireActiveUser();
   const context = await getMorningBriefContext(user.id);
-  const result = await runTemplate({ slug: "morning-brief", context });
+  const result = await runTemplate({ slug: "morning-brief", context, modelId });
   return morningBriefSchema.parse({ brief: result.data }).brief;
 }
 
@@ -261,6 +261,28 @@ export async function saveMorningBrief(brief: string) {
   });
   throwOnError(error);
   revalidatePath("/today");
+}
+
+// ─── Unified model picker ─────────────────────────────────────────────────────
+// Shared across every AI surface so the same models are usable everywhere.
+// The picker shows the catalog plus the template's configured default; the
+// chosen model_id is forwarded to runTemplate by the calling action.
+
+export interface ModelPickerOptions {
+  models: { id: string; provider: string; display_name: string }[];
+  default_model: string;
+}
+
+export async function getModelPickerOptions(templateSlug?: string): Promise<ModelPickerOptions> {
+  await requireActiveUser();
+  const [models, template] = await Promise.all([
+    getActiveModels(),
+    templateSlug ? getTemplateBySlug(templateSlug) : Promise.resolve(null),
+  ]);
+  return {
+    models: models.map((m) => ({ id: m.model_id, provider: m.provider, display_name: m.display_name })),
+    default_model: template?.active.default_model ?? "",
+  };
 }
 
 // ─── Message Drafter ─────────────────────────────────────────────────────────

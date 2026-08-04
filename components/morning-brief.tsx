@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { draftMorningBriefAction, getMorningBriefPrompt, saveMorningBrief } from "@/features/ai-actions";
+import { draftMorningBriefAction, getMorningBriefPrompt, saveMorningBrief, getModelPickerOptions, type ModelPickerOptions } from "@/features/ai-actions";
 import { Modal } from "@/components/modal";
 import { PromptModal } from "@/components/prompt-viewer";
+import { ModelPicker } from "@/components/model-picker";
 
 export function MorningBriefButton() {
   const [open, setOpen] = useState(false);
@@ -17,6 +18,15 @@ export function MorningBriefButton() {
   const [prompt, setPrompt] = useState<string | null>(null);
   const [promptOpen, setPromptOpen] = useState(false);
   const [promptBusy, setPromptBusy] = useState(false);
+
+  const [modelOptions, setModelOptions] = useState<ModelPickerOptions>({ models: [], default_model: "" });
+  const [modelId, setModelId] = useState("");
+
+  useEffect(() => {
+    getModelPickerOptions("morning-brief")
+      .then(setModelOptions)
+      .catch(() => {});
+  }, []);
 
   const onGetPrompt = async () => {
     setPromptBusy(true);
@@ -40,7 +50,7 @@ export function MorningBriefButton() {
     setSaved(false);
     setOpen(true);
     try {
-      const result = await draftMorningBriefAction();
+      const result = await draftMorningBriefAction(modelId || undefined);
       setBrief(result);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Morning brief failed. Check GROQ_API_KEY.");
@@ -71,12 +81,25 @@ export function MorningBriefButton() {
 
   return (
     <>
-      <button className="button" type="button" onClick={onDraft} disabled={busy}>
-        {busy ? "Drafting…" : "✨ Morning brief"}
-      </button>
-      <button className="button secondary" type="button" onClick={onGetPrompt} disabled={promptBusy}>
-        {promptBusy ? "Building…" : "Copy prompt"}
-      </button>
+      {modelOptions.models.length > 0 && (
+        <div style={{ maxWidth: 340, marginBottom: 12 }}>
+          <ModelPicker
+            models={modelOptions.models}
+            value={modelId}
+            onChange={setModelId}
+            defaultModel={modelOptions.default_model}
+            fieldId="morning-brief-model"
+          />
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <button className="button" type="button" onClick={onDraft} disabled={busy}>
+          {busy ? "Drafting…" : "✨ Morning brief"}
+        </button>
+        <button className="button secondary" type="button" onClick={onGetPrompt} disabled={promptBusy}>
+          {promptBusy ? "Building…" : "Copy prompt"}
+        </button>
+      </div>
 
       <PromptModal
         open={promptOpen}

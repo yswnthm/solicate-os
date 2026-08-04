@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { approveInboxDraft, draftBatchTriage, getBatchTriagePrompt, type BatchTriageItem } from "@/features/ai-actions";
+import { approveInboxDraft, draftBatchTriage, getBatchTriagePrompt, getModelPickerOptions, type BatchTriageItem, type ModelPickerOptions } from "@/features/ai-actions";
 import { Modal } from "@/components/modal";
 import { PromptModal } from "@/components/prompt-viewer";
+import { ModelPicker } from "@/components/model-picker";
 import type { TriageDraft } from "@/lib/ai/schemas";
 
 const ENTRY_TYPES = ["note", "meeting", "decision", "document", "update", "milestone", "capture"];
@@ -31,6 +32,15 @@ export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
   const [promptOpen, setPromptOpen] = useState(false);
   const [promptBusy, setPromptBusy] = useState(false);
 
+  const [modelOptions, setModelOptions] = useState<ModelPickerOptions>({ models: [], default_model: "" });
+  const [modelId, setModelId] = useState("");
+
+  useEffect(() => {
+    getModelPickerOptions("inbox-triage")
+      .then(setModelOptions)
+      .catch(() => {});
+  }, []);
+
   const onGetPrompt = async () => {
     setPromptBusy(true);
     setError(null);
@@ -51,7 +61,7 @@ export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
     setItems([]);
     setOpen(true);
     try {
-      const result = await draftBatchTriage();
+      const result = await draftBatchTriage(modelId || undefined);
       setItems(result);
       setDrafts(
         Object.fromEntries(
@@ -112,6 +122,17 @@ export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
 
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Triage all with AI">
         {error && <div className="notice" style={{ marginBottom: 16 }}>{error}</div>}
+        {modelOptions.models.length > 0 && (
+          <div style={{ maxWidth: 340, marginBottom: 16 }}>
+            <ModelPicker
+              models={modelOptions.models}
+              value={modelId}
+              onChange={setModelId}
+              defaultModel={modelOptions.default_model}
+              fieldId="triage-all-model"
+            />
+          </div>
+        )}
         {items.length === 0 && !error && (
           <div className="empty" style={{ marginTop: 0 }}>
             Drafting records for every inbox item…
