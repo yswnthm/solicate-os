@@ -8,9 +8,12 @@ import type { GenerateParams, ResponseFormat } from "../types";
 //  - Some reject `response_format: {"type": "json_object"}` with HTTP 400, so we
 //    retry once without it when a JSON response is requested.
 //  - Reasoning models can spend the whole token budget on reasoning and return
-//    HTTP 200 with `content: null` (finish_reason "length"), so we retry once
-//    with a larger budget.
+//    HTTP 200 with `content: null` (finish_reason "length"), or truncate the
+//    answer mid-JSON. We retry with escalating budgets while responses stay cut
+//    off, up to a generous cap.
 //  - Some return the JSON wrapped in ```json fences, which we strip.
+//  - Some return `content` as an array of parts instead of a string, which we
+//    normalize.
 
 const OPENCODE_ENDPOINT = "https://opencode.ai/zen/v1/chat/completions";
 
@@ -62,6 +65,19 @@ function stripFences(text: string): string {
   return fence ? fence[1].trim() : trimmed;
 }
 
+/** OpenAI-compatible endpoints may return content as a string or an array of parts. */
+function contentOf(choice: { message?: { content?: string | Array<{ text?: string } | string> } } | undefined): string | undefined {
+  const raw = choice?.message?.content;
+  if (typeof raw === "string") return raw;
+  if (Array.isArray(raw)) {
+    const joined = raw
+      .map((part) => (typeof part === "string" ? part : part?.text ?? ""))
+      .join("");
+    return joined || undefined;
+  }
+  return undefined;
+}
+
 export async function generateOpencode(params: GenerateParams): Promise<string> {
   const apiKey = process.env.OPENCODE_API_KEY;
   if (!apiKey) throw new Error("OPENCODE_API_KEY is not configured.");
@@ -83,13 +99,19 @@ export async function generateOpencode(params: GenerateParams): Promise<string> 
     throw new Error(`Opencode request failed (${result.status}): ${(result.detail ?? "").slice(0, 300)}`);
   }
 
-  const finishReason = result.body?.choices?.[0]?.finish_reason;
-  let content = result.body?.choices?.[0]?.message?.content;
+  let finishReason = result.body?.choices?.[0]?.finish_reason;
+  let content = contentOf(result.body?.choices?.[0]);
 
-  // Retry: reasoning burned the whole budget, leaving no content.
-  if (!content && finishReason === "length") {
-    const retry = await chat(apiKey, { ...base, maxTokens: Math.max(maxTokens * 2, 4096) });
-    content = retry.ok ? retry.body?.choices?.[0]?.message?.content : undefined;
+  // Retry: a truncated or reasoning-starved response (finish_reason "length") is
+  // unusable for JSON tasks. Escalate the budget until we get a complete answer
+  // or we've hit the cap.
+  let budget = Math.max(maxTokens * 2, 4096);
+  for (let i = 0; i < 3 && finishReason === "length" && budget <= 16384; i++) {
+    const retry = await chat(apiKey, { ...base, maxTokens: budget });
+    if (!retry.ok) break;
+    content = contentOf(retry.body?.choices?.[0]);
+    finishReason = retry.body?.choices?.[0]?.finish_reason ?? "length";
+    budget *= 2;
   }
 
   if (!content) {
