@@ -696,7 +696,7 @@ const getInboxDataCached = unstable_cache(
     const [messages, entries] = await Promise.all([
       supabase
         .from("messages")
-        .select("id, body_md, sent_at, conversation_id, conversations(title, project_id, people(name))")
+        .select("id, body_md, sent_at, conversation_id, conversations(title, project_id, people!conversations_client_id_fkey(name))")
         .eq("triage_state", "inbox")
         .order("sent_at", { ascending: false })
         .limit(100),

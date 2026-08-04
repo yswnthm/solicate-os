@@ -122,8 +122,55 @@ export function InboxList({
 
   if (total === 0) {
     return (
-      <div className="empty" style={{ marginTop: 0 }}>
-        Inbox is clear. Nothing needs triage right now.
+      <div
+        className="card"
+        style={{
+          marginTop: 0,
+          padding: "36px 24px",
+          textAlign: "center",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+          background: "var(--glass-bg)",
+          border: "1px stroke var(--glass-border)",
+          borderRadius: 16,
+        }}
+      >
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: "50%",
+            background: "var(--accent-soft)",
+            color: "var(--accent)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 22,
+          }}
+        >
+          ✓
+        </div>
+        <div>
+          <h3 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700 }}>Inbox is clear</h3>
+          <p style={{ margin: 0, color: "var(--muted)", fontSize: 14 }}>
+            All incoming messages and quick notes are triaged. Use the quick capture bar above or launch a workflow below.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
+          <Link href="/inbox?tab=capture" className="button secondary small">
+            ⚡ AI Deep Capture →
+          </Link>
+          <Link href="/ai/drafter" className="button secondary small">
+            ✉️ Message Drafter →
+          </Link>
+          <Link href="/projects" className="button secondary small">
+            📁 View Projects →
+          </Link>
+        </div>
       </div>
     );
   }

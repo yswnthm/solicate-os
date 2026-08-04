@@ -70,10 +70,10 @@ export default function GuidePage() {
             </div>
             <div className="row">
               <div className="row-main">
-                <div className="row-title">Inbox is the capture zone</div>
+                <div className="row-title">Inbox & Capture is the ingestion hub</div>
                 <div className="row-meta">
-                  Quick captures and untriaged messages land in Inbox. You read them, file them into a project, or
-                  dismiss them — the inbox should reach zero.
+                  Quick captures (notes, tasks, decisions, updates) and untriaged messages land in the unified Inbox &amp; Capture Hub.
+                  Use the inline command bar for instant capture or switch tabs to AI Deep Capture for multi-update extraction.
                 </div>
               </div>
             </div>
@@ -105,18 +105,10 @@ export default function GuidePage() {
               across every project so you never start a week guessing what moved. Both are read-only until you save.
             </p>
             <p>
-              <strong>3. Capture everything as it happens.</strong> A thought, a client decision, a payment that
-              landed, a message you must send — get it out of your head immediately with{" "}
-              <Kbd>⌘⇧X</Kbd> (AI capture) or <Kbd>⌘K</Kbd> → <em>Capture (AI)</em>. You can do this from any page
-              without leaving what you were doing.
+              <strong>3. Capture &amp; triage in one place.</strong> <Kbd>G</Kbd> <Kbd>I</Kbd>. Drop instant notes, tasks, or decisions using the top Quick Capture bar, or press <Kbd>⌘⇧X</Kbd> for AI Deep Capture. File each item into its project (or let ✨ Triage all draft everything with AI). Zero inbox = the record is complete.
             </p>
             <p>
-              <strong>4. Drain the inbox to zero.</strong> <Kbd>G</Kbd> <Kbd>I</Kbd>. File each item into its
-              project (or let ✨ Triage all with AI draft everything), dismiss what&apos;s noise. Zero inbox = the
-              record is complete.
-            </p>
-            <p>
-              <strong>5. Close the loop weekly.</strong> On each active project use{" "}
+              <strong>4. Close the loop weekly.</strong> On each active project use{" "}
               <em>✨ Weekly summary</em> to draft the week&apos;s update, approve it as a record, and archive nothing.
             </p>
           </div>
@@ -127,8 +119,8 @@ export default function GuidePage() {
             head={["Page", "Shortcut", "What it is for"]}
             rows={[
               ["Today", "G T", "Daily command center: overdue, upcoming, open issues, recent projects, inbox preview."],
-              ["Capture (AI)", "⌘⇧X", "Describe what happened in plain English; AI proposes the operational updates."],
-              ["Inbox", "G I", "Triage untriaged captures and messages; file or dismiss. Aim for zero."],
+              ["Inbox & Capture", "G I", "Unified ingestion center: inline quick capture bar, untriaged queue filing, and AI Deep Capture mode."],
+              ["AI Deep Capture", "⌘⇧X", "Describe what happened in plain English; AI proposes multi-table operational updates."],
               ["Projects", "G P", "All delivery work with active/paused counts."],
               ["Clients", "G C", "Businesses and individuals Solicate serves."],
               ["Relationships", "—", "How each client came in, referrals, and relationship-level terms."],
@@ -208,27 +200,16 @@ export default function GuidePage() {
         <Section title="Capturing & the inbox flow">
           <div className="prose">
             <p>
-              <strong>1. Capture first.</strong> Don&apos;t hold a thought in your head — use quick capture (
-              <Kbd>⌘⇧X</Kbd>, the Capture nav item, or the Today button). Choose where it happened: an existing
-              project (optionally a phase, plus a person), a brand-new project (optionally a client), or no project
-              at all. You can also force specific update types — tasks, decisions, finance, milestones, and more —
-              so the AI only proposes what you want.
+              <strong>1. Instant Quick Capture.</strong> Don&apos;t hold a thought in your head — use the inline Command Bar at the top of Inbox &amp; Capture (<Kbd>G</Kbd> <Kbd>I</Kbd>). Type a note, task, decision, or update, select an optional project, and hit Enter. It drops into your queue with zero friction.
             </p>
             <p>
-              <strong>2. Review, then apply.</strong> The AI proposes concrete updates (create a phase, complete a
-              task, log a decision, file a meeting, mark an invoice paid…). Review each one: approve or reject
-              individually, edit any payload, regenerate if it missed the point, or extract more actions.{" "}
-              <strong>Nothing is written until you apply.</strong> An in-progress capture resumes automatically if
-              you reload the page.
+              <strong>2. AI Deep Capture.</strong> Switch to the ⚡ <em>AI Quick Capture</em> tab (or <Kbd>⌘⇧X</Kbd>) when you want to describe complex updates in plain English. The AI analyzes your text against project memory and proposes multi-table updates (phases, tasks, decisions, finance, milestones).
             </p>
             <p>
-              <strong>3. Triage from Inbox.</strong> <Kbd>G I</Kbd>. Read each item and either file it into a
-              project as a record, or dismiss it. ✨ Triage all with AI drafts a title, type, project, and body for
-              the whole inbox at once — you edit, then Approve &amp; file. Skipped items stay in the inbox.
+              <strong>3. Review, then apply.</strong> The AI proposes concrete updates. Review each one: approve or reject individually, edit any payload, regenerate, or extract more actions. <strong>Nothing is written until you apply.</strong>
             </p>
             <p>
-              <strong>4. Records become searchable.</strong> Filed items land in the project&apos;s Knowledge Base
-              and are indexed by Search.
+              <strong>4. Triage &amp; Clear.</strong> Read untriaged items, file them into projects manually, or use ✨ <em>Triage all with AI</em> to draft titles, types, and projects for your whole queue at once. Aim for Inbox Zero.
             </p>
           </div>
         </Section>

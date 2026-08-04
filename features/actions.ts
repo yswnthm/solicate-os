@@ -280,16 +280,21 @@ export async function quickCapture(formData: FormData) {
   const { user } = await requireActiveUser();
   const projectId = optional(formData.get("project_id"));
   const title = z.string().min(1).parse(text(formData.get("title")));
+  const rawType = optional(formData.get("type")) ?? "capture";
+  const type = ["note", "meeting", "decision", "document", "update", "milestone", "capture"].includes(rawType)
+    ? rawType
+    : "capture";
+  const outcome = optional(formData.get("decision_outcome"));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("entries").insert({
     project_id: projectId,
-    type: "capture",
+    type: type as any,
     title,
     body_md: text(formData.get("body_md")),
     occurred_at: new Date().toISOString(),
     triage_state: "inbox",
-    decision_outcome: null,
-    decision_state: null,
+    decision_outcome: type === "decision" ? (outcome || title) : null,
+    decision_state: type === "decision" ? "active" : null,
     created_by_id: user.id,
   });
   if (error) throw new Error(error.message);

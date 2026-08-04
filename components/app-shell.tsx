@@ -44,9 +44,8 @@ export async function AppShell({
 
         <nav className="sidebar-nav" aria-label="Primary">
           <NavLink href="/today">Today</NavLink>
-          <NavLink href="/capture">Capture</NavLink>
           <NavLink href="/inbox" count={inboxCount}>
-            Inbox
+            Inbox & Capture
           </NavLink>
           <NavLink href="/projects">Projects</NavLink>
           <NavLink href="/clients">Clients</NavLink>
