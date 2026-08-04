@@ -7,6 +7,7 @@ import {
 } from "@/lib/supabase/server";
 import { getActiveModels } from "@/lib/ai";
 import { getTemplateBySlug } from "@/lib/ai/template-store";
+import { decodeCursor, encodeCursor, keysetFilter, toKeyset } from "@/lib/pagination";
 
 function throwOnError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
@@ -696,14 +697,30 @@ export async function getCaptureFormOptions() {
 
 // ─── Finance Ledger Queries ────────────────────────────────────────────────────
 
-/** Full transaction list for /finance/transactions with optional filters. */
+const TRANSACTION_PAGE_SIZE = 50;
+
+export interface TransactionPage {
+  rows: unknown[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+/**
+ * Paged transaction list for /finance/transactions. Uses keyset (cursor)
+ * pagination over (transaction_date DESC, created_at DESC, id DESC) so pages
+ * are stable under concurrent writes and cost O(page) instead of O(offset).
+ */
 export async function getTransactions(opts?: {
   type?: string;
   status?: string;
   invoiceStatus?: string;
   limit?: number;
-}) {
+  cursor?: string;
+}): Promise<TransactionPage> {
   const supabase = await createSupabaseServerClient();
+  const limit = opts?.limit ?? TRANSACTION_PAGE_SIZE;
+  const keys = decodeCursor(opts?.cursor);
+
   let query = supabase
     .from("transactions")
     .select(
@@ -719,15 +736,24 @@ export async function getTransactions(opts?: {
     )
     .order("transaction_date", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(opts?.limit ?? 100);
+    .order("id", { ascending: false })
+    .limit(limit + 1);
 
+  if (keys) query = query.or(keysetFilter(keys));
   if (opts?.type) query = query.eq("type", opts.type);
   if (opts?.status) query = query.eq("status", opts.status);
   if (opts?.invoiceStatus) query = query.eq("invoice_status", opts.invoiceStatus);
 
   const { data, error } = await query;
   throwOnError(error);
-  return data ?? [];
+
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const last = page[page.length - 1] as { transaction_date: unknown; created_at: unknown; id: unknown } | undefined;
+  const nextCursor = hasMore && last ? encodeCursor(toKeyset(last)) : null;
+
+  return { rows: page, nextCursor, hasMore };
 }
 
 /** Single transaction with full allocation detail. */
@@ -759,22 +785,12 @@ export async function getTransactionDetail(transactionId: string) {
 /** Aggregated KPIs + invoice pipeline for /finance/dashboard. */
 export async function getFinanceDashboard() {
   const supabase = await createSupabaseServerClient();
-  const now = new Date();
-  const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
 
-  const [incomeRes, expenseRes, invoiceRes, recentRes] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select("amount")
-      .eq("type", "income")
-      .eq("status", "completed")
-      .gte("transaction_date", startOfYear),
-    supabase
-      .from("transactions")
-      .select("amount")
-      .eq("type", "expense")
-      .eq("status", "completed")
-      .gte("transaction_date", startOfYear),
+  // Totals are computed in SQL (v_finance_ytd, migration 0026) instead of
+  // pulling every year row into JS — O(1) on the DB side however large the
+  // ledger grows.
+  const [totalsRes, invoiceRes, recentRes] = await Promise.all([
+    supabase.from("v_finance_ytd").select("*").maybeSingle(),
     supabase
       .from("transactions")
       .select("id, amount, invoice_status, invoice_number, transaction_date, from_person:people!transactions_from_person_id_fkey(id, name)")
@@ -790,11 +806,12 @@ export async function getFinanceDashboard() {
       .limit(15),
   ]);
 
-  const totalIncome  = (incomeRes.data ?? []).reduce((s, r) => s + Number(r.amount), 0);
-  const totalExpense = (expenseRes.data ?? []).reduce((s, r) => s + Number(r.amount), 0);
-  const invoices     = invoiceRes.data ?? [];
-  const preparing    = invoices.filter((i) => i.invoice_status === "preparing");
-  const sent         = invoices.filter((i) => i.invoice_status === "sent");
+  const totals = totalsRes.data as { total_income?: unknown; total_expense?: unknown } | null;
+  const totalIncome = Number(totals?.total_income ?? 0);
+  const totalExpense = Number(totals?.total_expense ?? 0);
+  const invoices = invoiceRes.data ?? [];
+  const preparing = invoices.filter((i) => i.invoice_status === "preparing");
+  const sent = invoices.filter((i) => i.invoice_status === "sent");
 
   return {
     totalIncome,

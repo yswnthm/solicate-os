@@ -1,5 +1,3 @@
-import type { CaptureFormOptions } from "@/components/capture/capture-flow";
-
 export interface FinanceContextInput {
   text: string;
   scope: string; // 'income', 'expense', 'allocation', 'invoice_update'

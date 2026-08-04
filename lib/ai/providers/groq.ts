@@ -1,4 +1,5 @@
 import type { GenerateParams } from "../types";
+import { fetchJsonWithRetry } from "@/lib/ai/http";
 
 // Groq exposes an OpenAI-compatible endpoint. We call it directly so the
 // provider layer stays SDK-free and swappable.
@@ -20,7 +21,9 @@ export async function generateGroq({
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY is not configured.");
 
-  const response = await fetch(GROQ_ENDPOINT, {
+  const result = await fetchJsonWithRetry<{
+    choices?: { message?: { content?: string } }[];
+  }>(GROQ_ENDPOINT, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -39,13 +42,11 @@ export async function generateGroq({
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`Groq request failed (${response.status}): ${detail.slice(0, 300)}`);
+  if (!result.ok) {
+    throw new Error(`Groq request failed (${result.status}): ${(result.detail ?? "").slice(0, 300)}`);
   }
 
-  const payload = (await response.json()) as { choices?: { message?: { content?: string } }[] };
-  const content = payload.choices?.[0]?.message?.content;
+  const content = result.body?.choices?.[0]?.message?.content;
   if (!content) throw new Error("Groq returned an empty response.");
   return content;
 }

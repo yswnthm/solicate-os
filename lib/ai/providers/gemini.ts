@@ -1,4 +1,5 @@
 import type { GenerateParams } from "../types";
+import { fetchJsonWithRetry } from "@/lib/ai/http";
 
 // Google's Generative Language API, called directly (no SDK).
 // Docs: https://ai.google.dev/api/generate-content
@@ -20,7 +21,10 @@ export async function generateGemini({
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not configured.");
 
-  const response = await fetch(`${GEMINI_BASE}/${encodeURIComponent(model)}:generateContent?key=${apiKey}`, {
+  const url = `${GEMINI_BASE}/${encodeURIComponent(model)}:generateContent?key=${apiKey}`;
+  const result = await fetchJsonWithRetry<{
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  }>(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -35,15 +39,11 @@ export async function generateGemini({
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`Gemini request failed (${response.status}): ${detail.slice(0, 300)}`);
+  if (!result.ok) {
+    throw new Error(`Gemini request failed (${result.status}): ${(result.detail ?? "").slice(0, 300)}`);
   }
 
-  const payload = (await response.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
-  };
-  const content = (payload.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("");
+  const content = (result.body?.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("");
   if (!content) throw new Error("Gemini returned an empty response.");
   return content;
 }

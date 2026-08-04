@@ -3,12 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Modal } from "@/components/modal";
-import { AllocationForm } from "@/components/finance/allocation-form";
 import { TransactionForm } from "@/components/finance/transaction-form";
 
 export function ProjectFinancePanel({
   allocations,
-  projectId,
   phases,
   people,
   categories,

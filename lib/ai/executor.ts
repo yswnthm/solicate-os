@@ -1,6 +1,9 @@
 import { generate, resolveModel } from "@/lib/ai";
 import { getMessageDraftContext } from "@/lib/ai/context";
 import { getTemplateBySlug } from "@/lib/ai/template-store";
+import { consumeAiCall } from "@/lib/ai/rate-limit";
+import { logger } from "@/lib/logger";
+import { getCurrentUser } from "@/lib/auth";
 import type { AiModelRow, TemplateVersion } from "@/lib/ai/types";
 
 // The reusable AI execution pipeline:
@@ -78,35 +81,69 @@ export function formatPromptForChat(prepared: PreparedTemplate): string {
 }
 
 export async function runTemplate(input: RunTemplateInput): Promise<RunTemplateResult> {
+  // Single enforcement point for the daily per-user AI budget. Every LLM call
+  // in the app flows through here, so one cap covers capture, triage, drafter,
+  // summaries, and finance capture.
+  const user = await getCurrentUser().catch(() => null);
+  if (user?.id) {
+    const allowed = await consumeAiCall(user.id);
+    if (!allowed) {
+      logger.warn("ai_rate_limit_exceeded", { userId: user.id, slug: input.slug });
+      throw new Error("Daily AI call limit reached. Try again tomorrow.");
+    }
+  }
+
+  const started = Date.now();
   const prepared = await prepareTemplate(input);
   const { system, payload, template: tpl } = prepared;
   const model = prepared.model!; // prepareTemplate throws when no model is active.
 
-  const content = await generate({
-    provider: model.provider,
-    model: model.model_id,
-    system,
-    user: payload,
-    temperature: Number(tpl.temperature),
-    maxTokens: Number(tpl.max_tokens),
-    responseFormat: tpl.response_format,
-  });
+  try {
+    const content = await generate({
+      provider: model.provider,
+      model: model.model_id,
+      system,
+      user: payload,
+      temperature: Number(tpl.temperature),
+      maxTokens: Number(tpl.max_tokens),
+      responseFormat: tpl.response_format,
+    });
 
-  let data: unknown = content;
-  if (tpl.response_format === "json_field") {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      throw new Error("AI returned invalid JSON.");
+    let data: unknown = content;
+    if (tpl.response_format === "json_field") {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        throw new Error("AI returned invalid JSON.");
+      }
+      data = tpl.output_field
+        ? (parsed as Record<string, unknown>)?.[tpl.output_field]
+        : parsed;
+      if (data === undefined || data === null || data === "") {
+        throw new Error(`AI response is missing "${tpl.output_field || "output"}".`);
+      }
     }
-    data = tpl.output_field
-      ? (parsed as Record<string, unknown>)?.[tpl.output_field]
-      : parsed;
-    if (data === undefined || data === null || data === "") {
-      throw new Error(`AI response is missing "${tpl.output_field || "output"}".`);
-    }
+
+    logger.info("ai_generation_succeeded", {
+      userId: user?.id ?? null,
+      slug: input.slug,
+      model: model.model_id,
+      template_version: tpl.version,
+      ms: Date.now() - started,
+    });
+
+    return { content, data, model, template: tpl };
+  } catch (cause) {
+    logger.error("ai_generation_failed", {
+      userId: user?.id ?? null,
+      slug: input.slug,
+      model: model.model_id,
+      ms: Date.now() - started,
+      error: cause instanceof Error ? cause.message : String(cause),
+      stack: cause instanceof Error ? cause.stack : undefined,
+      route: `ai:${input.slug}`,
+    });
+    throw cause;
   }
-
-  return { content, data, model, template: tpl };
 }

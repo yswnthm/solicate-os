@@ -1,4 +1,5 @@
 import type { GenerateParams, ResponseFormat } from "../types";
+import { fetchJsonWithRetry } from "@/lib/ai/http";
 
 // Opencode Zen exposes an OpenAI-compatible endpoint. We call it directly so
 // the provider layer stays SDK-free and swappable. Base URL from the Zen docs:
@@ -14,6 +15,9 @@ import type { GenerateParams, ResponseFormat } from "../types";
 //  - Some return the JSON wrapped in ```json fences, which we strip.
 //  - Some return `content` as an array of parts instead of a string, which we
 //    normalize.
+//
+// Transient failures (network, 408/429/5xx) are retried with backoff inside
+// fetchJsonWithRetry; the business retries below are purely response-level.
 
 const OPENCODE_ENDPOINT = "https://opencode.ai/zen/v1/chat/completions";
 
@@ -21,10 +25,14 @@ export function isOpencodeConfigured() {
   return Boolean(process.env.OPENCODE_API_KEY);
 }
 
+interface ChatBody {
+  choices?: { finish_reason?: string; message?: { content?: string | Array<{ text?: string } | string> } }[];
+}
+
 interface ChatResult {
   ok: boolean;
   status: number;
-  body?: { choices?: { finish_reason?: string; message?: { content?: string } }[] };
+  body?: ChatBody;
   detail?: string;
 }
 
@@ -32,7 +40,7 @@ async function chat(
   apiKey: string,
   opts: { model: string; system: string; userText: string; temperature: number; maxTokens: number; responseFormat?: ResponseFormat },
 ): Promise<ChatResult> {
-  const response = await fetch(OPENCODE_ENDPOINT, {
+  const result = await fetchJsonWithRetry<ChatBody>(OPENCODE_ENDPOINT, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -51,12 +59,7 @@ async function chat(
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    return { ok: false, status: response.status, detail };
-  }
-  const body = (await response.json()) as ChatResult["body"];
-  return { ok: true, status: response.status, body };
+  return { ok: result.ok, status: result.status, body: result.body, detail: result.detail };
 }
 
 function stripFences(text: string): string {
@@ -66,7 +69,7 @@ function stripFences(text: string): string {
 }
 
 /** OpenAI-compatible endpoints may return content as a string or an array of parts. */
-function contentOf(choice: { message?: { content?: string | Array<{ text?: string } | string> } } | undefined): string | undefined {
+function contentOf(choice: { finish_reason?: string; message?: { content?: string | Array<{ text?: string } | string> } } | undefined): string | undefined {
   const raw = choice?.message?.content;
   if (typeof raw === "string") return raw;
   if (Array.isArray(raw)) {

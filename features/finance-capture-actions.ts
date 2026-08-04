@@ -177,7 +177,7 @@ export async function approveFinanceCaptureActions(
 }
 
 /** Regenerate the proposal (if user wasn't happy with it). */
-export async function regenerateFinanceProposal(sessionId: string, modelId?: string): Promise<CaptureSessionState> {
+export async function regenerateFinanceProposal(sessionId: string): Promise<CaptureSessionState> {
   const { user } = await requireActiveUser();
   const resume = await getFinanceResumeState();
   if (!resume || resume.sessionId !== sessionId) throw new Error("Session not found.");
@@ -187,8 +187,8 @@ export async function regenerateFinanceProposal(sessionId: string, modelId?: str
 }
 
 /** Extract more actions from the same capture text. */
-export async function extractMoreFinanceActions(sessionId: string, modelId?: string): Promise<CaptureSessionState> {
-  return regenerateFinanceProposal(sessionId, modelId);
+export async function extractMoreFinanceActions(sessionId: string): Promise<CaptureSessionState> {
+  return regenerateFinanceProposal(sessionId);
 }
 
 /** Discard the current finance capture session. */

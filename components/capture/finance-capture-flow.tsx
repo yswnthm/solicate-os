@@ -118,12 +118,12 @@ export function FinanceCaptureFlow({ options }: { options: FinanceCaptureFormOpt
 
   const onRegenerate = () => {
     if (!state) return;
-    run("regenerate", () => regenerateFinanceProposal(state.sessionId, modelId || undefined));
+    run("regenerate", () => regenerateFinanceProposal(state.sessionId));
   };
 
   const onExtractMore = () => {
     if (!state) return;
-    run("extract-more", () => extractMoreFinanceActions(state.sessionId, modelId || undefined));
+    run("extract-more", () => extractMoreFinanceActions(state.sessionId));
   };
 
   const reset = () => {

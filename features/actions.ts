@@ -293,7 +293,7 @@ export async function quickCapture(formData: FormData) {
 // ─── Participants & conversations ─────────────────────────────────────────────
 
 export async function addProjectParticipant(formData: FormData) {
-  const { user } = await requireActiveUser();
+  await requireActiveUser();
   const projectId = id(formData.get("project_id"));
   const value = optional(formData.get("financial_value"));
   const supabase = await createSupabaseServerClient();
@@ -323,7 +323,7 @@ export async function createConversation(formData: FormData) {
   const clientId = id(formData.get("client_id"));
   const projectId = optional(formData.get("project_id"));
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("conversations")
     .insert({
       client_id: clientId,
