@@ -36,7 +36,7 @@ export default async function TodayPage() {
         {/* Due & Overdue Items (Spans 8 columns) */}
         <div className="col-span-8" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           
-          <section className="section" style={{ margin: 0 }}>
+          <section className="section card card-primary" style={{ margin: 0 }}>
             <div className="section-title">
               <h2>Action Required</h2>
               <span>Overdue items</span>
@@ -44,7 +44,7 @@ export default async function TodayPage() {
             <TaskList tasks={data.overdue} empty="No overdue work. Nice." />
           </section>
 
-          <section className="section" style={{ margin: 0 }}>
+          <section className="section card card-secondary" style={{ margin: 0 }}>
             <div className="section-title">
               <h2>Upcoming (Next 7 days)</h2>
               <span>Assigned to you</span>
@@ -52,7 +52,7 @@ export default async function TodayPage() {
             <TaskList tasks={data.upcoming} empty="Nothing due in the next seven days." />
           </section>
 
-          <section className="section" style={{ margin: 0 }}>
+          <section className="section card card-indigo" style={{ margin: 0 }}>
             <div className="section-title">
               <h2>Open Issues</h2>
               <span>Across active projects</span>
@@ -81,7 +81,7 @@ export default async function TodayPage() {
         <div className="col-span-4" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           
           {/* Recent Projects */}
-          <section className="section" style={{ margin: 0 }}>
+          <section className="section card card-dark" style={{ margin: 0 }}>
             <div className="section-title">
               <h2>Recent Projects</h2>
               <Link href="/projects" style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none" }}>
@@ -109,7 +109,7 @@ export default async function TodayPage() {
 
           {/* Inbox Preview Widget */}
           {inboxCount > 0 && (
-            <section className="section card card-gray" style={{ margin: 0 }}>
+            <section className="section card card-orange" style={{ margin: 0 }}>
               <div className="section-title" style={{ borderBottom: "none", paddingBottom: 0 }}>
                 <h2>Inbox Preview</h2>
                 <Link href="/inbox" style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none" }}>

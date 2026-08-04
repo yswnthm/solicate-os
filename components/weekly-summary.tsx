@@ -45,15 +45,14 @@ export function WeeklySummaryButton({ projectId }: { projectId: string }) {
   };
 
   const onDraft = async () => {
+    setOpen(true);
     setBusy(true);
     setError(null);
     try {
       const summary = await draftWeeklySummaryForProject(projectId, modelId || undefined);
       setDraft(summary);
-      setOpen(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Weekly summary failed.");
-      setOpen(true);
     } finally {
       setBusy(false);
     }
@@ -83,18 +82,7 @@ export function WeeklySummaryButton({ projectId }: { projectId: string }) {
 
   return (
     <>
-      {modelOptions.models.length > 0 && (
-        <div style={{ maxWidth: 320, marginBottom: 12 }}>
-          <ModelPicker
-            models={modelOptions.models}
-            value={modelId}
-            onChange={setModelId}
-            defaultModel={modelOptions.default_model}
-            fieldId="weekly-summary-model"
-          />
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <button className="button secondary small" type="button" onClick={onDraft} disabled={busy}>
           {busy ? "Drafting…" : "✨ Weekly summary"}
         </button>
@@ -111,11 +99,29 @@ export function WeeklySummaryButton({ projectId }: { projectId: string }) {
       />
 
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Weekly update draft">
+        {modelOptions.models.length > 0 && (
+          <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid var(--line)" }}>
+            <ModelPicker
+              models={modelOptions.models}
+              value={modelId}
+              onChange={setModelId}
+              defaultModel={modelOptions.default_model}
+              fieldId="weekly-summary-model"
+            />
+            {draft !== null && (
+              <button className="button ghost small" onClick={onDraft} disabled={busy} style={{ marginTop: 8 }}>
+                ↻ Redraft with selected model
+              </button>
+            )}
+          </div>
+        )}
+
+        {busy && <div className="empty">Drafting summary from the last 7 days of activity...</div>}
         {error && <div className="notice" style={{ marginBottom: 16 }}>{error}</div>}
-        {draft !== null && (
+        {draft !== null && !busy && (
           <>
             <p className="muted" style={{ marginBottom: 16 }}>
-              Drafted from the last 7 days of project activity. Edit freely — nothing is filed until you approve.
+              Drafted from project activity. Edit freely — nothing is filed until you approve.
             </p>
             <div className="form">
               <div className="field">

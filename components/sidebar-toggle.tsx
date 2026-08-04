@@ -8,7 +8,13 @@ export function SidebarToggle() {
       className="nav-toggle"
       aria-label="Toggle navigation"
       aria-expanded="false"
-      onClick={() => document.body.classList.toggle("sidebar-open")}
+      onClick={() => {
+        if (window.innerWidth < 900) {
+          document.body.classList.toggle("sidebar-open");
+        } else {
+          document.body.classList.toggle("desktop-sidebar-collapsed");
+        }
+      }}
     >
       ☰
     </button>

@@ -238,17 +238,7 @@ export function InboxList({
         </div>
       )}
 
-      {modelOptions.models.length > 0 && (
-        <div style={{ maxWidth: 340, marginBottom: 20 }}>
-          <ModelPicker
-            models={modelOptions.models}
-            value={modelId}
-            onChange={setModelId}
-            defaultModel={modelOptions.default_model}
-            fieldId="inbox-model"
-          />
-        </div>
-      )}
+      {/* Model Picker moved to Modal */}
 
       {optimistic.entries.length > 0 && (
         <section className="section">
@@ -297,13 +287,34 @@ export function InboxList({
       )}
 
       <Modal
-        isOpen={review !== null && draft !== null}
+        isOpen={drafting !== null || (review !== null && draft !== null)}
         onClose={() => {
           setReview(null);
           setDraft(null);
+          setDrafting(null);
         }}
         title="Review AI draft"
       >
+        {modelOptions.models.length > 0 && (
+          <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid var(--line)" }}>
+            <ModelPicker
+              models={modelOptions.models}
+              value={modelId}
+              onChange={setModelId}
+              defaultModel={modelOptions.default_model}
+              fieldId="inbox-model"
+            />
+            {draft !== null && review !== null && (
+              <button className="button ghost small" onClick={() => onDraft(review.kind, review.id)} disabled={drafting !== null} style={{ marginTop: 8 }}>
+                ↻ Redraft with selected model
+              </button>
+            )}
+          </div>
+        )}
+
+        {drafting !== null && (
+          <div className="empty" style={{ marginTop: 0 }}>Drafting record from inbox item...</div>
+        )}
         {draft && (
           <>
             <p className="muted" style={{ marginBottom: 16 }}>

@@ -24,7 +24,15 @@ export async function AppShell({
       <CommandMenu projects={projects} clients={clients} />
       <KeyboardShortcuts />
 
-      {/* Persistent Sidebar */}
+      {/* Floating Dynamic Island */}
+      <header className="top-nav">
+        <SidebarToggle />
+        <div style={{ width: "320px" }}>
+          <SearchTriggerButton />
+        </div>
+      </header>
+
+      {/* Floating Sidebar Island */}
       <aside className="sidebar">
         <Link href="/today" className="brand">
           <div className="brand-mark">S</div>
@@ -66,12 +74,6 @@ export async function AppShell({
 
       {/* Main column */}
       <div className="shell-main">
-        <header className="top-nav">
-          <SidebarToggle />
-          <div style={{ flex: 1, maxWidth: "480px" }}>
-            <SearchTriggerButton />
-          </div>
-        </header>
         <main className="main">{children}</main>
       </div>
     </div>

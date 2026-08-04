@@ -123,7 +123,7 @@ export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Triage all with AI">
         {error && <div className="notice" style={{ marginBottom: 16 }}>{error}</div>}
         {modelOptions.models.length > 0 && (
-          <div style={{ maxWidth: 340, marginBottom: 16 }}>
+          <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid var(--line)" }}>
             <ModelPicker
               models={modelOptions.models}
               value={modelId}
@@ -131,6 +131,11 @@ export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
               defaultModel={modelOptions.default_model}
               fieldId="triage-all-model"
             />
+            {items.length > 0 && (
+              <button className="button ghost small" onClick={onDraft} disabled={busy} style={{ marginTop: 8 }}>
+                ↻ Redraft with selected model
+              </button>
+            )}
           </div>
         )}
         {items.length === 0 && !error && (

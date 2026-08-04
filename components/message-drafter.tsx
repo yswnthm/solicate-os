@@ -367,14 +367,20 @@ export function MessageDrafter() {
             />
           </div>
 
-          <ModelPicker
-            models={options.models}
-            value={modelId}
-            onChange={setModelId}
-            defaultModel={options.template?.default_model}
-            fieldId="drafter-model"
-          />
-
+          <details style={{ border: "none", padding: 0, marginBottom: 16 }}>
+            <summary style={{ cursor: "pointer", color: "var(--muted)", fontSize: 13, fontWeight: 500, listStyle: "none" }}>
+              ⚙️ Advanced model settings
+            </summary>
+            <div style={{ marginTop: 16 }}>
+              <ModelPicker
+                models={options.models}
+                value={modelId}
+                onChange={setModelId}
+                defaultModel={options.template?.default_model}
+                fieldId="drafter-model"
+              />
+            </div>
+          </details>
           <button className="button" type="button" onClick={onDraft} disabled={busy || !canDraft} style={{ marginTop: 4 }}>
             {busy ? "Drafting…" : "Draft message"}
           </button>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { createConversation, createEntry, createIssue, createPhase, createTask } from "@/features/actions";
 import { getProjectWorkspace } from "@/features/queries";
@@ -24,6 +25,7 @@ export default async function ProjectOverviewPage({
   const { thread } = await searchParams;
   const data = await getProjectWorkspace(projectId);
   const project: any = data.project;
+  if (!project) notFound();
 
   const openTasks = data.tasks.filter(
     (t: any) => t.status !== "done" && t.status !== "cancelled",

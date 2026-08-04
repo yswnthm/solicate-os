@@ -343,15 +343,20 @@ function CaptureForm(props: {
         <p className="muted capture-hint">Leave blank to propose everything implied. Selected types are mandatory.</p>
       </section>
 
-      <section className="capture-section">
-        <ModelPicker
-          models={options.models}
-          value={props.modelId}
-          onChange={props.setModelId}
-          defaultModel={options.default_model}
-          fieldId="cap-model"
-        />
-      </section>
+      <details className="capture-section" style={{ border: "none", padding: 0 }}>
+        <summary style={{ cursor: "pointer", color: "var(--muted)", fontSize: 13, fontWeight: 500, listStyle: "none" }}>
+          ⚙️ Advanced model settings
+        </summary>
+        <div style={{ marginTop: 16 }}>
+          <ModelPicker
+            models={options.models}
+            value={props.modelId}
+            onChange={props.setModelId}
+            defaultModel={options.default_model}
+            fieldId="cap-model"
+          />
+        </div>
+      </details>
 
       <section className="capture-section">
         <div className="field">
