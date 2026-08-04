@@ -35,8 +35,7 @@ export async function AppShell({
       {/* Floating Sidebar Island */}
       <aside className="sidebar">
         <Link href="/today" className="brand">
-          <div className="brand-mark">S</div>
-          <div className="brand-text">Solicate</div>
+          <img src="/logo.png" alt="Solicate" className="brand-logo" />
         </Link>
 
         <nav className="sidebar-nav" aria-label="Primary">

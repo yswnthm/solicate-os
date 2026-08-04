@@ -173,19 +173,12 @@ body.desktop-sidebar-collapsed .signout-btn {
   padding: 8px 12px 24px;
   text-decoration: none;
 }
-.brand-mark {
-  width: 32px;
-  height: 32px;
-  background: var(--island-ink);
-  border-radius: var(--radius-sm);
-  display: grid;
-  place-items: center;
-  color: var(--island-bg);
-  font-weight: 800;
-  font-size: 16px;
+.brand-logo {
+  width: 120px;
+  height: auto;
   flex-shrink: 0;
+  display: block;
 }
-.brand-text { font-size: 16px; font-weight: 700; color: var(--island-ink); }
 
 .sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
 
