@@ -751,8 +751,8 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
   user-select: none;
 }
 .cmdk-item[data-selected="true"] {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--island-bg);
+  color: var(--island-ink);
 }
 .cmdk-icon { width: 18px; text-align: center; opacity: 0.8; flex-shrink: 0; }
 .cmdk-item-main {
@@ -774,7 +774,7 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.cmdk-item[data-selected="true"] .cmdk-sub { color: var(--accent); opacity: 0.8; }
+.cmdk-item[data-selected="true"] .cmdk-sub { color: var(--island-ink-2); opacity: 0.8; }
 
 /* Palette create modes */
 .cmdk-form {
