@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Bebas+Neue&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Special+Elite&display=swap');
 
 :root {
   /* Premium Light Canvas */
@@ -182,8 +182,8 @@ body.desktop-sidebar-collapsed .signout-btn {
   display: block;
 }
 .brand-text {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 26px;
+  font-family: 'Special Elite', monospace;
+  font-size: 20px;
   font-weight: 400;
   color: var(--island-ink);
   letter-spacing: 0.05em;
