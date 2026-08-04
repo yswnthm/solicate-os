@@ -51,6 +51,16 @@ export default function GuidePage() {
             </div>
             <div className="row">
               <div className="row-main">
+                <div className="row-title">Money reality vs money intent</div>
+                <div className="row-meta">
+                  <strong>Transactions</strong> are what actually moved (income, expense, transfer, refund,
+                  adjustment). <strong>Allocations</strong> map that money to projects and phases so you know what
+                  each engagement actually cost or earned. Keep both current and the Finance pages stay truthful.
+                </div>
+              </div>
+            </div>
+            <div className="row">
+              <div className="row-main">
                 <div className="row-title">People are external records</div>
                 <div className="row-meta">
                   Client contacts, partners, referrers, and collaborators live in People. Marking someone a partner
@@ -78,17 +88,55 @@ export default function GuidePage() {
           </div>
         </Section>
 
+        <Section title="A daily workflow">
+          <div className="prose">
+            <p>
+              The fastest way to work in Solicate is one steady loop — <strong>plan → capture → triage →
+              reflect</strong>. Everything below takes seconds because it starts from <Kbd>⌘K</Kbd> or a{" "}
+              <Kbd>G</Kbd> shortcut.
+            </p>
+            <p>
+              <strong>1. Start at Today.</strong> <Kbd>G</Kbd> <Kbd>T</Kbd>. Overdue work and open issues are the
+              real agenda; ignore the rest until the inbox is done.
+            </p>
+            <p>
+              <strong>2. Get the AI brief.</strong> <em>Morning brief</em> drafts a day plan from overdue items,
+              upcoming tasks, open issues, inbox, and project pulse. <em>Week in review</em> reads the last 7 days
+              across every project so you never start a week guessing what moved. Both are read-only until you save.
+            </p>
+            <p>
+              <strong>3. Capture everything as it happens.</strong> A thought, a client decision, a payment that
+              landed, a message you must send — get it out of your head immediately with{" "}
+              <Kbd>⌘⇧X</Kbd> (AI capture) or <Kbd>⌘K</Kbd> → <em>Capture (AI)</em>. You can do this from any page
+              without leaving what you were doing.
+            </p>
+            <p>
+              <strong>4. Drain the inbox to zero.</strong> <Kbd>G</Kbd> <Kbd>I</Kbd>. File each item into its
+              project (or let ✨ Triage all with AI draft everything), dismiss what&apos;s noise. Zero inbox = the
+              record is complete.
+            </p>
+            <p>
+              <strong>5. Close the loop weekly.</strong> On each active project use{" "}
+              <em>✨ Weekly summary</em> to draft the week&apos;s update, approve it as a record, and archive nothing.
+            </p>
+          </div>
+        </Section>
+
         <Section title="Pages & shortcuts">
           <Table
             head={["Page", "Shortcut", "What it is for"]}
             rows={[
               ["Today", "G T", "Daily command center: overdue, upcoming, open issues, recent projects, inbox preview."],
-              ["Inbox", "G I", "Triage untriaged captures and messages; file or dismiss."],
+              ["Capture (AI)", "⌘⇧X", "Describe what happened in plain English; AI proposes the operational updates."],
+              ["Inbox", "G I", "Triage untriaged captures and messages; file or dismiss. Aim for zero."],
               ["Projects", "G P", "All delivery work with active/paused counts."],
               ["Clients", "G C", "Businesses and individuals Solicate serves."],
               ["Relationships", "—", "How each client came in, referrals, and relationship-level terms."],
               ["People", "G U", "Client contacts, partners, and referrers."],
+              ["Finance", "—", "Money reality: YTD income/expense/net, invoice pipeline, and the transaction ledger."],
               ["Search", "G S", "Find the original record, not a summary."],
+              ["AI — Drafter", "—", "Draft a message to anyone on a project; mark sent to file it."],
+              ["AI — Templates / Models", "—", "The versioned prompts and the model catalog behind every AI feature."],
               ["Settings", "—", "Account, sign out, and operational guidelines."],
               ["Guide", "G ?", "You are here."],
             ]}
@@ -97,6 +145,8 @@ export default function GuidePage() {
             <p>
               To navigate with the keyboard, press <Kbd>G</Kbd> then the letter within a second — e.g.{" "}
               <Kbd>G</Kbd> <Kbd>T</Kbd> opens Today. Shortcuts are ignored while you are typing in a field.
+              Finance and the AI pages have no <Kbd>G</Kbd> shortcut — reach them from the sidebar or{" "}
+              <Kbd>⌘K</Kbd>.
             </p>
           </div>
         </Section>
@@ -110,17 +160,35 @@ export default function GuidePage() {
                 </div>
                 <div className="row-meta">
                   Toggle the palette from anywhere. Type to search projects, people, records, and messages, or pick
-                  from Recents, Go to, and Create.
+                  from Recents, Go to, and Create. Type at least two characters and it searches live.
                 </div>
               </div>
             </div>
             <div className="row">
               <div className="row-main">
                 <div className="row-title">
-                  <Kbd>⌘⇧X</Kbd> → quick capture
+                  <Kbd>/</Kbd> opens the palette from any page
                 </div>
                 <div className="row-meta">
-                  Jump straight into capturing a thought. Assign a project or leave it unsorted to triage from Inbox.
+                  Same dialog as <Kbd>⌘K</Kbd> — the fastest way to jump without touching the mouse.
+                </div>
+              </div>
+            </div>
+            <div className="row">
+              <div className="row-main">
+                <div className="row-title">Go to</div>
+                <div className="row-meta">
+                  Today, Inbox, Projects, Clients, Relationships, People, Search, Message Drafter, AI templates, AI
+                  models, Guide.
+                </div>
+              </div>
+            </div>
+            <div className="row">
+              <div className="row-main">
+                <div className="row-title">Create</div>
+                <div className="row-meta">
+                  Capture (AI), New project, New client, New relationship, New person — each opens an inline form
+                  that files as soon as you submit.
                 </div>
               </div>
             </div>
@@ -128,18 +196,9 @@ export default function GuidePage() {
               <div className="row-main">
                 <div className="row-title">Contextual actions</div>
                 <div className="row-meta">
-                  On a project page the palette offers Add task, Log issue, Log record, and status changes pre-scoped
-                  to that project. On a client page it offers New conversation.
-                </div>
-              </div>
-            </div>
-            <div className="row">
-              <div className="row-main">
-                <div className="row-title">
-                  <Kbd>/</Kbd> opens search
-                </div>
-                <div className="row-meta">
-                  Same as the search bar in the top navigation.
+                  On a project page the palette offers Add task, Log issue, Log record, and the status transitions
+                  (pause / complete / archive) pre-scoped to that project. On a client page it offers New
+                  conversation.
                 </div>
               </div>
             </div>
@@ -150,16 +209,22 @@ export default function GuidePage() {
           <div className="prose">
             <p>
               <strong>1. Capture first.</strong> Don&apos;t hold a thought in your head — use quick capture (
-              <Kbd>⌘⇧X</Kbd> or the Today button) or drop a message in.
+              <Kbd>⌘⇧X</Kbd>, the Capture nav item, or the Today button). Choose where it happened: an existing
+              project (optionally a phase, plus a person), a brand-new project (optionally a client), or no project
+              at all. You can also force specific update types — tasks, decisions, finance, milestones, and more —
+              so the AI only proposes what you want.
             </p>
             <p>
-              <strong>2. Triage from Inbox.</strong> Read each item and either file it into a project as a record,
-              or dismiss it. <Kbd>G I</Kbd> to get there.
+              <strong>2. Review, then apply.</strong> The AI proposes concrete updates (create a phase, complete a
+              task, log a decision, file a meeting, mark an invoice paid…). Review each one: approve or reject
+              individually, edit any payload, regenerate if it missed the point, or extract more actions.{" "}
+              <strong>Nothing is written until you apply.</strong> An in-progress capture resumes automatically if
+              you reload the page.
             </p>
             <p>
-              <strong>3. Let AI draft.</strong> Use ✨ Triage on a single item, or ✨ Triage all with AI for the
-              whole inbox. It drafts a title, type, project, and body — you edit, then Approve &amp; file. Skipped
-              items stay in the inbox.
+              <strong>3. Triage from Inbox.</strong> <Kbd>G I</Kbd>. Read each item and either file it into a
+              project as a record, or dismiss it. ✨ Triage all with AI drafts a title, type, project, and body for
+              the whole inbox at once — you edit, then Approve &amp; file. Skipped items stay in the inbox.
             </p>
             <p>
               <strong>4. Records become searchable.</strong> Filed items land in the project&apos;s Knowledge Base
@@ -187,6 +252,50 @@ export default function GuidePage() {
             <p>
               On the project page, <Kbd>✨ Weekly summary</Kbd> drafts an update from the last 7 days of activity;
               edit and Approve &amp; file it as a record.
+            </p>
+          </div>
+        </Section>
+
+        <Section title="Finance">
+          <div className="prose">
+            <p>
+              Finance has one job: keep the <strong>money reality</strong> in sync with the work. Reach it from the
+              sidebar (Finance), where <strong>/finance/dashboard</strong> is the landing view.
+            </p>
+            <p>
+              <strong>Dashboard.</strong> Year-to-date income, expense, and net profit at a glance, an invoice
+              pipeline (what&apos;s being prepared vs sent and awaiting payment), open invoices, and recent ledger
+              activity. Check this weekly — it should agree with your bank account and your invoice list.
+            </p>
+            <p>
+              <strong>Ledger.</strong> <Link href="/finance/transactions">All transactions</Link>, newest first,
+              filterable by type (income, expense, transfer, refund, adjustment) and status (planned, pending,
+              completed, cancelled). Use <em>Load more</em> to page through history. Each row shows its allocations
+              and where the money sits.
+            </p>
+            <p>
+              <strong>Transaction detail.</strong> Open any transaction for the full picture: counterparty,
+              category, payment method, notes, invoice info (number, sent/cleared dates, ref/UTR), and the
+              <em> Allocations</em> panel. Allocate unallocated money to a project or phase (or leave it as
+              overhead) with <em>Add allocation</em>; edit or re-target allocations freely. The amount you can
+              allocate is capped by the transaction amount.
+            </p>
+            <p>
+              <strong>Invoices.</strong> Income transactions carry an invoice lifecycle —{" "}
+              <em>preparing → sent → cleared</em>. Advance it from the <Link href="/finance/invoices">Invoices</Link>{" "}
+              page (Mark Sent / Mark Cleared) as real-world events happen, so the pipeline stays truthful.
+            </p>
+            <p>
+              <strong>Finance Capture.</strong> The fastest way to log money. Pick a scope — income, expense,
+              allocation, or invoice update — and type what happened in plain English, e.g.{" "}
+              <em>&quot;The ₹15,000 final payment from Acme for Phase 2 cleared&quot;</em> or{" "}
+              <em>&quot;Allocate ₹5,000 from the recent Acme transfer to the Design phase.&quot;</em> The AI
+              cross-references open invoices, active projects, and recent transactions to propose the exact ledger
+              entries, then you review and apply.
+            </p>
+            <p>
+              <strong>Money intent.</strong> Once a transaction exists, keep it allocated to the projects and phases
+              it belongs to — that is what makes project-level Finances, margins, and the dashboard trustworthy.
             </p>
           </div>
         </Section>
@@ -224,6 +333,16 @@ export default function GuidePage() {
               ["Close as", "resolved, accepted (risk accepted), closed (won't fix)"],
             ]}
           />
+          <h3 style={{ margin: "20px 0 8px" }}>Finance</h3>
+          <Table
+            head={["Field", "Options"]}
+            rows={[
+              ["Transaction type", "income, expense, transfer, refund, adjustment"],
+              ["Transaction status", "planned, pending, completed, cancelled"],
+              ["Invoice status", "preparing → sent → cleared (income only)"],
+              ["Allocation", "transaction → project (optionally a phase), or overhead"],
+            ]}
+          />
           <h3 style={{ margin: "20px 0 8px" }}>Records &amp; conversations</h3>
           <Table
             head={["Entity", "Options"]}
@@ -259,7 +378,8 @@ export default function GuidePage() {
             </p>
             <p>
               Anything logged anywhere is reachable from <Link href="/search">Search</Link> — which covers record
-              titles, record bodies, and message content.
+              titles, record bodies, and message content (Postgres full-text search). From any page,{" "}
+              <Kbd>⌘K</Kbd> and start typing to search before you even reach the Search page.
             </p>
           </div>
         </Section>
@@ -272,6 +392,9 @@ export default function GuidePage() {
               ["Today — Week in review", "Reads every project's last 7 days: what moved, decisions, risks, momentum. Save as a note or copy."],
               ["Project — Weekly summary", "Drafts a project update from 7 days of activity; Approve & file it as a record."],
               ["Inbox — AI triage", "Drafts title / type / project / body for inbox items; edit then approve & file, or skip."],
+              ["Capture (AI)", "Turns a plain-English account of what happened into concrete updates — tasks, decisions, meetings, finance, milestones, even new projects and clients. Review each one before applying."],
+              ["Finance Capture", "Logs income, expenses, allocations, and invoice updates from plain English, cross-referenced against your actual open invoices, projects, and transactions."],
+              ["Message Drafter", "Drafts a message to anyone on a project; mark sent to file it as an outbound message."],
             ]}
           />
           <p className="muted" style={{ marginTop: 12, fontSize: 13 }}>
@@ -299,6 +422,26 @@ export default function GuidePage() {
           />
         </Section>
 
+        <Section title="Common tasks — cheat sheet">
+          <Table
+            head={["I want to…", "Fastest path"]}
+            rows={[
+              ["Log a payment I received", "Sidebar → Finance → Finance Capture → Income, or ⌘⇧X and mention the payment"],
+              ["Log an expense", "Finance Capture → Expense, or ⌘⇧X"],
+              ["Mark an invoice sent / cleared", "Finance → Invoices → Mark Sent / Mark Cleared, or Finance Capture → Invoice Update"],
+              ["Allocate money to a project", "Open the transaction → Add allocation, or Finance Capture → Allocation"],
+              ["Record a client decision", "Phase → Decisions, or ⌘⇧X and mention the decision with an outcome"],
+              ["File a meeting note", "Phase → Records → new record, or ⌘⇧X"],
+              ["Draft a follow-up message", "⌘K → Message Drafter"],
+              ["Capture a stray thought", "⌘⇧X from anywhere — leave it unsorted and triage from Inbox later"],
+              ["Find something from months ago", "⌘K and type, or G S → search page"],
+              ["Pause / complete a project", "Project header status controls, or ⌘K on the project page"],
+              ["Start the day", "G T → Morning brief → drain the inbox (G I)"],
+              ["Close the week", "G T → Week in review, then ✨ Weekly summary on each active project"],
+            ]}
+          />
+        </Section>
+
         <Section title="Operational guidelines">
           <div className="prose">
             <p>
@@ -315,6 +458,10 @@ export default function GuidePage() {
             <p>
               <strong>Tasks vs issues.</strong> A task is work to do. An issue is a problem, risk, or unresolved
               concern. Don&apos;t conflate them.
+            </p>
+            <p>
+              <strong>Keep finance truthful.</strong> Log money when it actually moves, advance invoices when they
+              actually go out or clear, and allocate every transaction to the work it belongs to.
             </p>
             <p>
               <strong>Archive, don&apos;t delete.</strong> Completed and closed projects remain searchable.
