@@ -186,7 +186,7 @@ export async function getTodayData(userId: string) {
     supabase
       .from("tasks")
       .select("id, title, due_at, priority, status, project_id, projects!inner(name, status)")
-      .eq("assignee_id", null)
+      .is("assignee_id", null)
       .in("status", ["todo", "in_progress", "blocked"])
       .eq("projects.status", ACTIVE)
       .order("due_at", { ascending: true, nullsFirst: false })
