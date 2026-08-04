@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Bebas+Neue&display=swap');
 
 :root {
   /* Premium Light Canvas */
@@ -182,11 +182,12 @@ body.desktop-sidebar-collapsed .signout-btn {
   display: block;
 }
 .brand-text {
-  font-family: 'Playfair Display', serif;
-  font-size: 24px;
-  font-weight: 700;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px;
+  font-weight: 400;
   color: var(--island-ink);
-  letter-spacing: -0.02em;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
 }
 
 .sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
