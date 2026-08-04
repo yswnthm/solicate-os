@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap');
 
 :root {
   /* Premium Light Canvas */
@@ -174,15 +174,19 @@ body.desktop-sidebar-collapsed .signout-btn {
   text-decoration: none;
 }
 .brand-logo {
-  width: 140px;
-  height: auto;
-  object-fit: contain;
-  object-position: left center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
   flex-shrink: 0;
   display: block;
-  /* Drops the white background and turns black text to white */
-  filter: invert(1);
-  mix-blend-mode: screen;
+}
+.brand-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--island-ink);
+  letter-spacing: -0.02em;
 }
 
 .sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
