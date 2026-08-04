@@ -181,6 +181,7 @@ body.desktop-sidebar-collapsed .signout-btn {
   flex-shrink: 0;
   display: block;
 }
+.brand-text { font-size: 16px; font-weight: 700; color: var(--island-ink); }
 
 .sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
 
