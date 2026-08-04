@@ -36,7 +36,6 @@ export async function AppShell({
       <aside className="sidebar">
         <Link href="/today" className="brand">
           <img src="/logo.png" alt="Solicate" className="brand-logo" />
-          <div className="brand-text">Solicate</div>
         </Link>
 
         <nav className="sidebar-nav" aria-label="Primary">
