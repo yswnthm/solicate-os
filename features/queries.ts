@@ -339,10 +339,10 @@ export async function getProjectWorkspace(projectId: string) {
         .eq("project_id", projectId)
         .order("position"),
       supabase
-        .from("finance_items")
-        .select("id, kind, title, amount, currency_code, occurred_on, notes, phase_id, phases(id, name)")
+        .from("v_project_finance")
+        .select("allocation_id, transaction_id, project_id, phase_id, target, allocated_amount, allocation_notes, type, status, invoice_status, invoice_number, transaction_date, currency_code, reference_number, transaction_notes, category_name")
         .eq("project_id", projectId)
-        .order("occurred_on", { ascending: false }),
+        .order("transaction_date", { ascending: false }),
       supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
       supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
     ]);
@@ -371,7 +371,16 @@ export async function getProjectWorkspace(projectId: string) {
     recentMessages: recentMessages.data ?? [],
     activity: activity.data ?? [],
     phases: phases.data ?? [],
-    finance: finance.data ?? [],
+    finance: (finance.data ?? []).map((f: any) => ({
+      ...f,
+      id: f.allocation_id,
+      kind: f.type === "income" ? "payment" : f.type === "invoice" ? "invoice" : "expense",
+      title: f.transaction_notes || f.allocation_notes || f.category_name || "Transaction",
+      amount: f.allocated_amount ?? 0,
+      occurred_on: f.transaction_date,
+      notes: f.allocation_notes || f.transaction_notes,
+      phase_id: f.phase_id,
+    })),
     people: people.data ?? [],
     users: users.data ?? [],
   };
@@ -448,10 +457,10 @@ export async function getProjectWorkspaceForAI(projectId: string) {
         .eq("project_id", projectId)
         .order("position"),
       supabase
-        .from("finance_items")
-        .select("id, kind, title, amount, currency_code, occurred_on, notes, phase_id, phases(id, name)")
+        .from("v_project_finance")
+        .select("allocation_id, transaction_id, project_id, phase_id, target, allocated_amount, allocation_notes, type, status, invoice_status, invoice_number, transaction_date, currency_code, reference_number, transaction_notes, category_name")
         .eq("project_id", projectId)
-        .order("occurred_on", { ascending: false })
+        .order("transaction_date", { ascending: false })
         .limit(25),
       supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
       supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
@@ -481,7 +490,16 @@ export async function getProjectWorkspaceForAI(projectId: string) {
     recentMessages: recentMessages.data ?? [],
     activity: activity.data ?? [],
     phases: phases.data ?? [],
-    finance: finance.data ?? [],
+    finance: (finance.data ?? []).map((f: any) => ({
+      ...f,
+      id: f.allocation_id,
+      kind: f.type === "income" ? "payment" : f.type === "invoice" ? "invoice" : "expense",
+      title: f.transaction_notes || f.allocation_notes || f.category_name || "Transaction",
+      amount: f.allocated_amount ?? 0,
+      occurred_on: f.transaction_date,
+      notes: f.allocation_notes || f.transaction_notes,
+      phase_id: f.phase_id,
+    })),
     people: people.data ?? [],
     users: users.data ?? [],
   };
@@ -546,10 +564,10 @@ export async function getPhaseWorkspace(phaseId: string) {
       .order("occurred_at", { ascending: false })
       .limit(200),
     supabase
-      .from("finance_items")
-      .select("id, kind, title, amount, currency_code, occurred_on, notes, phase_id, phases(id, name)")
+      .from("v_project_finance")
+      .select("allocation_id, transaction_id, project_id, phase_id, target, allocated_amount, allocation_notes, type, status, invoice_status, invoice_number, transaction_date, currency_code, reference_number, transaction_notes, category_name")
       .eq("phase_id", phaseId)
-      .order("occurred_on", { ascending: false }),
+      .order("transaction_date", { ascending: false }),
     supabase
       .from("phases")
       .select("id, name, description, position, status, started_on, target_date, completed_at, project_id")
@@ -580,7 +598,16 @@ export async function getPhaseWorkspace(phaseId: string) {
     tasks: tasks.data ?? [],
     issues: issues.data ?? [],
     entries: entries.data ?? [],
-    finance: finance.data ?? [],
+    finance: (finance.data ?? []).map((f: any) => ({
+      ...f,
+      id: f.allocation_id,
+      kind: f.type === "income" ? "payment" : f.type === "invoice" ? "invoice" : "expense",
+      title: f.transaction_notes || f.allocation_notes || f.category_name || "Transaction",
+      amount: f.allocated_amount ?? 0,
+      occurred_on: f.transaction_date,
+      notes: f.allocation_notes || f.transaction_notes,
+      phase_id: f.phase_id,
+    })),
     activity: activity.data ?? [],
     phases: phases.data ?? [],
     users: users.data ?? [],

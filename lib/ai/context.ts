@@ -99,10 +99,10 @@ export async function getMessageDraftContext(vars: {
       // Reduced from 80: 40 entries covers ~4-6 weeks of typical activity.
       .limit(40),
     supabase
-      .from("finance_items")
-      .select("id, kind, title, amount, currency_code, occurred_on, notes, phase_id, phases(id, name)")
+      .from("v_project_finance")
+      .select("allocation_id, transaction_id, project_id, phase_id, target, allocated_amount, allocation_notes, type, status, invoice_status, invoice_number, transaction_date, currency_code, reference_number, transaction_notes, category_name")
       .eq("project_id", vars.projectId)
-      .order("occurred_on", { ascending: false })
+      .order("transaction_date", { ascending: false })
       // Reduced from 20: 20 finance items covers all realistic project finances.
       .limit(20),
     supabase.from("people").select("id, name, email, phone, is_partner, summary").eq("id", vars.personId).maybeSingle(),
@@ -183,13 +183,13 @@ export async function getMessageDraftContext(vars: {
         phase: (e.phases as unknown as Record<string, unknown> | undefined)?.name ?? null,
       }));
 
-  const financialItems = (finance.data ?? []).map((f) => ({
-    kind: f.kind,
-    title: f.title,
-    amount: Number(f.amount),
+  const financialItems = (finance.data ?? []).map((f: any) => ({
+    kind: f.type === "income" ? "payment" : f.type === "invoice" ? "invoice" : (f.kind ?? "expense"),
+    title: f.transaction_notes || f.allocation_notes || f.category_name || f.title || "Transaction",
+    amount: Number(f.allocated_amount ?? f.amount ?? 0),
     currency: f.currency_code,
-    date: f.occurred_on,
-    phase: (f.phases as unknown as Record<string, unknown> | undefined)?.name ?? null,
+    date: f.transaction_date || f.occurred_on,
+    phase: null,
   }));
 
   return {

@@ -115,10 +115,10 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
         .order("occurred_at", { ascending: false })
         .limit(40),
       supabase
-        .from("finance_items")
-        .select("id, kind, title, amount, currency_code, occurred_on, payment_status, phase_id, phases(id, name)")
+        .from("v_project_finance")
+        .select("allocation_id, transaction_id, project_id, phase_id, target, allocated_amount, allocation_notes, type, status, invoice_status, invoice_number, transaction_date, currency_code, reference_number, transaction_notes, category_name")
         .eq("project_id", pid)
-        .order("occurred_on", { ascending: false })
+        .order("transaction_date", { ascending: false })
         .limit(25),
     ]);
     [project, phases, tasks, issues, entries, finance].forEach((r) => throwOnError(r.error));
@@ -198,15 +198,15 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
         severity: i.severity,
         phase: (i.phases as unknown as Record<string, unknown> | undefined)?.name ?? null,
       })),
-    financials: finance.map((f) => ({
-      id: f.id,
-      kind: f.kind,
-      title: f.title,
-      amount: Number(f.amount),
+    financials: finance.map((f: any) => ({
+      id: f.allocation_id || f.id,
+      kind: f.type === "income" ? "payment" : f.type === "invoice" ? "invoice" : (f.kind ?? "expense"),
+      title: f.transaction_notes || f.allocation_notes || f.category_name || f.title || "Transaction",
+      amount: Number(f.allocated_amount ?? f.amount ?? 0),
       currency: f.currency_code,
-      date: f.occurred_on,
-      payment_status: (f.payment_status as string) ?? null,
-      phase: (f.phases as unknown as Record<string, unknown> | undefined)?.name ?? null,
+      date: f.transaction_date || f.occurred_on,
+      payment_status: (f.invoice_status ?? f.payment_status ?? null) as string | null,
+      phase: null,
     })),
     // Body truncated to 300 chars — enough for the model to understand
     // what each entry is about without burning tokens on full prose.
