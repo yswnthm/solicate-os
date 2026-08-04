@@ -5,7 +5,7 @@ import { useState } from "react";
 import { createModel, deleteModel, setModelActive } from "@/features/ai-manage-actions";
 import type { AiModelRow } from "@/lib/ai/types";
 
-const PROVIDERS = ["groq", "gemini"] as const;
+const PROVIDERS = ["groq", "gemini", "opencode"] as const;
 
 export function ModelManagement({ models }: { models: AiModelRow[] }) {
   const [busy, setBusy] = useState(false);

@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { generateGemini, isGeminiConfigured } from "@/lib/ai/providers/gemini";
 import { generateGroq, isGroqConfigured } from "@/lib/ai/providers/groq";
+import { generateOpencode, isOpencodeConfigured } from "@/lib/ai/providers/opencode";
 import type { AiModelRow, AiProvider, GenerateParams } from "@/lib/ai/types";
 
 function throwOnError(error: { message: string } | null) {
@@ -10,7 +11,13 @@ function throwOnError(error: { message: string } | null) {
 // ─── Provider dispatch ───────────────────────────────────────────────────────
 
 export function isProviderConfigured(provider: AiProvider) {
-  return provider === "groq" ? isGroqConfigured() : provider === "gemini" ? isGeminiConfigured() : false;
+  return provider === "groq"
+    ? isGroqConfigured()
+    : provider === "gemini"
+      ? isGeminiConfigured()
+      : provider === "opencode"
+        ? isOpencodeConfigured()
+        : false;
 }
 
 export async function generate(params: GenerateParams): Promise<string> {
@@ -19,6 +26,8 @@ export async function generate(params: GenerateParams): Promise<string> {
       return generateGroq(params);
     case "gemini":
       return generateGemini(params);
+    case "opencode":
+      return generateOpencode(params);
     default:
       throw new Error(`Unsupported provider: ${(params as { provider: string }).provider}`);
   }

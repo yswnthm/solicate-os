@@ -1,12 +1,13 @@
 // Shared types for the AI framework. The execution engine is provider-agnostic;
 // providers are resolved from the ai_models catalog at runtime.
 
-export const AI_PROVIDERS = ["groq", "gemini"] as const;
+export const AI_PROVIDERS = ["groq", "gemini", "opencode"] as const;
 export type AiProvider = (typeof AI_PROVIDERS)[number];
 
 export const PROVIDER_LABELS: Record<AiProvider, string> = {
   groq: "Groq",
   gemini: "Gemini",
+  opencode: "Opencode Zen",
 };
 
 export type ResponseFormat = "text" | "json_field";
