@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { createConversation, createEntry, createIssue, createPhase, createTask } from "@/features/actions";
+import { createConversation, createIssue, createPhase, createTask } from "@/features/actions";
 import { getProjectWorkspace } from "@/features/queries";
 import { StatusPill } from "@/components/status-pill";
 import { ModalTrigger } from "@/components/modal-trigger";

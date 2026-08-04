@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { Modal } from "@/components/modal";
 import { EntityEditModal, type FieldConfig, type Values } from "@/components/editing/entity-edit-modal";
 import {
-  getTaskEditContext,
   updateClient,
   updateConversation,
   updateEntry,

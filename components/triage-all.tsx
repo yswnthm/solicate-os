@@ -132,7 +132,7 @@ export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
               fieldId="triage-all-model"
             />
             {items.length > 0 && (
-              <button className="button ghost small" onClick={onDraft} disabled={busy} style={{ marginTop: 8 }}>
+              <button className="button ghost small" onClick={onDraft} style={{ marginTop: 8 }}>
                 ↻ Redraft with selected model
               </button>
             )}

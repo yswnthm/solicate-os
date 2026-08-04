@@ -35,6 +35,7 @@ export async function AppShell({
       {/* Floating Sidebar Island */}
       <aside className="sidebar">
         <Link href="/today" className="brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="By Order" className="brand-logo" />
           <div className="brand-text">By Order</div>
         </Link>
