@@ -31,7 +31,7 @@ create table public.semantic_chunks (
 );
 
 create index semantic_chunks_embedding_idx on public.semantic_chunks
-  using hnsw (embedding vector_cosine_ops);
+  using hnsw (embedding extensions.vector_cosine_ops);
 create index semantic_chunks_source_idx on public.semantic_chunks(source_type, source_id);
 create index semantic_chunks_project_idx on public.semantic_chunks(project_id);
 
@@ -51,7 +51,7 @@ create or replace function public.match_semantic_chunks(
   chunk_text text,
   similarity float
 )
-language sql stable set search_path = public as $$
+language sql stable set search_path = public, extensions as $$
   select c.id, c.source_type, c.source_id, c.project_id, c.chunk_text,
          1 - (c.embedding <=> query_embedding) as similarity
     from public.semantic_chunks c
