@@ -84,7 +84,7 @@ export default async function TodayPage() {
           <section className="section card card-dark" style={{ margin: 0 }}>
             <div className="section-title">
               <h2>Recent Projects</h2>
-              <Link href="/projects" style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none" }}>
+              <Link href="/projects" style={{ fontSize: 11, fontWeight: 700, background: "var(--island-bg)", color: "var(--island-ink)", padding: "4px 10px", borderRadius: "999px", textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 View all →
               </Link>
             </div>
@@ -112,7 +112,7 @@ export default async function TodayPage() {
             <section className="section card card-orange" style={{ margin: 0 }}>
               <div className="section-title" style={{ borderBottom: "none", paddingBottom: 0 }}>
                 <h2>Inbox Preview</h2>
-                <Link href="/inbox" style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none" }}>
+                <Link href="/inbox" style={{ fontSize: 11, fontWeight: 700, background: "var(--island-bg)", color: "var(--island-ink)", padding: "4px 10px", borderRadius: "999px", textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   Triage all →
                 </Link>
               </div>

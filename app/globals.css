@@ -1023,8 +1023,8 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
   cursor: pointer;
 }
 .tab:hover { color: var(--ink); background: var(--surface-2); }
-.tab.active { color: var(--accent); background: var(--accent-soft); }
-.tab .tab-count { color: var(--muted-2); font-weight: 500; margin-left: 6px; }
+.tab.active { color: var(--island-ink); background: var(--island-bg); box-shadow: var(--shadow-sm); }
+.tab .tab-count { color: inherit; opacity: 0.7; font-weight: 500; margin-left: 6px; }
 
 /* ─── Progress ─────────────────────────────────────────────────────────────── */
 .progress {
