@@ -11,9 +11,6 @@ import type { CaptureInput, CaptureSessionState, ClarificationAnswers, Clarifica
 // review. Nothing is executed here — execution happens only for actions the
 // operator explicitly approves (features/capture-actions.ts).
 
-/** Above this confidence the engine skips clarification and proposes directly. */
-export const CLARIFICATION_CONFIDENCE = 0.95;
-
 function throwOnError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
@@ -139,8 +136,9 @@ export async function runCaptureAnalysis(sessionId: string, modelId?: string) {
     throw new Error("AI understanding failed validation.");
   }
 
-  const questions: ClarificationQuestion[] =
-    analyze.confidence >= CLARIFICATION_CONFIDENCE ? [] : analyze.clarifying_questions;
+  // Trust the model's questions: the v2 template asks a separate question for
+  // every missing fact that would change an action, even at high confidence.
+  const questions: ClarificationQuestion[] = analyze.clarifying_questions ?? [];
 
   const status = questions.length > 0 ? "awaiting_clarification" : "proposals_ready";
 
@@ -164,7 +162,13 @@ export async function runCaptureAnalysis(sessionId: string, modelId?: string) {
  * proposed row. Invalid model output is preserved on the session for audit
  * and surfaced to the reviewer.
  */
-export async function runCaptureProposal(sessionId: string, answers: ClarificationAnswers = {}, modelId?: string) {
+export async function runCaptureProposal(
+  sessionId: string,
+  answers: ClarificationAnswers = {},
+  modelId?: string,
+  instructions?: string,
+  actionIdPrefix?: string,
+) {
   const supabase = await createSupabaseServerClient();
   const session = await loadSession(sessionId);
   const input = toInput(session);
@@ -178,7 +182,8 @@ export async function runCaptureProposal(sessionId: string, answers: Clarificati
       scope: input.scope,
       understanding: session.understanding,
       answers,
-      action_id_prefix: `${sessionId.slice(0, 4)}-`,
+      action_id_prefix: actionIdPrefix ?? `${sessionId.slice(0, 4)}-`,
+      instructions: instructions ?? "",
     },
     modelId,
   });
@@ -200,13 +205,15 @@ export async function runCaptureProposal(sessionId: string, answers: Clarificati
     status: "proposed",
   }));
 
+  const existingInvalid = Array.isArray(session.invalid_actions) ? session.invalid_actions : [];
+
   const [{ error: updateError }, { error: actionsError }] = await Promise.all([
     supabase
       .from("capture_sessions")
       .update({
         status: "proposals_ready",
         answers,
-        invalid_actions: invalid,
+        invalid_actions: [...existingInvalid, ...invalid],
         error: "",
       })
       .eq("id", sessionId),
@@ -217,6 +224,52 @@ export async function runCaptureProposal(sessionId: string, answers: Clarificati
   throwOnError(updateError ?? actionsError);
 
   return loadCaptureState(sessionId);
+}
+
+const toAnswers = (session: SessionRow): ClarificationAnswers =>
+  session.answers && typeof session.answers === "object"
+    ? (session.answers as ClarificationAnswers)
+    : {};
+
+/**
+ * Re-run the proposer from scratch. Previously proposed rows are dropped so
+ * the session's actions reflect only the fresh proposal.
+ */
+export async function regenerateCaptureProposal(sessionId: string, modelId?: string) {
+  const supabase = await createSupabaseServerClient();
+  const session = await loadSession(sessionId);
+  const { error: deleteError } = await supabase
+    .from("capture_actions")
+    .delete()
+    .eq("session_id", sessionId)
+    .in("status", ["proposed"]);
+  throwOnError(deleteError);
+
+  return runCaptureProposal(sessionId, toAnswers(session), modelId);
+}
+
+/**
+ * Run the proposer again asking for MORE actions, keeping the current
+ * proposals. The already-proposed actions are listed in the instructions so
+ * the model adds only what is clearly implied but not yet covered.
+ */
+export async function extractMoreCaptureActions(sessionId: string, modelId?: string) {
+  const supabase = await createSupabaseServerClient();
+  const session = await loadSession(sessionId);
+  const { data: existing, error: existingError } = await supabase
+    .from("capture_actions")
+    .select("kind, label")
+    .eq("session_id", sessionId)
+    .in("status", ["proposed"]);
+  throwOnError(existingError);
+
+  const already = ((existing ?? []) as { kind: string; label: string }[]).map((a) => `${a.kind}: ${a.label}`);
+  const instructions =
+    already.length > 0
+      ? `EXTRACT MORE. The following actions are ALREADY PROPOSED. Propose ONLY additional actions that are clearly implied by the capture but not yet covered. Do NOT repeat, rename, or re-propose any listed action. Look for what a deeper review surfaces: exact amounts, milestones, follow-ups, next steps, timeline implications, and communication drafts.\n\nAlready proposed:\n${already.map((a) => `- ${a}`).join("\n")}`
+      : "EXTRACT MORE. Propose every additional action clearly implied by the capture that a first pass might have missed.";
+
+  return runCaptureProposal(sessionId, toAnswers(session), modelId, instructions, `${sessionId.slice(0, 4)}x-`);
 }
 
 // ─── State for the review UI ──────────────────────────────────────────────────

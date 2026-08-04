@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 
 import {
   answerClarifications,
   approveCaptureActions,
   discardCapture,
+  extractMoreActions,
+  regenerateProposal,
   submitCapture,
   type CaptureDecision,
 } from "@/features/capture-actions";
@@ -96,6 +98,16 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
     run("discard", () => discardCapture(state.sessionId));
   };
 
+  const onRegenerate = () => {
+    if (!state) return;
+    run("regenerate", () => regenerateProposal(state.sessionId, modelId || undefined));
+  };
+
+  const onExtractMore = () => {
+    if (!state) return;
+    run("extract-more", () => extractMoreActions(state.sessionId, modelId || undefined));
+  };
+
   const reset = () => {
     setState(null);
     setText("");
@@ -140,7 +152,13 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
       )}
 
       {step === "review" && state && (
-        <ReviewStep state={state} onApprove={onApprove} onDiscard={onDiscard} />
+        <ReviewStep
+          state={state}
+          onApprove={onApprove}
+          onDiscard={onDiscard}
+          onRegenerate={onRegenerate}
+          onExtractMore={onExtractMore}
+        />
       )}
 
       {step === "done" && state && (
@@ -436,13 +454,24 @@ function ReviewStep({
   state,
   onApprove,
   onDiscard,
+  onRegenerate,
+  onExtractMore,
 }: {
   state: CaptureSessionState;
   onApprove: (decisions: CaptureDecision[]) => void;
   onDiscard: () => void;
+  onRegenerate: () => void;
+  onExtractMore: () => void;
 }) {
   const [decisions, setDecisions] = useState<Record<string, DecisionState>>({});
   const [busy, setBusy] = useState(false);
+
+  // A regenerate / extract-more replaces or appends actions; reset per-action
+  // decisions so the fresh proposal is reviewed cleanly.
+  useEffect(() => {
+    setDecisions({});
+    setBusy(false);
+  }, [state.actions]);
 
   const all = state.actions.map((a) => decisions[a.id]?.approved ?? true);
   const approvedCount = all.filter(Boolean).length;
@@ -538,6 +567,12 @@ function ReviewStep({
       <div className="capture-actions-foot">
         <button type="button" className="button" onClick={submit} disabled={busy || approvedCount === 0}>
           {busy ? "Applying…" : `Apply ${approvedCount} update${approvedCount === 1 ? "" : "s"}`}
+        </button>
+        <button type="button" className="button ghost" onClick={() => { setBusy(true); onRegenerate(); }} disabled={busy}>
+          Regenerate
+        </button>
+        <button type="button" className="button ghost" onClick={() => { setBusy(true); onExtractMore(); }} disabled={busy}>
+          Extract more
         </button>
         <button type="button" className="button ghost" onClick={onDiscard} disabled={busy}>
           Discard session

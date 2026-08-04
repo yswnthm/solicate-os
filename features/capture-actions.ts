@@ -7,11 +7,12 @@ import { requireActiveUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { actionSchema, type CaptureAction } from "@/lib/capture/actions-schema";
 import {
-  CLARIFICATION_CONFIDENCE,
   createCaptureSession,
   discardCaptureSession,
+  extractMoreCaptureActions,
   loadCaptureState,
   markSessionExecuted,
+  regenerateCaptureProposal,
   runCaptureAnalysis,
   runCaptureProposal,
   updateActionResult,
@@ -36,9 +37,9 @@ function throwOnError(error: { message: string } | null) {
 export async function submitCapture(input: unknown, modelId?: string): Promise<CaptureSessionState> {
   const { user } = await requireActiveUser();
   const sessionId = await createCaptureSession(user.id, input);
-  const { status, confidence } = await runCaptureAnalysis(sessionId, modelId);
+  const { status } = await runCaptureAnalysis(sessionId, modelId);
 
-  if (status === "proposals_ready" && confidence >= CLARIFICATION_CONFIDENCE) {
+  if (status === "proposals_ready") {
     return runCaptureProposal(sessionId, {}, modelId);
   }
   return loadCaptureState(sessionId);
@@ -52,6 +53,18 @@ export async function answerClarifications(
 ): Promise<CaptureSessionState> {
   await requireActiveUser();
   return runCaptureProposal(sessionIdOf(sessionId), answers, modelId);
+}
+
+/** Re-run the proposer from scratch, replacing the current proposals. */
+export async function regenerateProposal(sessionId: string, modelId?: string): Promise<CaptureSessionState> {
+  await requireActiveUser();
+  return regenerateCaptureProposal(sessionIdOf(sessionId), modelId);
+}
+
+/** Run the proposer again for additional actions, keeping the current ones. */
+export async function extractMoreActions(sessionId: string, modelId?: string): Promise<CaptureSessionState> {
+  await requireActiveUser();
+  return extractMoreCaptureActions(sessionIdOf(sessionId), modelId);
 }
 
 /** Resume a session from its id (e.g. after refresh, or from the URL). */
