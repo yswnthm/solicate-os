@@ -92,8 +92,8 @@ export async function createCaptureSession(userId: string, input: unknown): Prom
       phase_id: parsed.phase_id,
       person_id: parsed.person_id,
       client_id: parsed.client_id,
-      new_client_name: parsed.new_client_name,
-      new_phase_name: parsed.new_phase_name,
+      new_client_name: parsed.new_client_name ?? "",
+      new_phase_name: parsed.new_phase_name ?? "",
       status: "processing",
     })
     .select("id")
