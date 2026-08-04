@@ -73,6 +73,26 @@ export async function getCaptureState(sessionId: string): Promise<CaptureSession
   return loadCaptureState(sessionIdOf(sessionId));
 }
 
+/**
+ * Resume the operator's most recent in-flight session (proposals waiting for a
+ * verdict, clarification pending, or just-executed) on page load. Terminal
+ * sessions (discarded / error) are skipped.
+ */
+export async function getResumeState(): Promise<CaptureSessionState | null> {
+  const { user } = await requireActiveUser();
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("capture_sessions")
+    .select("id")
+    .eq("created_by_id", user.id)
+    .in("status", ["awaiting_clarification", "proposals_ready", "approved", "executed"])
+    .order("created_at", { ascending: false })
+    .limit(1);
+  throwOnError(error);
+  if (!data?.[0]) return null;
+  return loadCaptureState(String(data[0].id));
+}
+
 /** Abandon a session without executing anything. */
 export async function discardCapture(sessionId: string): Promise<CaptureSessionState> {
   await requireActiveUser();
@@ -137,6 +157,11 @@ export async function approveCaptureActions(sessionId: string, decisions: unknow
   const touchedProjects = new Set<string>();
 
   for (const row of rows ?? []) {
+    // Idempotency: a row already in a terminal state (applied / rejected /
+    // error) is never re-processed, so re-submitting an Apply does not create
+    // duplicate records. Only proposed actions are eligible.
+    if (row.status === "applied" || row.status === "rejected" || row.status === "error") continue;
+
     const decision = byActionId.get(String(row.id));
     const actionId = String(row.id);
 

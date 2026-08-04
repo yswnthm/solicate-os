@@ -8,6 +8,7 @@ import {
   approveCaptureActions,
   discardCapture,
   extractMoreActions,
+  getResumeState,
   regenerateProposal,
   submitCapture,
   type CaptureDecision,
@@ -40,6 +41,24 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
 
+  // Resume the most recent in-flight session on page load, so a reload or a
+  // return to /capture never strands a pending review or an executed result.
+  useEffect(() => {
+    let cancelled = false;
+    getResumeState()
+      .then((next) => {
+        if (cancelled || !next) return;
+        setState(next);
+        if (next.status === "awaiting_clarification") setStep("clarify");
+        else if (next.status === "executed") setStep("done");
+        else setStep(next.actions.length ? "review" : "form");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [scope, setScope] = useState<"existing_project" | "new_project" | "projectless">("existing_project");
   const [projectId, setProjectId] = useState("");
   const [phaseId, setPhaseId] = useState("");
@@ -61,7 +80,8 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
         const next = await fn();
         setState(next);
         if (next.status === "awaiting_clarification") setStep("clarify");
-        else if (next.status === "proposals_ready" || next.status === "approved" || next.status === "executed") setStep(next.actions.length ? "review" : "done");
+        else if (next.status === "executed") setStep("done");
+        else if (next.status === "proposals_ready" || next.status === "approved") setStep(next.actions.length ? "review" : "done");
         else if (next.status === "error") setStep("done");
         else setStep("review");
       } catch (cause) {
