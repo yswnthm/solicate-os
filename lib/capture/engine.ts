@@ -3,6 +3,7 @@ import { runTemplate } from "@/lib/ai/executor";
 import { getCaptureContext, getCaptureProposeContext } from "@/lib/capture/context";
 import { validateActions, type CaptureAction } from "@/lib/capture/actions-schema";
 import { captureAnalyzeSchema, captureInputSchema } from "@/lib/capture/schemas";
+import { missingUpdateTypes, updateTypeLabel } from "@/lib/capture/update-types";
 import type { CaptureInput, CaptureSessionState, ClarificationAnswers, ClarificationQuestion } from "@/lib/capture/types";
 
 // The capture engine. It owns the Draft → Review → Approve pipeline for
@@ -25,6 +26,7 @@ interface SessionRow {
   client_id: string | null;
   new_client_name: string;
   new_phase_name: string;
+  update_types: string[];
   status: string;
   title: string;
   understanding: string;
@@ -46,6 +48,7 @@ export function toInput(row: SessionRow): CaptureInput {
     client_id: row.client_id,
     new_client_name: row.new_client_name || null,
     new_phase_name: row.new_phase_name || null,
+    update_types: Array.isArray(row.update_types) ? row.update_types : [],
     text: row.capture_text,
   };
 }
@@ -91,6 +94,7 @@ export async function createCaptureSession(userId: string, input: unknown): Prom
       client_id: parsed.client_id,
       new_client_name: parsed.new_client_name ?? "",
       new_phase_name: parsed.new_phase_name ?? "",
+      update_types: parsed.update_types,
       status: "processing",
     })
     .select("id")
@@ -104,7 +108,7 @@ async function loadSession(sessionId: string): Promise<SessionRow> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("capture_sessions")
-    .select("id, capture_text, scope, project_id, phase_id, person_id, client_id, new_client_name, new_phase_name, status, title, understanding, confidence, clarifications, answers, invalid_actions, summary, error, executed_at")
+    .select("id, capture_text, scope, project_id, phase_id, person_id, client_id, new_client_name, new_phase_name, update_types, status, title, understanding, confidence, clarifications, answers, invalid_actions, summary, error, executed_at")
     .eq("id", sessionId)
     .maybeSingle();
   throwOnError(error);
@@ -172,24 +176,44 @@ export async function runCaptureProposal(
   const supabase = await createSupabaseServerClient();
   const session = await loadSession(sessionId);
   const input = toInput(session);
+  const requiredTypes = input.update_types ?? [];
 
-  const context = await getCaptureProposeContext(input, answers);
-  const result = await runTemplate({
-    slug: "capture-propose",
-    context,
-    variables: {
-      capture: input.text,
-      scope: input.scope,
-      understanding: session.understanding,
-      answers,
-      action_id_prefix: actionIdPrefix ?? `${sessionId.slice(0, 4)}-`,
-      instructions: instructions ?? "",
-    },
-    modelId,
-  });
+  const propose = (withInstructions: string | undefined, prefix: string | undefined) =>
+    getCaptureProposeContext(input, answers).then((context) =>
+      runTemplate({
+        slug: "capture-propose",
+        context,
+        variables: {
+          capture: input.text,
+          scope: input.scope,
+          understanding: session.understanding,
+          answers,
+          action_id_prefix: prefix ?? `${sessionId.slice(0, 4)}-`,
+          instructions: withInstructions ?? "",
+          update_types: requiredTypes,
+        },
+        modelId,
+      }),
+    );
 
-  const raw = result.data;
-  const { valid, invalid } = validateActions(raw);
+  const runOnce = async (withInstructions: string | undefined, prefix: string | undefined) => {
+    const result = await propose(withInstructions, prefix);
+    return result.data;
+  };
+
+  // Mandatory update types: if a required category is missing, retry ONCE with
+  // a corrective instruction before persisting anything.
+  let raw = await runOnce(instructions, actionIdPrefix);
+  let { valid, invalid } = validateActions(raw);
+  const missing = missingUpdateTypes(requiredTypes, valid);
+
+  if (missing.length > 0 && !(instructions ?? "").toLowerCase().includes("retry")) {
+    const corrective = `RETRY — MANDATORY. The operator required these update types and you MISSED them: ${missing.join(", ")}. You MUST propose at least one action for each. Re-propose the FULL action list including the required ones. Do not drop or rename them.${instructions ? `\n\n${instructions}` : ""}`;
+    raw = await runOnce(corrective, actionIdPrefix);
+    const retry = validateActions(raw);
+    valid = retry.valid;
+    invalid = [...invalid, ...retry.invalid];
+  }
 
   const rows = valid.map((a) => ({
     session_id: sessionId,
@@ -286,6 +310,21 @@ export async function loadCaptureState(sessionId: string): Promise<CaptureSessio
   const questions = Array.isArray(session.clarifications) ? (session.clarifications as ClarificationQuestion[]) : [];
   const invalid = Array.isArray(session.invalid_actions) ? session.invalid_actions : [];
 
+  const requiredTypes = Array.isArray(session.update_types) ? session.update_types : [];
+  const proposalRows = (actions.data ?? []).map((a) => ({
+    kind: String(a.kind),
+    payload: (a.payload ?? {}) as Record<string, unknown>,
+  }));
+  const missingTypes = missingUpdateTypes(requiredTypes, proposalRows);
+
+  const errors: string[] = [];
+  if (invalid.length > 0) {
+    errors.push(`${invalid.length} proposed action${invalid.length === 1 ? "" : "s"} could not be parsed and were not added.`);
+  }
+  if (missingTypes.length > 0) {
+    errors.push(`You asked for: ${missingTypes.map(updateTypeLabel).join(", ")} — but none was proposed. Click Extract more or Regenerate.`);
+  }
+
   return {
     sessionId: session.id,
     status: session.status as CaptureSessionState["status"],
@@ -293,6 +332,8 @@ export async function loadCaptureState(sessionId: string): Promise<CaptureSessio
     understanding: session.understanding,
     confidence: session.confidence ?? 0,
     questions,
+    requiredTypes,
+    missingTypes,
     actions: (actions.data ?? []).map((a) => ({
       id: String(a.id),
       kind: String(a.kind),
@@ -308,7 +349,7 @@ export async function loadCaptureState(sessionId: string): Promise<CaptureSessio
     phaseId: session.phase_id,
     personId: session.person_id,
     summary: session.summary,
-    errors: invalid.length > 0 ? [`${invalid.length} proposed action${invalid.length === 1 ? "" : "s"} could not be parsed and were not added.`] : [],
+    errors,
     error: session.error || undefined,
   };
 }

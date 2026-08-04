@@ -13,6 +13,8 @@ export interface CaptureInput {
   new_client_name: string | null;
   /** A new phase the operator expects to create. */
   new_phase_name: string | null;
+  /** Update categories the operator explicitly requested (mandatory). */
+  update_types: string[];
   text: string;
 }
 
@@ -51,6 +53,10 @@ export interface CaptureSessionState {
   confidence: number;
   questions: ClarificationQuestion[];
   actions: ActionProposal[];
+  /** Update categories the operator required (mandatory). */
+  requiredTypes: string[];
+  /** Required categories with no proposed action. */
+  missingTypes: string[];
   projectId: string | null;
   phaseId: string | null;
   personId: string | null;

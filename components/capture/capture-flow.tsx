@@ -15,6 +15,7 @@ import {
 import type { CaptureSessionState, ClarificationQuestion } from "@/lib/capture/types";
 import { ACTION_SPECS, KIND_LABELS } from "@/components/capture/action-fields";
 import { ModelPicker, type ModelPickerOption } from "@/components/model-picker";
+import { UPDATE_TYPES, updateTypeLabel } from "@/lib/capture/update-types";
 
 export interface CaptureFormOptions {
   projects: { id: string; name: string; client: string | null; phases: { id: string; name: string; position: number; status: string }[] }[];
@@ -45,6 +46,7 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
   const [newPhaseName, setNewPhaseName] = useState("");
   const [clientId, setClientId] = useState("");
   const [newClientName, setNewClientName] = useState("");
+  const [updateTypes, setUpdateTypes] = useState<string[]>([]);
   const [text, setText] = useState("");
   const [modelId, setModelId] = useState("");
 
@@ -76,6 +78,7 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
           client_id: clientId || null,
           new_client_name: newClientName || null,
           new_phase_name: newPhaseName || null,
+          update_types: updateTypes,
           text,
         },
         modelId || undefined,
@@ -113,6 +116,7 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
     setText("");
     setNewPhaseName("");
     setNewClientName("");
+    setUpdateTypes([]);
     setStep("form");
   };
 
@@ -137,6 +141,8 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
           setClientId={setClientId}
           newClientName={newClientName}
           setNewClientName={setNewClientName}
+          updateTypes={updateTypes}
+          setUpdateTypes={setUpdateTypes}
           text={text}
           setText={setText}
           modelId={modelId}
@@ -186,6 +192,8 @@ function CaptureForm(props: {
   setClientId: (v: string) => void;
   newClientName: string;
   setNewClientName: (v: string) => void;
+  updateTypes: string[];
+  setUpdateTypes: (v: string[]) => void;
   text: string;
   setText: (v: string) => void;
   modelId: string;
@@ -282,6 +290,29 @@ function CaptureForm(props: {
             ))}
           </select>
         </div>
+      </section>
+
+      <section className="capture-section">
+        <div className="capture-section-title">What updates should it propose? (optional)</div>
+        <div className="capture-scopes">
+          {UPDATE_TYPES.filter((t) => !t.scope || t.scope === scope).map((t) => {
+            const active = props.updateTypes.includes(t.value);
+            return (
+              <button
+                key={t.value}
+                type="button"
+                className={`capture-scope ${active ? "selected" : ""}`}
+                onClick={() =>
+                  props.setUpdateTypes(active ? props.updateTypes.filter((v) => v !== t.value) : [...props.updateTypes, t.value])
+                }
+              >
+                <span className="capture-scope-title">{t.label}</span>
+                <span className="capture-scope-hint">{t.description}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="muted capture-hint">Leave blank to propose everything implied. Selected types are mandatory.</p>
       </section>
 
       <section className="capture-section">
@@ -525,6 +556,16 @@ function ReviewStep({
         <span className="pill">{state.actions.length} proposed update{state.actions.length === 1 ? "" : "s"}</span>
         <h2>{state.title}</h2>
         <p className="muted">{state.understanding}</p>
+        {state.requiredTypes.length > 0 && (
+          <div className="capture-required">
+            <span className="muted">Required:</span>
+            {state.requiredTypes.map((t) => (
+              <span key={t} className={`pill ${state.missingTypes.includes(t) ? "missing" : ""}`}>
+                {updateTypeLabel(t)}
+              </span>
+            ))}
+          </div>
+        )}
         {state.errors.map((e) => (
           <p key={e} className="notice">{e}</p>
         ))}

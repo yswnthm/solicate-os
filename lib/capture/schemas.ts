@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UPDATE_TYPES } from "@/lib/capture/update-types";
 
 // Zod schemas for the capture-analyze and capture-propose template outputs.
 // These are the safety net between the model's JSON and the pipeline state —
@@ -28,6 +29,10 @@ export const captureInputSchema = z.object({
     .nullish()
     .transform((v) => (typeof v === "string" ? v.trim() : null))
     .transform((v) => (v === "" ? null : v)),
+  update_types: z
+    .array(z.string())
+    .default([])
+    .transform((v) => [...new Set(v.filter((x) => UPDATE_TYPES.some((t) => t.value === x)))]),
   text: z.string().trim().min(1, "Describe what happened."),
 });
 

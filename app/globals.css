@@ -1031,6 +1031,10 @@ a.row:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .capture-textarea { font-size: 14px; line-height: 1.6; }
 .capture-hint { font-size: 12px; }
 
+.capture-required { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.capture-required .pill { border: 1px solid var(--line); }
+.capture-required .pill.missing { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+
 .capture-center {
   display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 24px; padding: 80px 24px; text-align: center;
