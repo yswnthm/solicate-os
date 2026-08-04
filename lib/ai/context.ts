@@ -54,7 +54,7 @@ export async function getMessageDraftContext(vars: {
         .maybeSingle()
     : Promise.resolve({ data: null, error: null });
 
-  const [project, phases, tasks, issues, entries, finance, person, participant, conversations, phaseDetail] = await Promise.all([
+  const [project, phases, openTasks, doneTasks, issues, entries, finance, person, participant, conversations, phaseDetail] = await Promise.all([
     supabase
       .from("projects")
       .select("id, name, code, summary, objective, success_definition, direction, status, started_on, target_date, completed_at, clients(id, name)")
@@ -67,14 +67,22 @@ export async function getMessageDraftContext(vars: {
       .select("id, name, description, position, status, started_on, target_date, completed_at")
       .eq("project_id", vars.projectId)
       .order("position"),
+    // Open tasks queried separately from done ones so the done slice can never
+    // be silently dropped by a status-ordered limit (see recently_done below).
     supabase
       .from("tasks")
-      .select("id, title, description_md, status, priority, due_at, phase_id, phases(id, name)")
+      .select("id, title, status, priority, due_at, phase_id, phases(id, name)")
       .eq("project_id", vars.projectId)
-      .order("status")
+      .in("status", ["todo", "in_progress", "blocked"])
       .order("due_at", { ascending: true, nullsFirst: false })
-      // Reduced from 120: 50 tasks is more than enough signal for drafting a message.
-      .limit(50),
+      .limit(20),
+    supabase
+      .from("tasks")
+      .select("id, title, status, phase_id, phases(id, name)")
+      .eq("project_id", vars.projectId)
+      .eq("status", "done")
+      .order("completed_at", { ascending: false, nullsFirst: false })
+      .limit(8),
     supabase
       .from("issues")
       .select("id, title, description_md, status, severity, resolution_summary, phase_id, phases(id, name)")
@@ -95,7 +103,7 @@ export async function getMessageDraftContext(vars: {
       .select("id, kind, title, amount, currency_code, occurred_on, notes, phase_id, phases(id, name)")
       .eq("project_id", vars.projectId)
       .order("occurred_on", { ascending: false })
-      // Reduced from 40: 20 finance items covers all realistic project finances.
+      // Reduced from 20: 20 finance items covers all realistic project finances.
       .limit(20),
     supabase.from("people").select("id, name, email, phone, is_partner, summary").eq("id", vars.personId).maybeSingle(),
     supabase
@@ -118,7 +126,8 @@ export async function getMessageDraftContext(vars: {
   [
     project,
     phases,
-    tasks,
+    openTasks,
+    doneTasks,
     issues,
     entries,
     finance,
@@ -233,21 +242,16 @@ export async function getMessageDraftContext(vars: {
     messages: history,
     decisions: byType("decision"),
     tasks: {
-      // Reduced open slice from 30 → 20; recently_done from 10 → 8.
-      open: (tasks.data ?? [])
-        .filter((t) => !["done", "cancelled"].includes(t.status))
-        .slice(0, 20)
-        .map((t) => ({
-          title: t.title,
-          status: t.status,
-          priority: t.priority,
-          due_at: t.due_at,
-          phase: (t.phases as unknown as Record<string, unknown> | undefined)?.name ?? null,
-        })),
-      recently_done: (tasks.data ?? [])
-        .filter((t) => t.status === "done")
-        .slice(0, 8)
-        .map((t) => ({ title: t.title, phase: (t.phases as unknown as Record<string, unknown> | undefined)?.name ?? null })),
+      // Open tasks come from their own query — the done slice below can never
+      // be dropped by a status-ordered limit.
+      open: (openTasks.data ?? []).map((t) => ({
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        due_at: t.due_at,
+        phase: (t.phases as unknown as Record<string, unknown> | undefined)?.name ?? null,
+      })),
+      recently_done: (doneTasks.data ?? []).map((t) => ({ title: t.title, phase: (t.phases as unknown as Record<string, unknown> | undefined)?.name ?? null })),
     },
     // Reduced open filter from 20 → 15.
     issues: (issues.data ?? [])
@@ -330,68 +334,133 @@ export async function getWeekReviewContext() {
   const projects = await getProjects();
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Targeted 5-query fetch per project — only what week-in-review needs.
-  // Skips phases, finance, participants, conversations, activity, people, users.
-  // Previously routed through getProjectWorkspaceForAI (12 queries, 7 unused).
+  // H6: constant-cost rebuild. Previously this fetched 5 queries PER project
+  // (≈2500 queries at 500 projects). Now it runs a fixed set of GLOBAL queries
+  // plus the deterministic rollup views, regardless of how many projects exist.
   const supabase = await createSupabaseServerClient();
-  const perProject = await Promise.all(
-    projects.map(async (p: any) => {
-      const [project, tasks, issues, entries, messages] = await Promise.all([
-        supabase
-          .from("projects")
-          .select("name, status, clients(name)")
-          .eq("id", p.id)
-          .maybeSingle(),
-        supabase
-          .from("tasks")
-          .select("title, status")
-          .eq("project_id", p.id)
-          .order("status")
-          .limit(40),
-        supabase
-          .from("issues")
-          .select("title, status")
-          .eq("project_id", p.id)
-          .order("reported_at", { ascending: false })
-          .limit(20),
-        supabase
-          .from("entries")
-          .select("title, occurred_at")
-          .eq("project_id", p.id)
-          .eq("triage_state", "filed")
-          .gte("occurred_at", weekAgo)
-          .order("occurred_at", { ascending: false })
-          .limit(10),
-        supabase
-          .from("messages")
-          .select("body_md, sent_at, conversations!inner(project_id)")
-          .eq("conversations.project_id", p.id)
-          .gte("sent_at", weekAgo)
-          .order("sent_at", { ascending: false })
-          .limit(8),
-      ]);
-      return {
-        name: (project.data as any)?.name ?? p.name,
-        client: (project.data as any)?.clients?.name ?? null,
-        status: (project.data as any)?.status ?? p.status,
-        doneTasks: (tasks.data ?? [])
-          .filter((t: any) => t.status === "done")
-          .slice(0, 10)
-          .map((t: any) => `- ${t.title}`),
-        openIssues: (issues.data ?? [])
-          .filter((i: any) => i.status !== "resolved")
-          .slice(0, 5)
-          .map((i: any) => `- ${i.title}`),
-        entries: (entries.data ?? [])
-          .slice(0, 8)
-          .map((e: any) => `- ${e.title}`),
-        messages: (messages.data ?? [])
-          .slice(0, 6)
-          .map((m: any) => `- ${truncate(m.body_md as string | null, 80)}`),
-      };
-    }),
-  );
-  return { projects: perProject };
+  const [
+    statusRollup,
+    financeRollup,
+    decisions,
+    doneTasks,
+    resolvedIssues,
+    openIssues,
+    entries,
+    messages,
+    activity,
+  ] = await Promise.all([
+    supabase.from("status_rollup").select("project_id, open_tasks, done_tasks, open_issues, resolved_issues, phase_count, active_phases"),
+    supabase.from("finance_rollup").select("project_id, invoices_count, invoiced_total, payments_count, paid_total, outstanding"),
+    supabase.from("decision_log").select("project_id, title, decision_outcome, occurred_at").gte("occurred_at", weekAgo),
+    supabase
+      .from("tasks")
+      .select("project_id, title")
+      .eq("status", "done")
+      .gte("completed_at", weekAgo),
+    supabase
+      .from("issues")
+      .select("project_id, title")
+      .in("status", ["resolved", "accepted"])
+      .gte("resolved_at", weekAgo),
+    supabase
+      .from("issues")
+      .select("project_id, title, severity")
+      .not("status", "eq", "resolved")
+      .not("status", "eq", "accepted")
+      .not("status", "eq", "closed")
+      .order("reported_at", { ascending: false }),
+    supabase
+      .from("entries")
+      .select("project_id, title")
+      .eq("triage_state", "filed")
+      .gte("occurred_at", weekAgo)
+      .order("occurred_at", { ascending: false }),
+    supabase
+      .from("messages")
+      .select("body_md, sent_at, conversations!inner(project_id)")
+      .gte("sent_at", weekAgo)
+      .order("sent_at", { ascending: false })
+      .limit(200),
+    supabase
+      .from("activity_events")
+      .select("project_id, record_type, event_type, summary, occurred_at")
+      .gte("occurred_at", weekAgo)
+      .order("occurred_at", { ascending: false })
+      .limit(300),
+  ]);
+
+  [
+    statusRollup,
+    financeRollup,
+    decisions,
+    doneTasks,
+    resolvedIssues,
+    openIssues,
+    entries,
+    messages,
+    activity,
+  ].forEach((r) => throwOnError(r.error));
+
+  const groupBy = (rows: unknown[], key: string) => {
+    const map = new Map<string, unknown[]>();
+    for (const row of rows) {
+      const k = (row as Record<string, unknown>)[key] as string | null | undefined;
+      if (!k) continue;
+      const arr = map.get(k) ?? [];
+      arr.push(row);
+      map.set(k, arr);
+    }
+    return map;
+  };
+
+  const statusBy = groupBy(statusRollup.data ?? [], "project_id");
+  const financeBy = groupBy(financeRollup.data ?? [], "project_id");
+  const decisionsBy = groupBy(decisions.data ?? [], "project_id");
+  const doneBy = groupBy(doneTasks.data ?? [], "project_id");
+  const resolvedBy = groupBy(resolvedIssues.data ?? [], "project_id");
+  const openBy = groupBy(openIssues.data ?? [], "project_id");
+  const entriesBy = groupBy(entries.data ?? [], "project_id");
+  const messagesBy = groupBy(messages.data ?? [], "project_id");
+  const activityBy = groupBy(activity.data ?? [], "project_id");
+
+  const perProject = projects.map((p: any) => {
+    const id = p.id;
+    const rollup = (statusBy.get(id)?.[0] ?? {}) as Record<string, unknown>;
+    const fin = (financeBy.get(id)?.[0] ?? {}) as Record<string, unknown>;
+
+    return {
+      name: p.name,
+      client: p.clients?.name ?? null,
+      status: p.status,
+      rollup: {
+        open_tasks: rollup.open_tasks ?? 0,
+        done_tasks: rollup.done_tasks ?? 0,
+        open_issues: rollup.open_issues ?? 0,
+        active_phases: rollup.active_phases ?? 0,
+      },
+      finance:
+        fin.invoiced_total != null
+          ? { invoiced: fin.invoiced_total, paid: fin.paid_total, outstanding: fin.outstanding }
+          : null,
+      decisions: (decisionsBy.get(id) ?? [])
+        .slice(0, 5)
+        .map((d: any) => ({ title: d.title, outcome: d.decision_outcome, date: d.occurred_at })),
+      done_tasks: (doneBy.get(id) ?? []).slice(0, 10).map((t: any) => `- ${t.title}`),
+      resolved_issues: (resolvedBy.get(id) ?? []).slice(0, 5).map((i: any) => `- ${i.title}`),
+      open_issues: (openBy.get(id) ?? [])
+        .slice(0, 5)
+        .map((i: any) => `- ${i.title} [${i.severity}]`),
+      entries: (entriesBy.get(id) ?? []).slice(0, 8).map((e: any) => `- ${e.title}`),
+      messages: (messagesBy.get(id) ?? [])
+        .slice(0, 6)
+        .map((m: any) => `- ${truncate(m.body_md as string | null, 80)}`),
+      activity: (activityBy.get(id) ?? [])
+        .slice(0, 8)
+        .map((a: any) => `- ${a.summary}`),
+    };
+  });
+
+  return { period: { from: weekAgo, to: new Date().toISOString() }, projects: perProject };
 }
 
 export async function getInboxItemContext(kindValue: "entry" | "message", itemId: string) {

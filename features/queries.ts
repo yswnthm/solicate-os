@@ -560,24 +560,35 @@ export async function getClientDetail(clientId: string) {
 }
 
 export async function getInboxData() {
-  const supabase = await createSupabaseServerClient();
-  const [messages, entries] = await Promise.all([
-    supabase
-      .from("messages")
-      .select("id, body_md, sent_at, conversation_id, conversations(title, project_id, clients(name))")
-      .eq("triage_state", "inbox")
-      .order("sent_at", { ascending: false })
-      .limit(100),
-    supabase
-      .from("entries")
-      .select("id, title, type, body_md, occurred_at, project_id, decision_outcome, projects(name)")
-      .eq("triage_state", "inbox")
-      .order("occurred_at", { ascending: false })
-      .limit(100),
-  ]);
-  [messages, entries].forEach((r) => throwOnError(r.error));
-  return { messages: messages.data ?? [], entries: entries.data ?? [] };
+  return getInboxDataCached(await getAccessToken());
 }
+
+// Inbox snapshot for triage + the inbox page. Cached 30s and tag-invalidated by
+// every inbox mutation (revalidateTag("inbox")), so repeated "draft all" /
+// "copy prompt" runs stop re-querying up to 200 rows per call.
+const getInboxDataCached = unstable_cache(
+  async (accessToken: string | null) => {
+    const supabase = createSupabaseServerClientWithToken(accessToken);
+    const [messages, entries] = await Promise.all([
+      supabase
+        .from("messages")
+        .select("id, body_md, sent_at, conversation_id, conversations(title, project_id, clients(name))")
+        .eq("triage_state", "inbox")
+        .order("sent_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("entries")
+        .select("id, title, type, body_md, occurred_at, project_id, decision_outcome, projects(name)")
+        .eq("triage_state", "inbox")
+        .order("occurred_at", { ascending: false })
+        .limit(100),
+    ]);
+    [messages, entries].forEach((r) => throwOnError(r.error));
+    return { messages: messages.data ?? [], entries: entries.data ?? [] };
+  },
+  ["get-inbox-data"],
+  { revalidate: 30, tags: ["inbox"] },
+);
 
 export async function getPersonDetail(personId: string) {
   const supabase = await createSupabaseServerClient();

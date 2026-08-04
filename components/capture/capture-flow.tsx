@@ -37,6 +37,7 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
   const [step, setStep] = useState<Step>("form");
   const [state, setState] = useState<CaptureSessionState | null>(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
 
   const [scope, setScope] = useState<"existing_project" | "new_project" | "projectless">("existing_project");
@@ -51,7 +52,10 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
   const [modelId, setModelId] = useState("");
 
   const run = (label: string, fn: () => Promise<CaptureSessionState>) => {
+    if (busy) return;
     setError("");
+    setBusy(true);
+    if (label === "submit") setStep("analyzing");
     startTransition(async () => {
       try {
         const next = await fn();
@@ -63,6 +67,8 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "Something went wrong.");
         setStep("form");
+      } finally {
+        setBusy(false);
       }
     });
   };
@@ -147,6 +153,7 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
           setText={setText}
           modelId={modelId}
           setModelId={setModelId}
+          busy={busy}
           onSubmit={onSubmit}
         />
       )}
@@ -198,6 +205,7 @@ function CaptureForm(props: {
   setText: (v: string) => void;
   modelId: string;
   setModelId: (v: string) => void;
+  busy: boolean;
   onSubmit: () => void;
 }) {
   const { options, scope } = props;
@@ -338,8 +346,8 @@ function CaptureForm(props: {
             autoFocus
           />
         </div>
-        <button type="button" className="button" onClick={props.onSubmit} disabled={!props.text.trim()}>
-          Understand & propose updates →
+        <button type="button" className="button" onClick={props.onSubmit} disabled={props.busy || !props.text.trim()}>
+          {props.busy ? "Understanding…" : "Understand & propose updates →"}
         </button>
         <p className="muted capture-hint">
           The AI proposes the operational updates. You review each one before anything is written.

@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { runTemplate } from "@/lib/ai/executor";
-import { getCaptureContext, getCaptureProposeContext } from "@/lib/capture/context";
+import { runTemplate, type RunTemplateResult } from "@/lib/ai/executor";
+import { buildProposeDigest, getCaptureContext, getCaptureProposeContext, isCaptureContext } from "@/lib/capture/context";
 import { validateActions, type CaptureAction } from "@/lib/capture/actions-schema";
 import { captureAnalyzeSchema, captureInputSchema } from "@/lib/capture/schemas";
 import { missingUpdateTypes, updateTypeLabel } from "@/lib/capture/update-types";
@@ -36,7 +36,15 @@ interface SessionRow {
   invalid_actions: unknown;
   summary: string;
   error: string;
+  context: unknown;
+  audit: unknown;
   executed_at: string | null;
+}
+
+/** Merge a per-run audit record into the session's stored audit object. */
+function mergeAudit(existing: unknown, entry: Record<string, unknown>): Record<string, unknown> {
+  const base = existing && typeof existing === "object" ? (existing as Record<string, unknown>) : {};
+  return { ...base, ...entry };
 }
 
 export function toInput(row: SessionRow): CaptureInput {
@@ -108,7 +116,7 @@ async function loadSession(sessionId: string): Promise<SessionRow> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("capture_sessions")
-    .select("id, capture_text, scope, project_id, phase_id, person_id, client_id, new_client_name, new_phase_name, update_types, status, title, understanding, confidence, clarifications, answers, invalid_actions, summary, error, executed_at")
+    .select("id, capture_text, scope, project_id, phase_id, person_id, client_id, new_client_name, new_phase_name, update_types, status, title, understanding, confidence, clarifications, answers, invalid_actions, summary, error, context, audit, executed_at")
     .eq("id", sessionId)
     .maybeSingle();
   throwOnError(error);
@@ -154,6 +162,16 @@ export async function runCaptureAnalysis(sessionId: string, modelId?: string) {
       understanding: analyze.understanding,
       confidence: analyze.confidence,
       clarifications: questions,
+      // H1: persist the analyzed context package so the propose step (and any
+      // later step) reuses it instead of re-querying the project per call.
+      context,
+      audit: mergeAudit(session.audit, {
+        analyze: {
+          model: result.model?.model_id ?? "",
+          template_version: result.template.version,
+          at: new Date().toISOString(),
+        },
+      }),
     })
     .eq("id", sessionId);
   throwOnError(error);
@@ -178,26 +196,38 @@ export async function runCaptureProposal(
   const input = toInput(session);
   const requiredTypes = input.update_types ?? [];
 
-  const propose = (withInstructions: string | undefined, prefix: string | undefined) =>
-    getCaptureProposeContext(input, answers).then((context) =>
-      runTemplate({
-        slug: "capture-propose",
-        context,
-        variables: {
-          capture: input.text,
-          scope: input.scope,
-          understanding: session.understanding,
-          answers,
-          action_id_prefix: prefix ?? `${sessionId.slice(0, 4)}-`,
-          instructions: withInstructions ?? "",
-          update_types: requiredTypes,
-        },
-        modelId,
-      }),
-    );
+  // H1 + H2: reuse the context persisted at analysis time and shrink it into
+  // the compact propose digest (ids + titles + statuses, no bodies). Legacy
+  // sessions without a persisted context fall back to a fresh fetch, which is
+  // then digested the same way — the model only ever sees the digest.
+  const proposeContextPromise = isCaptureContext(session.context)
+    ? Promise.resolve(buildProposeDigest(session.context))
+    : getCaptureContext(input).then(buildProposeDigest);
 
+  const propose = (withInstructions: string | undefined, prefix: string | undefined) =>
+    proposeContextPromise
+      .then((ctx) => getCaptureProposeContext(ctx, answers))
+      .then((context) =>
+        runTemplate({
+          slug: "capture-propose",
+          context,
+          variables: {
+            capture: input.text,
+            scope: input.scope,
+            understanding: session.understanding,
+            answers,
+            action_id_prefix: prefix ?? `${sessionId.slice(0, 4)}-`,
+            instructions: withInstructions ?? "",
+            update_types: requiredTypes,
+          },
+          modelId,
+        }),
+      );
+
+  const runs: RunTemplateResult[] = [];
   const runOnce = async (withInstructions: string | undefined, prefix: string | undefined) => {
     const result = await propose(withInstructions, prefix);
+    runs.push(result);
     return result.data;
   };
 
@@ -231,6 +261,14 @@ export async function runCaptureProposal(
 
   const existingInvalid = Array.isArray(session.invalid_actions) ? session.invalid_actions : [];
 
+  const prevAudit = session.audit && typeof session.audit === "object" ? (session.audit as Record<string, unknown>) : {};
+  const prevPropose = Array.isArray(prevAudit.propose) ? (prevAudit.propose as unknown[]) : [];
+  const proposeRuns = runs.map((r) => ({
+    model: r.model?.model_id ?? "",
+    template_version: r.template.version,
+    at: new Date().toISOString(),
+  }));
+
   const [{ error: updateError }, { error: actionsError }] = await Promise.all([
     supabase
       .from("capture_sessions")
@@ -239,6 +277,7 @@ export async function runCaptureProposal(
         answers,
         invalid_actions: [...existingInvalid, ...invalid],
         error: "",
+        audit: mergeAudit(session.audit, { propose: [...prevPropose, ...proposeRuns] }),
       })
       .eq("id", sessionId),
     rows.length > 0

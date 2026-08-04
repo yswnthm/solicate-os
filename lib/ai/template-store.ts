@@ -1,4 +1,6 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { unstable_cache } from "next/cache";
+
+import { createSupabaseServerClient, createSupabaseServerClientWithToken, getAccessToken } from "@/lib/supabase/server";
 import type { ResponseFormat, TemplateVersion } from "@/lib/ai/types";
 
 function throwOnError(error: { message: string } | null) {
@@ -59,28 +61,38 @@ function mapVersion(row: Record<string, unknown>): TemplateVersion {
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
 
+// Templates are near-static (versioned, append-only). The active version is
+// cached and tag-invalidated ("ai-templates") whenever a version is written.
 export async function getTemplateBySlug(slug: string): Promise<TemplateDetail | null> {
-  const supabase = await createSupabaseServerClient();
-  const { data: meta, error } = await supabase
-    .from("ai_templates")
-    .select("id, slug, name, description, current_version, is_active")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .maybeSingle();
-  throwOnError(error);
-  if (!meta) return null;
-
-  const { data: version, error: versionError } = await supabase
-    .from("ai_template_versions")
-    .select("*")
-    .eq("template_id", meta.id)
-    .eq("version", meta.current_version)
-    .maybeSingle();
-  throwOnError(versionError);
-  if (!version) return null;
-
-  return { ...(meta as TemplateMeta), active: mapVersion(version) };
+  return getTemplateBySlugCached(await getAccessToken(), slug);
 }
+
+const getTemplateBySlugCached = unstable_cache(
+  async (accessToken: string | null, slug: string): Promise<TemplateDetail | null> => {
+    const supabase = createSupabaseServerClientWithToken(accessToken);
+    const { data: meta, error } = await supabase
+      .from("ai_templates")
+      .select("id, slug, name, description, current_version, is_active")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle();
+    throwOnError(error);
+    if (!meta) return null;
+
+    const { data: version, error: versionError } = await supabase
+      .from("ai_template_versions")
+      .select("*")
+      .eq("template_id", meta.id)
+      .eq("version", meta.current_version)
+      .maybeSingle();
+    throwOnError(versionError);
+    if (!version) return null;
+
+    return { ...(meta as TemplateMeta), active: mapVersion(version) };
+  },
+  ["ai-template-by-slug"],
+  { revalidate: 60, tags: ["ai-templates"] },
+);
 
 export async function listTemplates(): Promise<(TemplateMeta & { version_count: number })[]> {
   const supabase = await createSupabaseServerClient();

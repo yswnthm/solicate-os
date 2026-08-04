@@ -24,6 +24,8 @@ import {
   type TriageDraft,
 } from "@/lib/ai/schemas";
 import { getTemplateBySlug } from "@/lib/ai/template-store";
+import { isEmbeddingsConfigured } from "@/lib/ai/embeddings";
+import { indexSemanticSource } from "@/lib/ai/semantic";
 import { getActiveProjectsForSelect, getPeople } from "@/features/queries";
 
 const kind = (value: unknown) => z.enum(["entry", "message"]).parse(value);
@@ -116,7 +118,9 @@ export async function draftBatchTriage(modelId?: string): Promise<BatchTriageIte
   const items = (context.items as { id: string; kind: string }[]).slice(0, BATCH_LIMIT);
   if (items.length === 0) return [];
 
-  const result = await runTemplate({ slug: "inbox-triage-batch", context, modelId });
+  // Slice the context itself so the model only sees the items we keep — it
+  // should never process the whole inbox for a 6-item result set.
+  const result = await runTemplate({ slug: "inbox-triage-batch", context: { ...context, items }, modelId });
   const drafts = batchDraftsSchema.parse({ drafts: result.data });
   const byId = new Map(drafts.drafts.map((d) => [d.id, d]));
   return items
@@ -190,10 +194,42 @@ export async function approveWeeklySummary(projectId: string, summary: string) {
 // ─── Week in review ──────────────────────────────────────────────────────────
 
 export async function draftWeekReviewAction(modelId?: string): Promise<string> {
-  await requireActiveUser();
+  const { user } = await requireActiveUser();
+  const supabase = await createSupabaseServerClient();
+
+  // On-demand dirty-check: reuse a cached week review when nothing changed.
+  // Triggers (migration 0020) flip is_stale on any record change; the 24h
+  // guard also forces a regen once the window has drifted far enough.
+  const fresh = await supabase
+    .from("ai_summaries")
+    .select("content")
+    .eq("kind", "week_review")
+    .is("project_id", null)
+    .eq("is_stale", false)
+    .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  throwOnError(fresh.error);
+  const cached = (fresh.data?.content as { review?: string } | null | undefined)?.review;
+  if (cached) return cached;
+
   const context = await getWeekReviewContext();
   const result = await runTemplate({ slug: "week-in-review", context, modelId });
-  return weekReviewSchema.parse({ review: result.data }).review;
+  const review = weekReviewSchema.parse({ review: result.data }).review;
+
+  const { error } = await supabase.from("ai_summaries").insert({
+    kind: "week_review",
+    project_id: null,
+    period_start: context.period?.from ?? null,
+    period_end: context.period?.to ?? null,
+    content: { review },
+    model: result.model?.model_id ?? "",
+    is_stale: false,
+    created_by_id: user.id,
+  });
+  throwOnError(error);
+  return review;
 }
 
 // Build the exact prompt that would be sent to the model, for use in ChatGPT.
@@ -223,6 +259,76 @@ export async function saveWeekReview(review: string) {
   });
   throwOnError(error);
   revalidatePath("/today");
+}
+
+// ─── Semantic memory maintenance ──────────────────────────────────────────────
+
+/**
+ * Rebuild the semantic index for recent records. On-demand maintenance: chunk +
+ * embed recent entries/messages/tasks/issues and upsert into semantic_chunks.
+ * No-op friendly when no embedding provider is configured.
+ */
+export async function reindexSemanticMemoryAction(): Promise<string> {
+  await requireActiveUser();
+  if (!isEmbeddingsConfigured()) {
+    throw new Error("Embeddings are not configured (GEMINI_API_KEY). Semantic memory is disabled.");
+  }
+  const supabase = await createSupabaseServerClient();
+  const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [entries, messages, tasks, issues] = await Promise.all([
+    supabase
+      .from("entries")
+      .select("id, project_id, type, title, body_md")
+      .eq("triage_state", "filed")
+      .gte("occurred_at", since)
+      .order("occurred_at", { ascending: false })
+      .limit(500),
+    supabase
+      .from("messages")
+      .select("id, body_md, conversations!inner(project_id, title)")
+      .gte("sent_at", since)
+      .order("sent_at", { ascending: false })
+      .limit(500),
+    supabase
+      .from("tasks")
+      .select("id, project_id, title, description_md")
+      .not("status", "eq", "cancelled")
+      .order("updated_at", { ascending: false })
+      .limit(300),
+    supabase
+      .from("issues")
+      .select("id, project_id, title, description_md")
+      .not("status", "eq", "closed")
+      .order("updated_at", { ascending: false })
+      .limit(300),
+  ]);
+  [entries, messages, tasks, issues].forEach((r) => throwOnError(r.error));
+
+  let entryCount = 0;
+  let messageCount = 0;
+  let taskCount = 0;
+  let issueCount = 0;
+
+  for (const e of entries.data ?? []) {
+    await indexSemanticSource("entry", String(e.id), String(e.project_id), `Entry (${e.type ?? ""}): ${e.title ?? ""}`, String(e.body_md ?? ""));
+    entryCount++;
+  }
+  for (const m of messages.data ?? []) {
+    const conv = (m.conversations as { project_id?: string | null; title?: string | null } | undefined) ?? {};
+    await indexSemanticSource("message", String(m.id), conv.project_id ?? null, `Message (${conv.title ?? ""}):`, String(m.body_md ?? ""));
+    messageCount++;
+  }
+  for (const t of tasks.data ?? []) {
+    await indexSemanticSource("task", String(t.id), String(t.project_id), `Task: ${t.title ?? ""}`, String(t.description_md ?? ""));
+    taskCount++;
+  }
+  for (const i of issues.data ?? []) {
+    await indexSemanticSource("issue", String(i.id), String(i.project_id), `Issue: ${i.title ?? ""}`, String(i.description_md ?? ""));
+    issueCount++;
+  }
+
+  return `Semantic memory indexed: ${entryCount} entries, ${messageCount} messages, ${taskCount} tasks, ${issueCount} issues.`;
 }
 
 // ─── Morning brief ───────────────────────────────────────────────────────────
