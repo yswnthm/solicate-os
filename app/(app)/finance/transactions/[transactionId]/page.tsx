@@ -2,16 +2,17 @@ import { notFound } from "next/navigation";
 import { requireActiveUser } from "@/lib/auth";
 import { getTransactionDetail, getFinanceSettings } from "@/features/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { TransactionForm } from "@/components/finance/transaction-form";
-import { AllocationForm } from "@/components/finance/allocation-form";
+import { TransactionEditButton } from "@/components/finance/transaction-edit-button";
+import { AllocationAddButton, AllocationEditButton } from "@/components/finance/allocation-buttons";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
-import { Modal } from "@/components/modal";
 
-export default async function TransactionDetailPage({ params }: { params: { transactionId: string } }) {
+export default async function TransactionDetailPage({ params }: { params: Promise<{ transactionId: string }> }) {
   await requireActiveUser();
-  const tx = await getTransactionDetail(params.transactionId);
-  if (!tx) notFound();
+  const { transactionId } = await params;
+  const rawTx = await getTransactionDetail(transactionId);
+  if (!rawTx) notFound();
+  const tx = rawTx as any;
 
   const supabase = await createSupabaseServerClient();
   const [peopleRes, projectsRes, phasesRes, settings] = await Promise.all([
@@ -28,7 +29,7 @@ export default async function TransactionDetailPage({ params }: { params: { tran
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
 
-  const totalAllocated = (tx.transaction_allocations || []).reduce((sum, a) => sum + Number(a.amount), 0);
+  const totalAllocated = (tx.transaction_allocations || []).reduce((sum: number, a: any) => sum + Number(a.amount), 0);
   const unallocated = Number(tx.amount) - totalAllocated;
 
   return (
@@ -38,15 +39,12 @@ export default async function TransactionDetailPage({ params }: { params: { tran
         description={`Transaction ${tx.id.slice(0, 8)}`}
       >
         <div style={{ display: "flex", gap: "0.5rem" }}>
-          <Modal trigger={<button className="button muted">Edit Transaction</button>}>
-            <TransactionForm
-              transaction={tx}
-              people={people}
-              categories={settings.categories}
-              paymentMethods={settings.paymentMethods}
-              onClose={() => {}} // Note: Modal handles closing via context, but we can pass a dummy if not using context yet
-            />
-          </Modal>
+          <TransactionEditButton
+            transaction={tx}
+            people={people}
+            categories={settings.categories}
+            paymentMethods={settings.paymentMethods}
+          />
         </div>
       </PageHeader>
 
@@ -62,13 +60,13 @@ export default async function TransactionDetailPage({ params }: { params: { tran
               <div>{tx.transaction_date}</div>
 
               <div className="muted">Counterparty</div>
-              <div>{tx.type === "income" ? tx.from_person?.name || "—" : tx.to_person?.name || "—"}</div>
+              <div>{tx.type === "income" ? (tx.from_person?.name || tx.from_person?.[0]?.name || "—") : (tx.to_person?.name || tx.to_person?.[0]?.name || "—")}</div>
 
               <div className="muted">Category</div>
-              <div>{tx.finance_categories?.name || "—"}</div>
+              <div>{tx.finance_categories?.name || tx.finance_categories?.[0]?.name || "—"}</div>
 
               <div className="muted">Method</div>
-              <div>{tx.payment_methods?.name || "—"}</div>
+              <div>{tx.payment_methods?.name || tx.payment_methods?.[0]?.name || "—"}</div>
               
               <div className="muted">Notes</div>
               <div>{tx.notes || "—"}</div>
@@ -97,14 +95,11 @@ export default async function TransactionDetailPage({ params }: { params: { tran
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <h2 style={{ fontSize: "1.1rem", margin: 0 }}>Allocations</h2>
               {unallocated > 0 && (
-                <Modal trigger={<button className="button muted small">Add Allocation</button>}>
-                  <AllocationForm
-                    transactionId={tx.id}
-                    projects={projects}
-                    phases={phases}
-                    onClose={() => {}}
-                  />
-                </Modal>
+                <AllocationAddButton
+                  transactionId={tx.id}
+                  projects={projects}
+                  phases={phases}
+                />
               )}
             </div>
 
@@ -136,15 +131,12 @@ export default async function TransactionDetailPage({ params }: { params: { tran
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div className="fw-500">{formatCurrency(alloc.amount)}</div>
-                      <Modal trigger={<button className="button muted minimal" style={{ marginTop: "0.25rem" }}>Edit</button>}>
-                        <AllocationForm
-                          transactionId={tx.id}
-                          allocation={alloc}
-                          projects={projects}
-                          phases={phases}
-                          onClose={() => {}}
-                        />
-                      </Modal>
+                      <AllocationEditButton
+                        transactionId={tx.id}
+                        allocation={alloc}
+                        projects={projects}
+                        phases={phases}
+                      />
                     </div>
                   </div>
                 ))}

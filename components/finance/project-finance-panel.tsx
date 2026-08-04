@@ -22,6 +22,7 @@ export function ProjectFinancePanel({
   paymentMethods: any[];
 }) {
   const [filterPhase, setFilterPhase] = useState<string>("all");
+  const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
@@ -62,7 +63,8 @@ export function ProjectFinancePanel({
             {phases.map(ph => <option key={ph.id} value={ph.id}>{ph.name}</option>)}
           </select>
           
-          <Modal trigger={<button className="button primary">Log Transaction</button>}>
+          <button className="button primary" onClick={() => setIsTransactionFormOpen(true)}>Log Transaction</button>
+          <Modal isOpen={isTransactionFormOpen} onClose={() => setIsTransactionFormOpen(false)} title="Log Transaction">
             {/* The user can log a transaction globally, but maybe they want to allocate to this project immediately?
                 We'll just show the generic transaction form, and they can allocate it later or in a split view. 
                 For now, generic form is fine. */}
@@ -70,7 +72,7 @@ export function ProjectFinancePanel({
               people={people}
               categories={categories}
               paymentMethods={paymentMethods}
-              onClose={() => {}}
+              onClose={() => setIsTransactionFormOpen(false)}
             />
           </Modal>
         </div>

@@ -29,7 +29,7 @@ export default async function InvoicesPage() {
                     {inv.invoice_number || `Invoice (Transaction ${inv.id.slice(0, 8)})`}
                   </Link>
                   <div className="row-meta">
-                    {inv.from_person?.name || "Unknown client"} • {inv.transaction_date}
+                    {(inv as any).from_person?.name || "Unknown client"} • {inv.transaction_date}
                   </div>
                 </div>
                 <div style={{ textAlign: "right", marginRight: "1rem" }}>

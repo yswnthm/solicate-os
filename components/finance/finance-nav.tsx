@@ -8,8 +8,6 @@ const TABS = [
   { key: "dashboard", label: "Dashboard" },
   { key: "transactions", label: "Ledger" },
   { key: "invoices", label: "Invoices" },
-  { key: "categories", label: "Categories" },
-  { key: "settings", label: "Settings" },
 ] as const;
 
 export function FinanceNav() {

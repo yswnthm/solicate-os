@@ -1,7 +1,8 @@
 "use client";
 
 import { useTransition, useState, useEffect } from "react";
-import { createAllocation, updateAllocation } from "@/features/actions";
+import { createAllocation } from "@/features/actions";
+import { updateAllocation } from "@/features/update-actions";
 
 export function AllocationForm({
   transactionId,

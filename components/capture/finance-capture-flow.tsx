@@ -111,8 +111,9 @@ export function FinanceCaptureFlow({ options }: { options: FinanceCaptureFormOpt
     if (!state) return;
     run("discard", async () => {
       await discardFinanceCapture();
+      setTimeout(() => reset(), 500); // Wait for transition to settle
       return { ...state, status: "executed", actions: [] } as any;
-    }).then(() => reset());
+    });
   };
 
   const onRegenerate = () => {
