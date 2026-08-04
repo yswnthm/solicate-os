@@ -375,7 +375,6 @@ function CaptureForm(props: {
             onChange={(e) => props.setText(e.target.value)}
             placeholder={"Describe what happened in plain language…\n\nExample: “Phase two is complete. Client approved the SEO plan. The ₹15,000 payment came in.”"}
             rows={8}
-            autoFocus
           />
         </div>
         <button type="button" className="button" onClick={props.onSubmit} disabled={props.busy || !props.text.trim()}>
