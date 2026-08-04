@@ -27,7 +27,10 @@ export function NavLink({
   count?: number;
 }) {
   const pathname = usePathname();
-  const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
+  const isActive =
+    pathname === href ||
+    (href !== "/" && pathname.startsWith(href)) ||
+    (href === "/people" && (pathname.startsWith("/clients") || pathname.startsWith("/relationships")));
   const config = NAV_CONFIG[href] ?? { icon: "·" };
 
   return (

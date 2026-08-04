@@ -48,9 +48,7 @@ export async function AppShell({
             Inbox & Capture
           </NavLink>
           <NavLink href="/projects">Projects</NavLink>
-          <NavLink href="/clients">Clients</NavLink>
-          <NavLink href="/relationships">Relationships</NavLink>
-          <NavLink href="/people">People</NavLink>
+          <NavLink href="/people">People & Relationships</NavLink>
           <NavLink href="/finance">Finance</NavLink>
 
           <div className="sidebar-group-label">AI</div>
