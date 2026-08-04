@@ -26,7 +26,7 @@ export interface CaptureFormOptions {
   default_model: string;
 }
 
-type Step = "form" | "analyzing" | "clarify" | "review" | "done";
+type Step = "loading" | "form" | "analyzing" | "clarify" | "review" | "done";
 
 const SCOPES = [
   { value: "existing_project", title: "Existing project", hint: "This happened in a project you already track" },
@@ -35,7 +35,7 @@ const SCOPES = [
 ] as const;
 
 export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
-  const [step, setStep] = useState<Step>("form");
+  const [step, setStep] = useState<Step>("loading");
   const [state, setState] = useState<CaptureSessionState | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -47,13 +47,18 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
     let cancelled = false;
     getResumeState()
       .then((next) => {
-        if (cancelled || !next) return;
+        if (cancelled) return;
+        if (!next || next.status === "executed") {
+          setStep("form");
+          return;
+        }
         setState(next);
         if (next.status === "awaiting_clarification") setStep("clarify");
-        else if (next.status === "executed") setStep("done");
         else setStep(next.actions.length ? "review" : "form");
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setStep("form");
+      });
     return () => {
       cancelled = true;
     };
@@ -149,6 +154,8 @@ export function CaptureFlow({ options }: { options: CaptureFormOptions }) {
   return (
     <div className="capture-flow">
       {error && <div className="notice error">{error}</div>}
+
+      {step === "loading" && <div className="capture-center"><div className="spinner" /></div>}
 
       {step === "form" && (
         <CaptureForm
