@@ -277,10 +277,55 @@ export const relationshipSchema = z
 
 // ─── Finance items (invoices / payments / expenses) ─────────────────────────
 
+// ─── Finance Ledger ───────────────────────────────────────────────────────────
+
+export const transactionSchema = z.object({
+  type: z.enum(["income", "expense", "transfer", "refund", "adjustment"]),
+  amount: z.coerce.number().positive("Enter an amount greater than zero.").finite(),
+  currency_code: z.string().trim().default("INR"),
+  transaction_date: optDate,
+  status: z.enum(["planned", "pending", "completed", "cancelled"]).optional(),
+  invoice_status: z.enum(["preparing", "sent", "cleared"]).nullable().optional(),
+  invoice_date: optDate,
+  invoice_sent_at: optDate,
+  invoice_cleared_at: optDate,
+  invoice_number: z.string().trim().optional(),
+  category_id: optUuid,
+  payment_method_id: optUuid,
+  from_person_id: optUuid,
+  from_user_id: optUuid,
+  to_person_id: optUuid,
+  to_user_id: optUuid,
+  reference_number: z.string().trim().optional(),
+  notes: z.string().trim().optional(),
+});
+
+export const allocationSchema = z.object({
+  transaction_id: z.string().uuid(),
+  target: z.enum(["project", "phase", "overhead"]).default("project"),
+  project_id: optUuid,
+  phase_id: optUuid,
+  amount: z.coerce.number().positive("Enter an amount greater than zero.").finite(),
+  notes: z.string().trim().optional(),
+});
+
+export const financeCategorySchema = z.object({
+  name: req("Category name is required."),
+  transaction_type: z.enum(["income", "expense"]),
+  position: z.coerce.number().int().min(1).optional(),
+});
+
+export const paymentMethodSchema = z.object({
+  name: req("Payment method name is required."),
+  is_default: z.boolean().optional(),
+});
+
+// Legacy schema — kept for backward compat with updateFinanceItem
 const optCurrency = z
   .union([z.string(), z.null(), z.undefined()])
   .transform((v) => (typeof v === "string" && v.trim() ? v.trim().toUpperCase() : "INR"));
 
+/** @deprecated Use transactionSchema. Kept while finance_items_legacy exists. */
 export const financeItemSchema = z.object({
   project_id: z.string().uuid(),
   phase_id: optUuid,
@@ -294,3 +339,5 @@ export const financeItemSchema = z.object({
 
 export type RelationshipInput = z.infer<typeof relationshipSchema>;
 export type FinanceItemInput = z.infer<typeof financeItemSchema>;
+export type TransactionInput = z.infer<typeof transactionSchema>;
+export type AllocationInput = z.infer<typeof allocationSchema>;

@@ -50,6 +50,7 @@ export async function AppShell({
           <NavLink href="/clients">Clients</NavLink>
           <NavLink href="/relationships">Relationships</NavLink>
           <NavLink href="/people">People</NavLink>
+          <NavLink href="/finance">Finance</NavLink>
 
           <div className="sidebar-group-label">AI</div>
           <NavLink href="/ai/drafter">Drafter</NavLink>

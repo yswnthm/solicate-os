@@ -478,14 +478,87 @@ export async function createRelationship(formData: FormData) {
   redirect(`/relationships/${data.id}`);
 }
 
-// ─── Finance ─────────────────────────────────────────────────────────────────
+// ─── Finance ─────────────────────────────────────────────
 
+export async function createTransaction(formData: FormData) {
+  const { user } = await requireActiveUser();
+  const supabase = await createSupabaseServerClient();
+  const type = z.enum(["income", "expense", "transfer", "refund", "adjustment"]).parse(text(formData.get("type")));
+  const invoiceStatusRaw = optional(formData.get("invoice_status"));
+  const invoiceStatus = invoiceStatusRaw
+    ? z.enum(["preparing", "sent", "cleared"]).parse(invoiceStatusRaw)
+    : null;
+  const { error } = await supabase.from("transactions").insert({
+    type,
+    amount: z.coerce.number().positive().finite().parse(formData.get("amount")),
+    currency_code: "INR",
+    transaction_date: optional(formData.get("transaction_date")) ?? new Date().toISOString().slice(0, 10),
+    status: type === "expense" ? "completed" : "pending",
+    invoice_status: invoiceStatus,
+    invoice_number: text(formData.get("invoice_number")),
+    reference_number: text(formData.get("reference_number")),
+    notes: text(formData.get("notes")),
+    category_id: optional(formData.get("category_id")),
+    payment_method_id: optional(formData.get("payment_method_id")),
+    from_person_id: optional(formData.get("from_person_id")),
+    to_person_id: optional(formData.get("to_person_id")),
+    created_by_id: user.id,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/finance");
+  revalidatePath("/finance/transactions");
+  revalidatePath("/today");
+}
+
+export async function createAllocation(formData: FormData) {
+  const { user } = await requireActiveUser();
+  const supabase = await createSupabaseServerClient();
+  const projectId = optional(formData.get("project_id"));
+  const phaseId = optional(formData.get("phase_id"));
+  const target = phaseId ? "phase" : projectId ? "project" : "overhead";
+  const transactionId = id(formData.get("transaction_id"));
+  const { error } = await supabase.from("transaction_allocations").insert({
+    transaction_id: transactionId,
+    target,
+    project_id: projectId,
+    phase_id: phaseId,
+    amount: z.coerce.number().positive().finite().parse(formData.get("amount")),
+    notes: text(formData.get("notes")),
+    created_by_id: user.id,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/finance");
+  revalidatePath(`/finance/transactions/${transactionId}`);
+  if (projectId) revalidatePath(`/projects/${projectId}`);
+}
+
+export async function advanceInvoiceStatus(formData: FormData) {
+  await requireActiveUser();
+  const supabase = await createSupabaseServerClient();
+  const transactionId = id(formData.get("transaction_id"));
+  const newStatus = z.enum(["preparing", "sent", "cleared"]).parse(text(formData.get("invoice_status")));
+  const updates: Record<string, unknown> = { invoice_status: newStatus };
+  if (newStatus === "sent") updates.invoice_sent_at = new Date().toISOString();
+  if (newStatus === "cleared") {
+    updates.invoice_cleared_at = new Date().toISOString();
+    updates.status = "completed";
+    const ref = text(formData.get("reference_number"));
+    if (ref) updates.reference_number = ref;
+  }
+  const { error } = await supabase.from("transactions").update(updates).eq("id", transactionId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/finance");
+  revalidatePath(`/finance/transactions/${transactionId}`);
+  revalidatePath("/finance/invoices");
+}
+
+/** @deprecated Use createTransaction. Kept for backward compat with existing UI. */
 export async function createFinanceItem(formData: FormData) {
   const { user } = await requireActiveUser();
   const projectId = id(formData.get("project_id"));
   const phaseId = optional(formData.get("phase_id"));
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("finance_items").insert({
+  const { error } = await supabase.from("finance_items_legacy").insert({
     project_id: projectId,
     phase_id: phaseId,
     kind: z.enum(["invoice", "payment", "expense"]).parse(text(formData.get("kind"))),

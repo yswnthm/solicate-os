@@ -297,10 +297,11 @@ export async function applyAction(userId: string, action: CaptureAction, resolve
 
     case "finance.invoice":
     case "finance.payment": {
+      // Legacy: kept for backward compat with old capture sessions.
       const p = action.payload;
       if (!projectId) return { ok: false, error: `${action.kind} needs a project.` };
       const { data, error } = await supabase
-        .from("finance_items")
+        .from("finance_items_legacy")
         .insert({
           project_id: projectId,
           phase_id: phaseId,
@@ -320,16 +321,104 @@ export async function applyAction(userId: string, action: CaptureAction, resolve
     }
 
     case "finance.mark_paid": {
+      // Legacy: kept for backward compat with old capture sessions.
       const p = action.payload;
       if (!refId) return { ok: false, error: "finance.mark_paid needs an invoice reference." };
       const { error } = await supabase
-        .from("finance_items")
+        .from("finance_items_legacy")
         .update({
           payment_status: p.payment_status ?? "paid",
           paid_at: p.paid_at ? new Date(p.paid_at).toISOString() : nowIso(),
         })
         .eq("id", refId)
         .eq("kind", "invoice");
+      throwOnError(error);
+      return { ok: true };
+    }
+
+    // ─── New Finance Ledger actions ───────────────────────────────────────────────────
+
+    case "finance.transaction": {
+      const p = action.payload;
+      const { data, error } = await supabase
+        .from("transactions")
+        .insert({
+          type: p.type,
+          amount: p.amount,
+          currency_code: "INR",
+          transaction_date: p.transaction_date ?? todayIso(),
+          status: p.type === "expense" ? "completed" : "pending",
+          invoice_status: p.invoice_status ?? null,
+          invoice_number: p.invoice_number ?? "",
+          reference_number: p.reference_number ?? "",
+          notes: p.notes ?? "",
+          from_person_id: p.type === "income" ? personId : null,
+          to_person_id: p.type === "expense" ? personId : null,
+          created_by_id: userId,
+        })
+        .select("id")
+        .single();
+      throwOnError(error);
+      return data ? { ok: true, createdId: String(data.id), createdKind: "transaction" } : { ok: true };
+    }
+
+    case "finance.allocate": {
+      const p = action.payload;
+      if (!refId) return { ok: false, error: "finance.allocate needs a transaction reference." };
+      const target = phaseId ? "phase" : projectId ? "project" : "overhead";
+      const { error } = await supabase
+        .from("transaction_allocations")
+        .insert({
+          transaction_id: refId,
+          target,
+          project_id: projectId,
+          phase_id: phaseId,
+          amount: p.amount,
+          notes: p.notes ?? "",
+          created_by_id: userId,
+        });
+      throwOnError(error);
+      return { ok: true };
+    }
+
+    case "finance.invoice_sent": {
+      const p = action.payload;
+      if (!refId) return { ok: false, error: "finance.invoice_sent needs a transaction reference." };
+      const { error } = await supabase
+        .from("transactions")
+        .update({
+          invoice_status: "sent",
+          invoice_sent_at: p.invoice_sent_at ? new Date(p.invoice_sent_at).toISOString() : nowIso(),
+        })
+        .eq("id", refId)
+        .eq("type", "income");
+      throwOnError(error);
+      return { ok: true };
+    }
+
+    case "finance.invoice_cleared": {
+      const p = action.payload;
+      if (!refId) return { ok: false, error: "finance.invoice_cleared needs a transaction reference." };
+      const { error } = await supabase
+        .from("transactions")
+        .update({
+          invoice_status: "cleared",
+          invoice_cleared_at: p.invoice_cleared_at ? new Date(p.invoice_cleared_at).toISOString() : nowIso(),
+          status: "completed",
+          reference_number: p.reference_number ?? "",
+        })
+        .eq("id", refId)
+        .eq("type", "income");
+      throwOnError(error);
+      return { ok: true };
+    }
+
+    case "finance.mark_completed": {
+      if (!refId) return { ok: false, error: "finance.mark_completed needs a transaction reference." };
+      const { error } = await supabase
+        .from("transactions")
+        .update({ status: "completed" })
+        .eq("id", refId);
       throwOnError(error);
       return { ok: true };
     }

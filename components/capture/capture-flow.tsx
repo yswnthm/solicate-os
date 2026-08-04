@@ -390,7 +390,7 @@ function CaptureForm(props: {
 
 // ─── Analyzing ────────────────────────────────────────────────────────────────
 
-function AnalyzingStep({ text }: { text: string }) {
+export function AnalyzingStep({ text }: { text: string }) {
   return (
     <div className="capture-center">
       <div className="spinner" />
@@ -404,7 +404,7 @@ function AnalyzingStep({ text }: { text: string }) {
 
 // ─── Step 2: clarification ────────────────────────────────────────────────────
 
-function ClarifyStep({
+export function ClarifyStep({
   state,
   onAnswers,
   onCancel,
@@ -456,7 +456,7 @@ function ClarifyStep({
   );
 }
 
-function QuestionField({
+export function QuestionField({
   question,
   index,
   value,
@@ -520,7 +520,7 @@ interface DecisionState {
   payload: Record<string, unknown>;
 }
 
-function ReviewStep({
+export function ReviewStep({
   state,
   onApprove,
   onDiscard,
@@ -745,7 +745,7 @@ function ActionEditor({
 
 // ─── Step 4: done ─────────────────────────────────────────────────────────────
 
-function DoneStep({ state, onReset }: { state: CaptureSessionState; onReset: () => void }) {
+export function DoneStep({ state, onReset }: { state: CaptureSessionState; onReset: () => void }) {
   const projectId = useMemo(() => {
     if (state.projectId) return state.projectId;
     const ref = state.actions.find((a) => a.project_id && !/^action:/.test(a.project_id));

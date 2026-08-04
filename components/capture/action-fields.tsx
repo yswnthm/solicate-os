@@ -152,6 +152,45 @@ export const ACTION_SPECS: Record<string, KindSpec> = {
       { key: "paid_at", label: "Paid on", type: "date" },
     ],
   },
+  // ─── New finance ledger action specs ──────────────────────────────────────────
+  "finance.transaction": {
+    fields: [
+      select("type", "Type", ["income", "expense", "transfer", "refund", "adjustment"]),
+      { key: "amount", label: "Amount (₹)", type: "number" },
+      { key: "transaction_date", label: "Date", type: "date" },
+      select("invoice_status", "Invoice stage", ["preparing", "sent", "cleared"]),
+      { key: "invoice_number", label: "Invoice #", type: "text", placeholder: "INV-2025-042" },
+      { key: "reference_number", label: "Reference / UTR", type: "text" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+    refs: [{ key: "person_id", label: "Counterparty (person)" }],
+  },
+  "finance.allocate": {
+    fields: [
+      { key: "amount", label: "Amount (₹)", type: "number" },
+      { key: "notes", label: "Notes", type: "text" },
+    ],
+    refs: [
+      { key: "ref_id", label: "Transaction" },
+      { key: "project_id", label: "Project" },
+      { key: "phase_id", label: "Phase" },
+    ],
+  },
+  "finance.invoice_sent": {
+    fields: [{ key: "invoice_sent_at", label: "Sent at", type: "date" }],
+    refs: [{ key: "ref_id", label: "Transaction (invoice)" }],
+  },
+  "finance.invoice_cleared": {
+    fields: [
+      { key: "invoice_cleared_at", label: "Cleared at", type: "date" },
+      { key: "reference_number", label: "UTR / Reference", type: "text" },
+    ],
+    refs: [{ key: "ref_id", label: "Transaction (invoice)" }],
+  },
+  "finance.mark_completed": {
+    fields: [],
+    refs: [{ key: "ref_id", label: "Transaction" }],
+  },
   "communication.draft": {
     fields: [
       { key: "intent", label: "Intent", type: "text" },
@@ -177,8 +216,13 @@ export const KIND_LABELS: Record<string, string> = {
   "issue.resolve": "Resolve issue",
   "entry.create": "Record entry",
   "decision.supersede": "Supersede decision",
-  "finance.invoice": "Invoice",
-  "finance.payment": "Payment received",
-  "finance.mark_paid": "Mark invoice paid",
+  "finance.invoice": "Invoice (legacy)",
+  "finance.payment": "Payment received (legacy)",
+  "finance.mark_paid": "Mark invoice paid (legacy)",
+  "finance.transaction": "New transaction",
+  "finance.allocate": "Allocate funds",
+  "finance.invoice_sent": "Mark invoice sent",
+  "finance.invoice_cleared": "Mark invoice cleared",
+  "finance.mark_completed": "Mark completed",
   "communication.draft": "Message draft",
 };

@@ -693,3 +693,209 @@ export async function getCaptureFormOptions() {
     default_model: template?.active.default_model ?? "",
   };
 }
+
+// ─── Finance Ledger Queries ────────────────────────────────────────────────────
+
+/** Full transaction list for /finance/transactions with optional filters. */
+export async function getTransactions(opts?: {
+  type?: string;
+  status?: string;
+  invoiceStatus?: string;
+  limit?: number;
+}) {
+  const supabase = await createSupabaseServerClient();
+  let query = supabase
+    .from("transactions")
+    .select(
+      `id, type, amount, currency_code, transaction_date, status,
+       invoice_status, invoice_number, invoice_sent_at, invoice_cleared_at,
+       reference_number, notes, created_at,
+       finance_categories(id, name),
+       payment_methods(id, name),
+       from_person:people!transactions_from_person_id_fkey(id, name),
+       to_person:people!transactions_to_person_id_fkey(id, name),
+       transaction_allocations(id, target, project_id, phase_id, amount, notes,
+         projects(id, name, code), phases(id, name))`
+    )
+    .order("transaction_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(opts?.limit ?? 100);
+
+  if (opts?.type) query = query.eq("type", opts.type);
+  if (opts?.status) query = query.eq("status", opts.status);
+  if (opts?.invoiceStatus) query = query.eq("invoice_status", opts.invoiceStatus);
+
+  const { data, error } = await query;
+  throwOnError(error);
+  return data ?? [];
+}
+
+/** Single transaction with full allocation detail. */
+export async function getTransactionDetail(transactionId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("transactions")
+    .select(
+      `id, type, amount, currency_code, transaction_date, status,
+       invoice_status, invoice_date, invoice_number, invoice_sent_at, invoice_cleared_at,
+       reference_number, notes, created_at, updated_at,
+       finance_categories(id, name, transaction_type),
+       payment_methods(id, name),
+       from_person:people!transactions_from_person_id_fkey(id, name),
+       to_person:people!transactions_to_person_id_fkey(id, name),
+       transaction_allocations(
+         id, target, amount, notes, created_at,
+         project_id, phase_id,
+         projects(id, name, code),
+         phases(id, name, position)
+       )`
+    )
+    .eq("id", transactionId)
+    .maybeSingle();
+  throwOnError(error);
+  return data;
+}
+
+/** Aggregated KPIs + invoice pipeline for /finance/dashboard. */
+export async function getFinanceDashboard() {
+  const supabase = await createSupabaseServerClient();
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+
+  const [incomeRes, expenseRes, invoiceRes, recentRes] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select("amount")
+      .eq("type", "income")
+      .eq("status", "completed")
+      .gte("transaction_date", startOfYear),
+    supabase
+      .from("transactions")
+      .select("amount")
+      .eq("type", "expense")
+      .eq("status", "completed")
+      .gte("transaction_date", startOfYear),
+    supabase
+      .from("transactions")
+      .select("id, amount, invoice_status, invoice_number, transaction_date, from_person:people!transactions_from_person_id_fkey(id, name)")
+      .eq("type", "income")
+      .in("invoice_status", ["preparing", "sent"]),
+    supabase
+      .from("transactions")
+      .select(`id, type, amount, transaction_date, status, invoice_status, invoice_number,
+               from_person:people!transactions_from_person_id_fkey(id, name),
+               to_person:people!transactions_to_person_id_fkey(id, name)`)
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(15),
+  ]);
+
+  const totalIncome  = (incomeRes.data ?? []).reduce((s, r) => s + Number(r.amount), 0);
+  const totalExpense = (expenseRes.data ?? []).reduce((s, r) => s + Number(r.amount), 0);
+  const invoices     = invoiceRes.data ?? [];
+  const preparing    = invoices.filter((i) => i.invoice_status === "preparing");
+  const sent         = invoices.filter((i) => i.invoice_status === "sent");
+
+  return {
+    totalIncome,
+    totalExpense,
+    netProfit: totalIncome - totalExpense,
+    preparingCount: preparing.length,
+    preparingTotal: preparing.reduce((s, r) => s + Number(r.amount), 0),
+    sentCount: sent.length,
+    sentTotal: sent.reduce((s, r) => s + Number(r.amount), 0),
+    openInvoices: invoices,
+    recentTransactions: recentRes.data ?? [],
+  };
+}
+
+/** All transactions (via allocations) for a given project. */
+export async function getProjectTransactions(projectId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("transaction_allocations")
+    .select(
+      `id, amount, target, notes, created_at, phase_id,
+       transactions(
+         id, type, status, invoice_status, invoice_number, transaction_date, amount,
+         currency_code, reference_number, notes,
+         from_person:people!transactions_from_person_id_fkey(id, name),
+         to_person:people!transactions_to_person_id_fkey(id, name)
+       ),
+       phases(id, name)`
+    )
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+  throwOnError(error);
+  return data ?? [];
+}
+
+/** Form options for the Finance Capture page. */
+export async function getFinanceCaptureOptions() {
+  const supabase = await createSupabaseServerClient();
+  const [projects, phases, people, transactions, invoices, categories, paymentMethods, models] =
+    await Promise.all([
+      supabase.from("projects").select("id, name, code, clients(name)").neq("status", "archived").order("name"),
+      supabase.from("phases").select("id, name, position, status, project_id").neq("status", "cancelled").order("position"),
+      supabase.from("people").select("id, name, is_partner").order("name"),
+      supabase
+        .from("transactions")
+        .select(`id, type, amount, transaction_date, status, invoice_status, invoice_number, notes,
+                 from_person:people!transactions_from_person_id_fkey(id, name),
+                 to_person:people!transactions_to_person_id_fkey(id, name),
+                 transaction_allocations(project_id, phase_id, amount)`)
+        .order("transaction_date", { ascending: false })
+        .limit(30),
+      supabase
+        .from("transactions")
+        .select("id, amount, invoice_status, invoice_number, transaction_date, from_person:people!transactions_from_person_id_fkey(id, name)")
+        .eq("type", "income")
+        .eq("invoice_status", "sent")
+        .order("transaction_date", { ascending: false }),
+      supabase.from("finance_categories").select("id, name, transaction_type, is_default").order("position"),
+      supabase.from("payment_methods").select("id, name, is_default"),
+      getActiveModels(),
+    ]);
+
+  const template = await getTemplateBySlug("finance-capture-analyze");
+
+  return {
+    projects: (projects.data ?? []).map((p) => ({
+      id: String(p.id),
+      name: String(p.name),
+      code: p.code ? String(p.code) : null,
+      client: String((p.clients as { name?: unknown } | null | undefined)?.name ?? "") || null,
+    })),
+    phases: (phases.data ?? []).map((ph) => ({
+      id: String(ph.id),
+      name: String(ph.name),
+      position: Number(ph.position),
+      status: String(ph.status),
+      project_id: String(ph.project_id),
+    })),
+    people: (people.data ?? []).map((p) => ({
+      id: String(p.id),
+      name: String(p.name),
+      is_partner: Boolean(p.is_partner),
+    })),
+    recentTransactions: transactions.data ?? [],
+    openInvoices: invoices.data ?? [],
+    categories: categories.data ?? [],
+    paymentMethods: paymentMethods.data ?? [],
+    models: models.map((m) => ({ id: m.model_id, provider: m.provider, display_name: m.display_name })),
+    default_model: template?.active.default_model ?? "",
+  };
+}
+
+/** Categories and payment methods for settings pages. */
+export async function getFinanceSettings() {
+  const supabase = await createSupabaseServerClient();
+  const [categories, paymentMethods] = await Promise.all([
+    supabase.from("finance_categories").select("id, name, transaction_type, is_default, position").order("position"),
+    supabase.from("payment_methods").select("id, name, is_default, created_at").order("created_at"),
+  ]);
+  return {
+    categories: categories.data ?? [],
+    paymentMethods: paymentMethods.data ?? [],
+  };
+}

@@ -50,9 +50,16 @@ const actionBase = z.object({
     "issue.resolve",
     "entry.create",
     "decision.supersede",
+    // Legacy finance kinds (kept for backward compat)
     "finance.invoice",
     "finance.payment",
     "finance.mark_paid",
+    // New finance ledger kinds
+    "finance.transaction",
+    "finance.allocate",
+    "finance.invoice_sent",
+    "finance.invoice_cleared",
+    "finance.mark_completed",
     "communication.draft",
   ]),
   label: reqText,
@@ -234,6 +241,49 @@ const financeMarkPaid = z.object({
   }),
 });
 
+// ─── New finance ledger action schemas ────────────────────────────────────────
+
+const financeTransaction = z.object({
+  kind: z.literal("finance.transaction"),
+  payload: z.object({
+    type: z.enum(["income", "expense", "transfer", "refund", "adjustment"]),
+    amount: z.coerce.number().positive().finite(),
+    transaction_date: optDate,
+    invoice_status: z.enum(["preparing", "sent", "cleared"]).nullish(),
+    invoice_number: optText,
+    reference_number: optText,
+    notes: optText,
+  }),
+});
+
+const financeAllocate = z.object({
+  kind: z.literal("finance.allocate"),
+  payload: z.object({
+    amount: z.coerce.number().positive().finite(),
+    notes: optText,
+  }),
+});
+
+const financeInvoiceSent = z.object({
+  kind: z.literal("finance.invoice_sent"),
+  payload: z.object({
+    invoice_sent_at: optDate,
+  }),
+});
+
+const financeInvoiceCleared = z.object({
+  kind: z.literal("finance.invoice_cleared"),
+  payload: z.object({
+    invoice_cleared_at: optDate,
+    reference_number: optText,
+  }),
+});
+
+const financeMarkCompleted = z.object({
+  kind: z.literal("finance.mark_completed"),
+  payload: z.object({}),
+});
+
 const communicationDraft = z.object({
   kind: z.literal("communication.draft"),
   payload: z.object({
@@ -259,9 +309,16 @@ const actions = [
   actionBase.merge(issueResolve),
   actionBase.merge(entryCreate),
   actionBase.merge(decisionSupersede),
+  // Legacy finance actions
   actionBase.merge(financeInvoice),
   actionBase.merge(financePayment),
   actionBase.merge(financeMarkPaid),
+  // New finance ledger actions
+  actionBase.merge(financeTransaction),
+  actionBase.merge(financeAllocate),
+  actionBase.merge(financeInvoiceSent),
+  actionBase.merge(financeInvoiceCleared),
+  actionBase.merge(financeMarkCompleted),
   actionBase.merge(communicationDraft),
 ] as const;
 

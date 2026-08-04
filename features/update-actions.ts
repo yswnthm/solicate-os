@@ -19,6 +19,8 @@ import {
   projectSchema,
   relationshipSchema,
   taskSchema,
+  transactionSchema,
+  allocationSchema,
 } from "@/lib/validation";
 
 export type EditResult =
@@ -359,8 +361,65 @@ export async function updateRelationship(id: string, input: unknown): Promise<Ed
   });
 }
 
-// ─── Finance items ────────────────────────────────────────────────────────────
+// ─── Finance ──────────────────────────────────────────────────────────────────
 
+export async function updateTransaction(id: string, input: unknown): Promise<EditResult> {
+  return runMutation(async () => {
+    await requireActiveUser();
+    const parsed = transactionSchema.safeParse(input);
+    if (!parsed.success) return validationResult(parsed.error);
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.from("transactions").update(parsed.data).eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    refresh(["/finance", `/finance/transactions/${id}`]);
+  });
+}
+
+export async function updateAllocation(id: string, input: unknown): Promise<EditResult> {
+  return runMutation(async () => {
+    await requireActiveUser();
+    const parsed = allocationSchema.safeParse(input);
+    if (!parsed.success) return validationResult(parsed.error);
+    const supabase = await createSupabaseServerClient();
+    const { data: existing } = await supabase
+      .from("transaction_allocations")
+      .select("transaction_id, project_id, phase_id")
+      .eq("id", id)
+      .maybeSingle();
+    const { error } = await supabase.from("transaction_allocations").update(parsed.data).eq("id", id);
+    if (error) return { ok: false, error: error.message };
+
+    const transactionId = parsed.data.transaction_id ?? existing?.transaction_id;
+    const paths = ["/finance", `/finance/transactions/${transactionId}`];
+    
+    // Invalidate new and old project paths
+    if (parsed.data.project_id) paths.push(`/projects/${parsed.data.project_id}`);
+    if (existing?.project_id && existing.project_id !== parsed.data.project_id) {
+      paths.push(`/projects/${existing.project_id}`);
+    }
+    refresh(paths);
+  });
+}
+
+export async function deleteAllocation(id: string): Promise<EditResult> {
+  return runMutation(async () => {
+    await requireActiveUser();
+    const supabase = await createSupabaseServerClient();
+    const { data: existing } = await supabase
+      .from("transaction_allocations")
+      .select("transaction_id, project_id")
+      .eq("id", id)
+      .maybeSingle();
+    const { error } = await supabase.from("transaction_allocations").delete().eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    const paths = ["/finance"];
+    if (existing?.transaction_id) paths.push(`/finance/transactions/${existing.transaction_id}`);
+    if (existing?.project_id) paths.push(`/projects/${existing.project_id}`);
+    refresh(paths);
+  });
+}
+
+/** @deprecated Use updateTransaction. Kept while existing UI is migrated. */
 export async function updateFinanceItem(id: string, input: unknown): Promise<EditResult> {
   return runMutation(async () => {
     await requireActiveUser();
@@ -368,11 +427,11 @@ export async function updateFinanceItem(id: string, input: unknown): Promise<Edi
     if (!parsed.success) return validationResult(parsed.error);
     const supabase = await createSupabaseServerClient();
     const { data: existing } = await supabase
-      .from("finance_items")
+      .from("finance_items_legacy")
       .select("project_id, phase_id")
       .eq("id", id)
       .maybeSingle();
-    const { error } = await supabase.from("finance_items").update(parsed.data).eq("id", id);
+    const { error } = await supabase.from("finance_items_legacy").update(parsed.data).eq("id", id);
     if (error) return { ok: false, error: error.message };
     const projectId = parsed.data.project_id ?? existing?.project_id;
     if (!projectId) return { ok: true };
