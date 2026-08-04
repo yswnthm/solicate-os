@@ -24,7 +24,7 @@ export default async function ProjectLayout({
     <>
       <PageHeader
         title={project.name}
-        description={`${project.clients?.name ?? "Client"} ${project.code ? `· ${project.code}` : ""} · ${project.summary || "No working summary yet."}`}
+        description={`${project.people?.name ?? "Client"} ${project.code ? `· ${project.code}` : ""} · ${project.summary || "No working summary yet."}`}
       >
         <StatusPill value={project.status} />
         <WeeklySummaryButton projectId={projectId} />

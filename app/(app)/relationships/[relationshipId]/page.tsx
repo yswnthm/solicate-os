@@ -50,8 +50,8 @@ export default async function RelationshipDetailPage({
   return (
     <>
       <PageHeader
-        title={`${relationship.clients?.name ?? "Client"} relationship`}
-        description={`${relationship.source.replaceAll("_", " ")} · ${relationship.people?.name ?? "No linked partner"} · ${relationship.clients?.summary || "No client summary."}`}
+        title={`${relationship.client?.name ?? "Client"} relationship`}
+        description={`${relationship.source.replaceAll("_", " ")} · ${relationship.contact?.name ?? "No linked partner"} · ${relationship.client?.summary || "No client summary."}`}
       >
         <StatusPill value={relationship.status} />
         <EditRelationshipButton relationship={relationship} clients={clients} people={people} />

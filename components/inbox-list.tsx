@@ -22,10 +22,10 @@ const ENTRY_TYPES = ["note", "meeting", "decision", "document", "update", "miles
 type InboxProject = {
   id: string;
   name: string;
-  clients?: Array<{ name: string }> | { name: string } | null;
+  people?: Array<{ name: string }> | { name: string } | null;
 };
 
-const clientName = (c: InboxProject["clients"]) =>
+const clientName = (c: InboxProject["people"]) =>
   Array.isArray(c) ? c[0]?.name ?? null : c?.name ?? null;
 
 export function InboxList({
@@ -351,7 +351,7 @@ export function InboxList({
                     <option value="">No project</option>
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {clientName(p.clients) ? `${clientName(p.clients)} / ` : ""}
+                        {clientName(p.people) ? `${clientName(p.people)} / ` : ""}
                         {p.name}
                       </option>
                     ))}
@@ -401,7 +401,7 @@ export function InboxList({
               <option value="">Unsorted (no project)</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {clientName(p.clients) ? `${clientName(p.clients)} / ` : ""}
+                  {clientName(p.people) ? `${clientName(p.people)} / ` : ""}
                   {p.name}
                 </option>
               ))}

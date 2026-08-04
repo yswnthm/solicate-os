@@ -24,9 +24,10 @@ const getActiveClientsCached = unstable_cache(
   async (accessToken: string | null) => {
     const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
-      .from("clients")
-      .select("id, name, kind, status, summary, website_url")
-      .neq("status", "archived")
+      .from("people")
+      .select("id, name, kind, website_url, summary")
+      .is("archived_at", null)
+      .eq("kind", "business")
       .order("name");
     throwOnError(response.error);
     return response.data ?? [];
@@ -44,7 +45,7 @@ const getProjectsCached = unstable_cache(
     const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
       .from("projects")
-      .select("id, name, code, status, target_date, updated_at, started_on, summary, objective, client_id, clients(id, name)")
+      .select("id, name, code, status, target_date, updated_at, started_on, summary, objective, person_id, people!projects_person_id_fkey(id, name)")
       .neq("status", "archived")
       .order("updated_at", { ascending: false });
     throwOnError(response.error);
@@ -64,7 +65,7 @@ const getActiveProjectsForSelectCached = unstable_cache(
     const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
       .from("projects")
-      .select("id, name, clients(id, name)")
+      .select("id, name, people!projects_person_id_fkey(id, name)")
       .in("status", ["active", "paused"])
       .order("name");
     throwOnError(response.error);
@@ -176,7 +177,7 @@ export async function getTodayData(userId: string) {
       .limit(6),
     supabase
       .from("projects")
-      .select("id, name, status, updated_at, clients(name)")
+      .select("id, name, status, updated_at, people!projects_person_id_fkey(name)")
       .eq("status", ACTIVE)
       .order("updated_at", { ascending: false })
       .limit(6),
@@ -204,7 +205,7 @@ export async function getTodayData(userId: string) {
     // Active projects + their most recent activity → stalled detection.
     supabase
       .from("projects")
-      .select("id, name, created_at, clients(name)")
+      .select("id, name, created_at, people!projects_person_id_fkey(name)")
       .eq("status", ACTIVE)
       .order("updated_at", { ascending: false })
       .limit(200),
@@ -281,7 +282,7 @@ export async function getProjectHeader(projectId: string) {
   const supabase = await createSupabaseServerClient();
   const response = await supabase
     .from("projects")
-    .select("*, clients(id, name)")
+    .select("*, people!projects_person_id_fkey(id, name)")
     .eq("id", projectId)
     .maybeSingle();
   throwOnError(response.error);
@@ -292,7 +293,7 @@ export async function getProjectWorkspace(projectId: string) {
   const supabase = await createSupabaseServerClient();
   const [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, finance, people, users] =
     await Promise.all([
-      supabase.from("projects").select("*, clients(id, name)").eq("id", projectId).maybeSingle(),
+      supabase.from("projects").select("*, people!projects_person_id_fkey(id, name)").eq("id", projectId).maybeSingle(),
       supabase
         .from("tasks")
         .select("id, title, description_md, status, priority, due_at, phase_id, assignee_id, phases(id, name, position)")
@@ -395,7 +396,7 @@ export async function getProjectWorkspaceForAI(projectId: string) {
   const supabase = await createSupabaseServerClient();
   const [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, finance, people, users] =
     await Promise.all([
-      supabase.from("projects").select("*, clients(id, name)").eq("id", projectId).maybeSingle(),
+      supabase.from("projects").select("*, people!projects_person_id_fkey(id, name)").eq("id", projectId).maybeSingle(),
       supabase
         .from("tasks")
         // No description_md — saves significant tokens; capture context uses title+status+id
@@ -523,7 +524,7 @@ export async function getPhaseWorkspace(phaseId: string) {
   const [project, tasks, issues, entries, finance, phases, users] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, code, status, summary, objective, client_id, clients(id, name)")
+      .select("id, name, code, status, summary, objective, person_id, people!projects_person_id_fkey(id, name)")
       .eq("id", phase.project_id)
       .maybeSingle(),
     supabase
@@ -592,7 +593,7 @@ export async function getRelationships() {
   const supabase = await createSupabaseServerClient();
   const response = await supabase
     .from("relationships")
-    .select("*, clients(id, name, status, summary), people(id, name, is_partner)")
+    .select("*, client:people!relationships_client_id_fkey(id, name, kind, website_url, summary), contact:people!relationships_person_id_fkey(id, name, is_partner)")
     .order("created_at", { ascending: false });
   throwOnError(response.error);
   return response.data ?? [];
@@ -602,7 +603,7 @@ export async function getRelationshipDetail(relationshipId: string) {
   const supabase = await createSupabaseServerClient();
   const relationshipResult = await supabase
     .from("relationships")
-    .select("*, clients(id, name, status, summary, website_url), people(id, name, email, phone, is_partner)")
+    .select("*, client:people!relationships_client_id_fkey(id, name, kind, website_url, summary), contact:people!relationships_person_id_fkey(id, name, email, phone, is_partner)")
     .eq("id", relationshipId)
     .maybeSingle();
   throwOnError(relationshipResult.error);
@@ -622,7 +623,7 @@ export async function getRelationshipDetail(relationshipId: string) {
 export async function getClientDetail(clientId: string) {
   const supabase = await createSupabaseServerClient();
   const [client, contacts, projects, conversations, people, relationships] = await Promise.all([
-    supabase.from("clients").select("*").eq("id", clientId).maybeSingle(),
+    supabase.from("people").select("*").eq("id", clientId).maybeSingle(),
     supabase
       .from("client_people")
       .select("role_label, is_primary, people(id, name, email, phone, is_partner)")
@@ -668,7 +669,7 @@ const getInboxDataCached = unstable_cache(
     const [messages, entries] = await Promise.all([
       supabase
         .from("messages")
-        .select("id, body_md, sent_at, conversation_id, conversations(title, project_id, clients(name))")
+        .select("id, body_md, sent_at, conversation_id, conversations(title, project_id, people(name))")
         .eq("triage_state", "inbox")
         .order("sent_at", { ascending: false })
         .limit(100),
@@ -688,18 +689,24 @@ const getInboxDataCached = unstable_cache(
 
 export async function getPersonDetail(personId: string) {
   const supabase = await createSupabaseServerClient();
-  const [person, participations, clientLinks, conversations, relationships] = await Promise.all([
-    supabase.from("people").select("*").eq("id", personId).maybeSingle(),
+  const personResult = await supabase.from("people").select("*").eq("id", personId).maybeSingle();
+  throwOnError(personResult.error);
+  const person = personResult.data;
+  if (!person) return { person: null, participations: [], clientLinks: [], conversations: [], relationships: [] };
+
+  const [participations, clientLinks, conversations, relationships] = await Promise.all([
     supabase
       .from("project_participants")
-      .select("role, role_label, financial_arrangement, financial_value, currency_code, projects(id, name, status, code, clients(name))")
+      .select("role, role_label, financial_arrangement, financial_value, currency_code, projects(id, name, status, code, people!projects_person_id_fkey(name))")
       .eq("person_id", personId)
       .order("created_at", { ascending: false }),
-    supabase
-      .from("client_people")
-      .select("role_label, is_primary, clients(id, name, status)")
-      .eq("person_id", personId)
-      .order("created_at", { ascending: false }),
+    person.organization_id
+      ? supabase
+          .from("people")
+          .select("id, name, kind, website_url, summary")
+          .eq("id", person.organization_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
     supabase
       .from("conversation_participants")
       .select("conversations(id, title, channel, project_id, last_message_at)")
@@ -708,15 +715,15 @@ export async function getPersonDetail(personId: string) {
       .order("conversations(last_message_at)", { ascending: false }),
     supabase
       .from("relationships")
-      .select("id, source, status, summary, financial_arrangement, referral_commission, commission_currency, clients(id, name, status)")
-      .eq("person_id", personId)
+      .select("id, type, source, status, summary, financial_arrangement, referral_commission, commission_currency, client:people!relationships_client_id_fkey(id, name, kind)")
+      .or(`person_id.eq.${personId},client_id.eq.${personId}`)
       .order("created_at", { ascending: false }),
   ]);
-  [person, participations, clientLinks, conversations, relationships].forEach((r) => throwOnError(r.error));
+  [participations, clientLinks, conversations, relationships].forEach((r) => throwOnError(r.error));
   return {
-    person: person.data,
+    person: person,
     participations: participations.data ?? [],
-    clientLinks: clientLinks.data ?? [],
+    clientLinks: clientLinks.data ? [clientLinks.data] : [],
     conversations: conversations.data ?? [],
     relationships: relationships.data ?? [],
   };
@@ -736,7 +743,7 @@ export async function searchRecords(query: string) {  if (!query.trim()) return 
       .select("id, conversation_id, body_md, sent_at, conversations(title, project_id)")
       .textSearch("search_vector", search, { type: "websearch" })
       .limit(20),
-    supabase.from("projects").select("id, name, code, status, clients(name)").ilike("name", `%${search}%`).limit(10),
+    supabase.from("projects").select("id, name, code, status, people!projects_person_id_fkey(name)").ilike("name", `%${search}%`).limit(10),
     supabase.from("people").select("id, name, is_partner, email").ilike("name", `%${search}%`).limit(10),
   ]);
   [entries, messages, projects, people].forEach((r) => throwOnError(r.error));
@@ -755,14 +762,14 @@ export async function getCaptureFormOptions() {
   const [projects, phases, clients, people, models, template] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, status, clients(id, name)")
+      .select("id, name, status, people!projects_person_id_fkey(id, name)")
       .in("status", ["active", "paused"])
       .order("name"),
     supabase
       .from("phases")
       .select("id, project_id, name, position, status")
       .order("position"),
-    supabase.from("clients").select("id, name").neq("status", "archived").order("name"),
+    supabase.from("people").select("id, name").is("archived_at", null).eq("kind", "business").order("name"),
     supabase.from("people").select("id, name").is("archived_at", null).order("name"),
     getActiveModels(),
     getTemplateBySlug("capture-analyze"),
@@ -773,7 +780,7 @@ export async function getCaptureFormOptions() {
     projects: (projects.data ?? []).map((p) => ({
       id: String(p.id),
       name: String(p.name),
-      client: String((p.clients as { name?: unknown } | null | undefined)?.name ?? "") || null,
+      client: String((p.people as { name?: unknown } | null | undefined)?.name ?? "") || null,
       phases: (phases.data ?? [])
         .filter((ph) => ph.project_id === p.id)
         .map((ph) => ({
@@ -947,7 +954,7 @@ export async function getFinanceCaptureOptions() {
   const supabase = await createSupabaseServerClient();
   const [projects, phases, people, transactions, invoices, categories, paymentMethods, models] =
     await Promise.all([
-      supabase.from("projects").select("id, name, code, clients(name)").neq("status", "archived").order("name"),
+      supabase.from("projects").select("id, name, code, people!projects_person_id_fkey(name)").neq("status", "archived").order("name"),
       supabase.from("phases").select("id, name, position, status, project_id").neq("status", "cancelled").order("position"),
       supabase.from("people").select("id, name, is_partner").order("name"),
       supabase
@@ -976,7 +983,7 @@ export async function getFinanceCaptureOptions() {
       id: String(p.id),
       name: String(p.name),
       code: p.code ? String(p.code) : null,
-      client: String((p.clients as { name?: unknown } | null | undefined)?.name ?? "") || null,
+      client: String((p.people as { name?: unknown } | null | undefined)?.name ?? "") || null,
     })),
     phases: (phases.data ?? []).map((ph) => ({
       id: String(ph.id),

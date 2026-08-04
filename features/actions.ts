@@ -40,11 +40,12 @@ export async function signOut() {
 export async function createClient(formData: FormData) {
   const { user } = await requireActiveUser();
   const supabase = await createSupabaseServerClient();
+  const kind = z.enum(["business", "individual"]).parse(text(formData.get("kind")) || "business");
   const { data, error } = await supabase
-    .from("clients")
+    .from("people")
     .insert({
       name: z.string().min(1).parse(text(formData.get("name"))),
-      kind: z.enum(["business", "person"]).parse(text(formData.get("kind")) || "business"),
+      kind,
       website_url: optional(formData.get("website_url")),
       summary: text(formData.get("summary")),
       created_by_id: user.id,
@@ -52,8 +53,18 @@ export async function createClient(formData: FormData) {
     .select("id")
     .single();
   if (error) throw new Error(error.message);
+  // A client is a person + a client relationship.
+  const { error: relError } = await supabase.from("relationships").insert({
+    client_id: data.id,
+    type: "client",
+    created_by_id: user.id,
+  });
+  if (relError) throw new Error(relError.message);
   revalidatePath("/clients");
   revalidateTag("clients");
+  revalidatePath("/people");
+  revalidateTag("people");
+  revalidatePath("/relationships");
   redirect(`/clients/${data.id}`);
 }
 
@@ -79,27 +90,24 @@ export async function createPerson(formData: FormData) {
 export async function linkPersonToClient(formData: FormData) {
   await requireActiveUser();
   const clientId = id(formData.get("client_id"));
+  const personId = id(formData.get("person_id"));
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("client_people").insert({
-    client_id: clientId,
-    person_id: id(formData.get("person_id")),
-    role_label: text(formData.get("role_label")),
-    is_primary: formData.get("is_primary") === "on",
-  });
+  const { error } = await supabase.from("people").update({ organization_id: clientId }).eq("id", personId);
   if (error) throw new Error(error.message);
   revalidatePath(`/clients/${clientId}`);
+  revalidatePath(`/people/${personId}`);
 }
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
 export async function createProject(formData: FormData) {
   const { user } = await requireActiveUser();
-  const clientId = id(formData.get("client_id"));
+  const personId = id(formData.get("person_id"));
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("projects")
     .insert({
-      client_id: clientId,
+      person_id: personId,
       owner_id: user.id,
       name: z.string().min(1).parse(text(formData.get("name"))),
       code: optional(formData.get("code")),
@@ -452,6 +460,9 @@ export async function createRelationship(formData: FormData) {
     .insert({
       client_id: clientId,
       person_id: personId,
+      type: z.enum(["client", "lead", "partner", "team", "internal"]).parse(
+        text(formData.get("type")) || "client",
+      ),
       source: z.enum(["referral_partner", "direct_outreach", "existing_client", "marketplace", "internal"]).parse(
         text(formData.get("source")) || "direct_outreach",
       ),

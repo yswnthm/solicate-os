@@ -58,23 +58,25 @@ const datesConsistent = <T extends { started_on?: string | null; target_date?: s
 
 export const clientSchema = z.object({
   name: req("Client name is required."),
-  kind: z.enum(["business", "person"]),
-  status: z.enum(["active", "inactive", "archived"]),
+  kind: z.enum(["business", "individual"]),
   website_url: optUrl,
   summary: z.string().trim(),
 });
 
 export const personSchema = z.object({
   name: req("Name is required."),
+  kind: z.enum(["business", "individual"]).optional(),
   email: optEmail,
   phone: optString,
+  website_url: optUrl,
+  organization_id: optUuid,
   is_partner: z.boolean(),
   summary: z.string().trim(),
 });
 
 export const projectSchema = z
   .object({
-    client_id: z.string().uuid("Choose a client."),
+    person_id: z.string().uuid("Choose a client."),
     name: req("Project name is required."),
     code: optString,
     summary: z.string().trim(),
@@ -242,6 +244,7 @@ export const relationshipSchema = z
   .object({
     client_id: z.string().uuid(),
     person_id: optUuid,
+    type: z.enum(["client", "lead", "partner", "team", "internal"]),
     source: z.enum(["referral_partner", "direct_outreach", "existing_client", "marketplace", "internal"]),
     status: z.enum(["active", "inactive", "archived"]),
     summary: z.string().trim(),

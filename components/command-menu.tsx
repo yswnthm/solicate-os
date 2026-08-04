@@ -16,6 +16,7 @@ import {
   updateProjectStatus,
 } from "@/features/actions";
 import { quickSearch } from "@/features/search";
+import { useTheme } from "@/components/theme-provider";
 
 type PaletteMode =
   | "command"
@@ -33,10 +34,10 @@ type Project = {
   name: string;
   code?: string | null;
   status: string;
-  clients?: Array<{ name: string }> | { name: string } | null;
+  people?: Array<{ name: string }> | { name: string } | null;
 };
 
-const clientName = (c: Project["clients"]) =>
+const clientName = (c: Project["people"]) =>
   Array.isArray(c) ? c[0]?.name ?? null : c?.name ?? null;
 
 type Client = { id: string; name: string };
@@ -53,6 +54,7 @@ const MODE_TITLES: Record<Exclude<PaletteMode, "command">, string> = {
 };
 
 export function CommandMenu({ projects, clients }: { projects: Project[]; clients: Client[] }) {
+  const { setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PaletteMode>("command");
   const [search, setSearch] = useState("");
@@ -250,7 +252,7 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                       <span className="cmdk-item-main">
                         <span>{p.name}</span>
                         <span className="cmdk-sub">
-                          {clientName(p.clients) ?? "Project"} · {p.status}
+                          {clientName(p.people) ?? "Project"} · {p.status}
                         </span>
                       </span>
                     </Command.Item>
@@ -312,7 +314,7 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                       <span className="cmdk-item-main">
                         <span>{p.name}</span>
                         <span className="cmdk-sub">
-                          {clientName(p.clients) ?? "Project"} · {p.status}
+                          {clientName(p.people) ?? "Project"} · {p.status}
                         </span>
                       </span>
                     </Command.Item>
@@ -397,6 +399,30 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                       <span className="cmdk-item-main"><span>New person</span></span>
                     </Command.Item>
                   </Command.Group>
+
+                  <Command.Group heading="Theme / Appearance" className="cmdk-group-heading">
+                    <Command.Item className="cmdk-item" onSelect={() => { setTheme("dark"); setOpen(false); }}>
+                      <span className="cmdk-icon">🌙</span>
+                      <span className="cmdk-item-main">
+                        <span>Dark Mode</span>
+                        <span className="cmdk-sub">Switch interface to dark mode</span>
+                      </span>
+                    </Command.Item>
+                    <Command.Item className="cmdk-item" onSelect={() => { setTheme("light"); setOpen(false); }}>
+                      <span className="cmdk-icon">☀️</span>
+                      <span className="cmdk-item-main">
+                        <span>Light Mode</span>
+                        <span className="cmdk-sub">Switch interface to light mode</span>
+                      </span>
+                    </Command.Item>
+                    <Command.Item className="cmdk-item" onSelect={() => { setTheme("system"); setOpen(false); }}>
+                      <span className="cmdk-icon">💻</span>
+                      <span className="cmdk-item-main">
+                        <span>System Theme</span>
+                        <span className="cmdk-sub">Match system appearance settings</span>
+                      </span>
+                    </Command.Item>
+                  </Command.Group>
                 </>
               )}
             </Command.List>
@@ -478,7 +504,7 @@ function CreateForm({
         <form className="form" action={createProject} onSubmit={onDone}>
           <div className="field">
             <label htmlFor="palette-project-client">Client</label>
-            <select id="palette-project-client" name="client_id" required autoFocus>
+            <select id="palette-project-client" name="person_id" required autoFocus>
               <option value="">Choose client</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -516,7 +542,7 @@ function CreateForm({
             <label htmlFor="palette-client-kind">Type</label>
             <select id="palette-client-kind" name="kind">
               <option value="business">Business</option>
-              <option value="person">Individual</option>
+              <option value="individual">Individual</option>
             </select>
           </div>
           <button className="button" type="submit" style={{ marginTop: 8 }}>

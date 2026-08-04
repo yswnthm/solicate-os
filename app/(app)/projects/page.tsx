@@ -49,7 +49,7 @@ export default async function ProjectsPage() {
                   <Link className="row-main" href={`/projects/${project.id}`}>
                     <div className="row-title">{project.name}</div>
                     <div className="row-meta">
-                      {project.clients?.name}
+                      {project.people?.name}
                       {project.code ? ` · ${project.code}` : ""}
                       {project.target_date ? ` · target ${formatDate(project.target_date)}` : ""}
                     </div>

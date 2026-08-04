@@ -5,6 +5,7 @@ import { SearchTriggerButton } from "@/components/search-trigger-button";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { NavLink } from "@/components/nav-link";
 import { SidebarToggle } from "@/components/sidebar-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getActiveClients, getProjects } from "@/features/queries";
 
 export async function AppShell({
@@ -30,6 +31,7 @@ export async function AppShell({
         <div style={{ width: "320px" }}>
           <SearchTriggerButton />
         </div>
+        <ThemeToggle />
       </header>
 
       {/* Floating Sidebar Island */}

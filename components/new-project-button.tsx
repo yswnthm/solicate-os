@@ -19,7 +19,7 @@ export function NewProjectButton({ clients }: { clients: any[] }) {
         <form className="form" action={createProject} onSubmit={() => setIsOpen(false)}>
           <div className="field">
             <label>Client</label>
-            <select name="client_id" required>
+            <select name="person_id" required>
               <option value="">Choose client</option>
               {clients.map((client: any) => (
                 <option key={client.id} value={client.id}>

@@ -8,7 +8,7 @@
   --surface-hover: rgba(0, 0, 0, 0.04);
   
   /* Glass and Floating Panels */
-  --glass-bg: rgba(255, 255, 255, 0.95); /* removed glass opacity */
+  --glass-bg: rgba(255, 255, 255, 0.95);
   --glass-border: rgba(0, 0, 0, 0.1);
   
   /* Deep Dark Contrast (Sidebar/Islands) */
@@ -23,6 +23,7 @@
   --muted: #737373;
   --muted-2: #a3a3a3;
   --line: rgba(0,0,0,0.1);
+  --line-2: rgba(0,0,0,0.06);
   
   /* Vibrant Pastel Bento Colors */
   --accent: #E4FF00;
@@ -38,6 +39,7 @@
   --card-gray: #f3f4f6;
   --card-indigo: #e0e7ff;
   --card-orange: #ffedd5;
+  --card-row-bg: #ffffff;
 
   --danger: #ef4444;
   --danger-soft: #fee2e2;
@@ -71,6 +73,66 @@
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Premium Dark Theme Palette ────────────────────────────────────────── */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Midnight Obsidian Canvas */
+  --canvas: #090a0f;
+  --surface: #14161f;
+  --surface-2: #1b1e2b;
+  --surface-hover: rgba(255, 255, 255, 0.07);
+  
+  /* Glass and Floating Panels */
+  --glass-bg: rgba(20, 22, 31, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  
+  /* Floating Dark Islands */
+  --island-bg: #0f1017;
+  --island-ink: #f8fafc;
+  --island-ink-2: #94a3b8;
+  --island-hover: rgba(255, 255, 255, 0.1);
+  --island-border: rgba(255, 255, 255, 0.08);
+
+  --ink: #f3f4f6;
+  --ink-2: #cbd5e1;
+  --muted: #94a3b8;
+  --muted-2: #64748b;
+  --line: rgba(255, 255, 255, 0.12);
+  --line-2: rgba(255, 255, 255, 0.07);
+  
+  /* Neon Accent */
+  --accent: #E4FF00;
+  --accent-hover: #f0ff4f;
+  --accent-soft: rgba(228, 255, 0, 0.16);
+  --accent-ink: #111111;
+  
+  /* Dark Mode Bento Cards - Rich dark tinted hues */
+  --card-yellow: #1e1b12;
+  --card-pink: #22141c;
+  --card-purple: #1b1426;
+  --card-green: #102218;
+  --card-blue: #111f2c;
+  --card-gray: #181a24;
+  --card-indigo: #161a2e;
+  --card-orange: #261a12;
+  --card-row-bg: #1c1f2e;
+
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.18);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.18);
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, 0.18);
+
+  /* Enhanced Shadows for Dark Canvas */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-float: 0 20px 40px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-neon: 0 0 16px rgba(228, 255, 0, 0.35);
 }
 
 * { box-sizing: border-box; }
@@ -483,14 +545,14 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
 
 /* Bento specific rows */
 .card-primary .row, .card-secondary .row, .card-tertiary .row, .card-indigo .row, .card-orange .row {
-  background: #ffffff;
-  border: none;
+  background: var(--card-row-bg);
+  border: 1px solid var(--line-2);
   box-shadow: var(--shadow-sm);
 }
 .card-dark .row {
-  background: #2a2a2a;
-  color: var(--island-ink);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--line);
 }
 
 .row-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
@@ -1220,3 +1282,77 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
 .pill.success { color: var(--success); background: var(--success-soft); }
 
 .button.small { padding: 6px 12px; font-size: 13px; box-shadow: none; }
+
+/* ─── Theme Toggle Button & Segmented Control ─────────────────────────────── */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+.theme-toggle-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: scale(1.06);
+}
+.theme-icon {
+  transition: transform var(--transition-bounce);
+}
+.theme-toggle-btn:hover .theme-icon {
+  transform: rotate(20deg);
+}
+
+.theme-segmented-control {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  max-width: 360px;
+  width: 100%;
+}
+
+.theme-segment-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.theme-segment-btn:hover {
+  color: var(--ink);
+}
+
+.theme-segment-btn.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .theme-segment-btn.active {
+  background: var(--island-bg);
+  color: var(--island-ink);
+  border-color: var(--line);
+}

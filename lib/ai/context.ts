@@ -57,7 +57,7 @@ export async function getMessageDraftContext(vars: {
   const [project, phases, openTasks, doneTasks, issues, entries, finance, person, participant, conversations, phaseDetail] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, code, summary, objective, success_definition, direction, status, started_on, target_date, completed_at, clients(id, name)")
+      .select("id, name, code, summary, objective, success_definition, direction, status, started_on, target_date, completed_at, people!projects_person_id_fkey(id, name)")
       .eq("id", vars.projectId)
       .maybeSingle(),
     supabase
@@ -203,7 +203,7 @@ export async function getMessageDraftContext(vars: {
       direction: project.data?.direction,
       started_on: project.data?.started_on,
       target_date: project.data?.target_date,
-      client: (project.data?.clients as Record<string, unknown> | undefined)?.name ?? null,
+      client: (project.data?.people as Record<string, unknown> | undefined)?.name ?? null,
     },
     // Lean phase list — no scope_*/proposal_* (those are in the detail fetch below).
     phases: (phases.data ?? []).map((p) => ({
@@ -294,7 +294,7 @@ export async function getWeeklySummaryContext(projectId: string) {
 
   return {
     projectName: workspace.project.name,
-    clientName: (workspace.project as any).clients?.name ?? null,
+    clientName: (workspace.project as any).people?.name ?? null,
     entries: recent(workspace.entries),
     tasks: workspace.tasks
       .filter((t: any) => t.status === "done")
@@ -430,7 +430,7 @@ export async function getWeekReviewContext() {
 
     return {
       name: p.name,
-      client: p.clients?.name ?? null,
+      client: p.people?.name ?? null,
       status: p.status,
       rollup: {
         open_tasks: rollup.open_tasks ?? 0,
@@ -506,6 +506,6 @@ export async function getProjectsForContext() {
   return projects.map((p: any) => ({
     id: p.id,
     name: p.name,
-    client: p.clients?.name ?? null,
+    client: p.people?.name ?? null,
   }));
 }

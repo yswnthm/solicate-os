@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { signOut } from "@/features/actions";
 import { requireActiveUser } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function SettingsPage() {
   const { user, profile } = await requireActiveUser();
@@ -9,6 +10,14 @@ export default async function SettingsPage() {
     <>
       <PageHeader title="Settings" description="Account and application configuration." />
       <div className="stack">
+        <section className="card">
+          <h3>Appearance</h3>
+          <p className="muted" style={{ fontSize: 13, marginTop: 4, marginBottom: 16 }}>
+            Customize how Solicate OS looks on your device. Choose between light mode, dark mode, or follow system settings.
+          </p>
+          <ThemeToggle variant="segmented" />
+        </section>
+
         <section className="card">
           <h3>Account</h3>
           <div className="list" style={{ marginTop: 8 }}>

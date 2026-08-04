@@ -418,7 +418,7 @@ export async function getDraftFormOptions(): Promise<DraftFormOptions> {
   const config = (template?.active.config ?? {}) as { lengths?: { id: string; label: string; hint: string }[]; styles?: string[] };
 
   return {
-    projects: projects.map((p: any) => ({ id: p.id, name: p.name, client: p.clients?.name ?? null })),
+    projects: projects.map((p: any) => ({ id: p.id, name: p.name, client: p.people?.name ?? null })),
     people: people.map((p: any) => ({ id: p.id, name: p.name })),
     models: models.map((m) => ({ id: m.model_id, provider: m.provider, model_id: m.model_id, display_name: m.display_name })),
     template: template

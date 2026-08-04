@@ -311,7 +311,7 @@ export default async function ProjectOverviewPage({
           <ModalTrigger buttonLabel="+ New conversation" title="Create conversation" buttonClass="button ghost small">
             <form className="form" action={createConversation}>
               <input type="hidden" name="project_id" value={projectId} />
-              <input type="hidden" name="client_id" value={project.client_id} />
+              <input type="hidden" name="client_id" value={project.person_id} />
               <div className="field">
                 <label>New conversation</label>
                 <input name="title" placeholder="Client + Sakshi WhatsApp" required />

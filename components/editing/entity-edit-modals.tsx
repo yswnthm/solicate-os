@@ -44,7 +44,6 @@ const PHASE_STATUS_OPTIONS = ["planned", "active", "on_hold", "completed", "canc
   value: v,
   label: label(v),
 }));
-const CLIENT_STATUS_OPTIONS = ["active", "inactive", "archived"].map((v) => ({ value: v, label: label(v) }));
 const CONVERSATION_KIND_OPTIONS = ["direct", "group"].map((v) => ({ value: v, label: label(v) }));
 const CHANNEL_OPTIONS = ["whatsapp", "email", "manual", "other"].map((v) => ({ value: v, label: label(v) }));
 const ROLE_OPTIONS = ["client_contact", "partner", "collaborator"].map((v) => ({ value: v, label: label(v) }));
@@ -62,6 +61,7 @@ const PAYMENT_STATUS_OPTIONS = ["not_applicable", "pending", "partially_paid", "
 const RELATIONSHIP_SOURCE_OPTIONS = ["referral_partner", "direct_outreach", "existing_client", "marketplace", "internal"].map(
   (v) => ({ value: v, label: label(v) }),
 );
+const RELATIONSHIP_TYPE_OPTIONS = ["client", "lead", "partner", "team", "internal"].map((v) => ({ value: v, label: label(v) }));
 const RELATIONSHIP_STATUS_OPTIONS = ["active", "inactive", "archived"].map((v) => ({
   value: v,
   label: label(v),
@@ -89,8 +89,7 @@ export function EditClientModal({
 }) {
   const fields: FieldConfig[] = [
     { kind: "text", name: "name", label: "Client name", required: true, width: "half", autoFocus: true },
-    { kind: "select", name: "kind", label: "Type", options: [{ value: "business", label: "Business" }, { value: "person", label: "Individual" }], width: "half" },
-    { kind: "select", name: "status", label: "Status", options: CLIENT_STATUS_OPTIONS, width: "half" },
+    { kind: "select", name: "kind", label: "Type", options: [{ value: "business", label: "Business" }, { value: "individual", label: "Individual" }], width: "half" },
     { kind: "url", name: "website_url", label: "Website", placeholder: "https://", hint: "Optional", width: "half" },
     { kind: "textarea", name: "summary", label: "Relationship summary", minHeight: 110 },
   ];
@@ -99,7 +98,7 @@ export function EditClientModal({
       open={open}
       onOpenChange={onOpenChange}
       title="Edit client"
-      record={{ name: client.name, kind: client.kind, status: client.status, website_url: client.website_url ?? "", summary: client.summary }}
+      record={{ name: client.name, kind: client.kind, website_url: client.website_url ?? "", summary: client.summary }}
       fields={fields}
       successMessage="Client updated."
       onSave={async (values) => updateClient(client.id, values)}
@@ -152,7 +151,7 @@ export function EditProjectModal({
   onOpenChange: (open: boolean) => void;
 }) {
   const fields: FieldConfig[] = [
-    { kind: "select", name: "client_id", label: "Client", options: clients.map((c) => ({ value: c.id, label: c.name })), placeholder: "Choose client", required: true, width: "half", autoFocus: true },
+    { kind: "select", name: "person_id", label: "Client", options: clients.map((c) => ({ value: c.id, label: c.name })), placeholder: "Choose client", required: true, width: "half", autoFocus: true },
     { kind: "text", name: "name", label: "Project name", required: true, width: "half" },
     { kind: "text", name: "code", label: "Code", hint: "Must be unique", width: "half" },
     { kind: "select", name: "status", label: "Status", options: PROJECT_STATUS_OPTIONS, width: "half" },
@@ -187,7 +186,7 @@ export function EditProjectModal({
       onOpenChange={onOpenChange}
       title="Edit project"
       record={{
-        client_id: project.client_id,
+        person_id: project.person_id,
         name: project.name,
         code: project.code ?? "",
         status: project.status,
@@ -904,6 +903,13 @@ export function EditRelationshipModal({
     },
     {
       kind: "select",
+      name: "type",
+      label: "Type",
+      options: RELATIONSHIP_TYPE_OPTIONS,
+      width: "half",
+    },
+    {
+      kind: "select",
       name: "source",
       label: "Source",
       options: RELATIONSHIP_SOURCE_OPTIONS,
@@ -965,6 +971,7 @@ export function EditRelationshipModal({
       record={{
         client_id: relationship.client_id,
         person_id: relationship.person_id ?? "",
+        type: relationship.type ?? "client",
         source: relationship.source,
         status: relationship.status,
         summary: relationship.summary ?? "",

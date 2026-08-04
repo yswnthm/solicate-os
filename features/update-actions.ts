@@ -75,9 +75,9 @@ export async function updateClient(id: string, input: unknown): Promise<EditResu
     const parsed = clientSchema.safeParse(input);
     if (!parsed.success) return validationResult(parsed.error);
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.from("clients").update(parsed.data).eq("id", id);
+    const { error } = await supabase.from("people").update(parsed.data).eq("id", id);
     if (error) return { ok: false, error: error.message };
-    refresh(["/clients", `/clients/${id}`], ["clients"]);
+    refresh(["/clients", `/clients/${id}`, `/people/${id}`], ["clients", "people"]);
   });
 }
 

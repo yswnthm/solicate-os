@@ -11,7 +11,9 @@ import { EditClientButton } from "@/components/editing/edit-buttons";
 export default async function ClientsPage() {
   const clients = await getActiveClients();
   const businesses = clients.filter((c: any) => c.kind === "business");
-  const individuals = clients.filter((c: any) => c.kind === "person");
+  const individuals = clients.filter((c: any) => c.kind === "individual");
+  const clientStatus = (c: any) =>
+    c.relationships?.some((r: any) => r.status === "active") ? "active" : "inactive";
 
   return (
     <>
@@ -29,7 +31,7 @@ export default async function ClientsPage() {
               <label>Type</label>
               <select name="kind">
                 <option value="business">Business</option>
-                <option value="person">Individual</option>
+                <option value="individual">Individual</option>
               </select>
             </div>
             <div className="field">
@@ -77,7 +79,7 @@ export default async function ClientsPage() {
                       {client.summary || client.kind}
                     </div>
                   </Link>
-                  <StatusPill value={client.status} />
+                  <StatusPill value={clientStatus(client)} />
                   <EditClientButton client={client} />
                 </div>
               ))}

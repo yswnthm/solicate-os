@@ -43,11 +43,10 @@ export async function applyAction(userId: string, action: CaptureAction, resolve
     case "client.create": {
       const p = action.payload;
       const { data, error } = await supabase
-        .from("clients")
+        .from("people")
         .insert({
           name: p.name,
           kind: p.kind,
-          status: p.status ?? "active",
           website_url: p.website_url,
           summary: p.summary ?? "",
           created_by_id: userId,
@@ -55,7 +54,16 @@ export async function applyAction(userId: string, action: CaptureAction, resolve
         .select("id")
         .single();
       throwOnError(error);
-      return data ? { ok: true, createdId: String(data.id), createdKind: "client" } : { ok: true };
+      if (!data) return { ok: true };
+      // A client is a person + a client relationship.
+      const { error: relError } = await supabase.from("relationships").insert({
+        client_id: data.id,
+        type: "client",
+        status: p.status ?? "active",
+        created_by_id: userId,
+      });
+      if (relError) throw new Error(relError.message);
+      return { ok: true, createdId: String(data.id), createdKind: "client" };
     }
 
     case "project.create": {
@@ -65,7 +73,7 @@ export async function applyAction(userId: string, action: CaptureAction, resolve
       const { data, error } = await supabase
         .from("projects")
         .insert({
-          client_id: client,
+          person_id: client,
           owner_id: userId,
           name: p.name,
           code: p.code,

@@ -63,7 +63,7 @@ export default async function SearchPage({
                         <div className="row-main">
                           <div className="row-title">{project.name}</div>
                           <div className="row-meta">
-                            {project.clients?.name} {project.code ? `· ${project.code}` : ""}
+                            {project.people?.name} {project.code ? `· ${project.code}` : ""}
                           </div>
                         </div>
                         <StatusPill value={project.status} />

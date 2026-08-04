@@ -126,11 +126,11 @@ export default async function RelationshipsPage() {
                 <StatusPill value={r.source} />
                 <div className="row-main">
                   <div className="row-title">
-                    <Link href={`/relationships/${r.id}`}>{r.clients?.name ?? "Client"}</Link>
+                    <Link href={`/relationships/${r.id}`}>{r.client?.name ?? "Client"}</Link>
                   </div>
                   <div className="row-meta">
-                    {r.people?.name
-                      ? `${r.people.name}${r.people.is_partner ? " (partner)" : ""} · `
+                    {r.contact?.name
+                      ? `${r.contact.name}${r.contact.is_partner ? " (partner)" : ""} · `
                       : ""}
                     {r.status.replaceAll("_", " ")}
                     {r.financial_arrangement !== "none"

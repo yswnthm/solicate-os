@@ -51,15 +51,14 @@ export default async function PersonDetailPage({
             </div>
             <div className="list">
               {clientLinks.map((link: any) => (
-                <Link className="row" href={`/clients/${link.clients?.id}`} key={link.clients?.id}>
+                <Link className="row" href={`/clients/${link.id}`} key={link.id}>
                   <div className="row-main">
-                    <div className="row-title">{link.clients?.name}</div>
+                    <div className="row-title">{link.name}</div>
                     <div className="row-meta">
-                      {link.role_label || "Contact"}
-                      {link.is_primary ? " · Primary" : ""}
+                      {link.kind === "business" ? "Business client" : "Individual client"}
                     </div>
                   </div>
-                  <StatusPill value={link.clients?.status} />
+                  <StatusPill value={link.kind} />
                 </Link>
               ))}
             </div>
@@ -80,7 +79,7 @@ export default async function PersonDetailPage({
                     <div className="row-title">{p.projects?.name}</div>
                     <div className="row-meta">
                       {p.role_label || p.role}
-                      {p.projects?.clients?.name ? ` · ${p.projects.clients.name}` : ""}
+                      {p.projects?.people?.name ? ` · ${p.projects.people.name}` : ""}
                       {p.financial_arrangement !== "none"
                         ? ` · ${p.financial_arrangement.replace(/_/g, " ")}${p.financial_value ? ` ${formatCurrency(p.financial_value, p.currency_code ?? "INR")}` : ""}`
                         : ""}
@@ -106,7 +105,7 @@ export default async function PersonDetailPage({
                   href={
                     c.conversations?.project_id
                       ? `/projects/${c.conversations.project_id}`
-                      : `/clients/${person.client_id ?? ""}`
+                      : `/clients/${person.organization_id ?? ""}`
                   }
                   key={c.conversations?.id}
                 >
@@ -136,7 +135,7 @@ export default async function PersonDetailPage({
                 <Link className="row" href={`/relationships/${r.id}`} key={r.id}>
                   <StatusPill value={r.source} />
                   <div className="row-main">
-                    <div className="row-title">{r.clients?.name}</div>
+                    <div className="row-title">{r.client?.name}</div>
                     <div className="row-meta">
                       {r.summary || r.financial_arrangement.replaceAll("_", " ") || "Relationship record"}
                       {r.referral_commission != null

@@ -14,10 +14,10 @@ const ENTRY_TYPES = ["note", "meeting", "decision", "document", "update", "miles
 type InboxProject = {
   id: string;
   name: string;
-  clients?: Array<{ name: string }> | { name: string } | null;
+  people?: Array<{ name: string }> | { name: string } | null;
 };
 
-const clientName = (c: InboxProject["clients"]) =>
+const clientName = (c: InboxProject["people"]) =>
   Array.isArray(c) ? c[0]?.name ?? null : c?.name ?? null;
 
 export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
@@ -132,7 +132,7 @@ export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
               fieldId="triage-all-model"
             />
             {items.length > 0 && (
-              <button className="button ghost small" onClick={onDraft} style={{ marginTop: 8 }}>
+              <button className="button ghost small" onClick={onDraft} disabled={busyId !== null} style={{ marginTop: 8 }}>
                 ↻ Redraft with selected model
               </button>
             )}
@@ -185,7 +185,7 @@ export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
                         <option value="">No project</option>
                         {projects.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {clientName(p.clients) ? `${clientName(p.clients)} / ` : ""}
+                            {clientName(p.people) ? `${clientName(p.people)} / ` : ""}
                             {p.name}
                           </option>
                         ))}

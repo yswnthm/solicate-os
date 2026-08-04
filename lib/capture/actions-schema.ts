@@ -74,7 +74,7 @@ const clientCreate = z.object({
   kind: z.literal("client.create"),
   payload: z.object({
     name: reqText,
-    kind: z.enum(["business", "person"]),
+    kind: z.enum(["business", "individual"]),
     status: z.enum(["active", "inactive", "archived"]).optional(),
     website_url: optText,
     summary: optText,

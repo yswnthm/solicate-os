@@ -84,7 +84,7 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
     const [project, phases, tasks, issues, entries, finance] = await Promise.all([
       supabase
         .from("projects")
-        .select("*, clients(id, name)")
+        .select("*, people!projects_person_id_fkey(id, name)")
         .eq("id", pid)
         .maybeSingle(),
       supabase
@@ -137,7 +137,7 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
   let client: { id: string | null; name: string } | null = null;
   if (input.scope === "new_project") {
     if (input.client_id) {
-      const { data, error } = await supabase.from("clients").select("id, name").eq("id", input.client_id).maybeSingle();
+      const { data, error } = await supabase.from("people").select("id, name").eq("id", input.client_id).maybeSingle();
       throwOnError(error);
       if (data) client = { id: String(data.id), name: String(data.name) };
     }
@@ -228,7 +228,7 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
     projects: projects.map((p) => ({
       id: String(p.id),
       name: String(p.name),
-      client: clientNameOf(p.clients),
+      client: clientNameOf(p.people),
     })),
     people: people.map((p) => ({
       id: String(p.id),

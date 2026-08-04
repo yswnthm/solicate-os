@@ -28,10 +28,7 @@ export default async function ClientPage({
         title={(client as any).name}
         description={(client as any).summary || "Client relationship record."}
       >
-        <StatusPill value={(client as any).status} />
-        <span className="muted" style={{ fontSize: 12 }}>
-          {(client as any).kind}
-        </span>
+        <StatusPill value={(client as any).kind} />
         {(client as any).website_url && (
           <a
             href={(client as any).website_url}
@@ -165,7 +162,7 @@ export default async function ClientPage({
                   <div className="row-main">
                     <div className="row-title">
                       <Link href={`/relationships/${relationship.id}`}>
-                        {relationship.people?.name ?? "Relationship"} · {relationship.source.replaceAll("_", " ")}
+                        {relationship.contact?.name ?? "Relationship"} · {relationship.source.replaceAll("_", " ")}
                       </Link>
                     </div>
                     <div className="row-meta">
@@ -213,14 +210,6 @@ export default async function ClientPage({
                     ))}
                   </select>
                 </div>
-                <div className="field">
-                  <label>Role at this client</label>
-                  <input name="role_label" placeholder="Owner, operations, finance…" />
-                </div>
-                <label className="checkbox">
-                  <input type="checkbox" name="is_primary" />
-                  Primary contact
-                </label>
                 <button className="button" type="submit" style={{ marginTop: 8 }}>
                   Link contact
                 </button>
@@ -230,16 +219,16 @@ export default async function ClientPage({
           {contacts.length ? (
             <div className="list">
               {contacts.map((contact: any) => (
-                <div className="row" key={contact.people?.id}>
+                <div className="row" key={contact.id}>
                   <div className="row-main">
-                    <div className="row-title">{contact.people?.name}</div>
+                    <div className="row-title">{contact.name}</div>
                     <div className="row-meta">
-                      {contact.role_label || "Contact"}
-                      {contact.is_primary ? " · primary" : ""}
-                      {contact.people?.email ? ` · ${contact.people.email}` : ""}
+                      {contact.kind === "business" ? "Business" : "Individual"}
+                      {contact.email ? ` · ${contact.email}` : ""}
+                      {contact.phone ? ` · ${contact.phone}` : ""}
                     </div>
                   </div>
-                  {contact.people?.is_partner ? (
+                  {contact.is_partner ? (
                     <StatusPill value="partner" />
                   ) : null}
                 </div>

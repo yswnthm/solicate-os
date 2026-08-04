@@ -155,7 +155,7 @@ export default async function TodayPage() {
                     <StatusPill value="project" />
                     <div className="row-main">
                       <div className="row-title">{project.name}</div>
-                      <div className="row-meta">{project.clients?.name}</div>
+                      <div className="row-meta">{project.people?.name}</div>
                     </div>
                     <span className="muted" style={{ fontSize: 13 }}>{project.daysSince}d quiet</span>
                   </Link>
@@ -211,7 +211,7 @@ export default async function TodayPage() {
                     <div className="row-main">
                       <div className="row-title">{project.name}</div>
                       <div className="row-meta">
-                        {project.clients?.name} · {formatDateTime(project.updated_at)}
+                        {project.people?.name} · {formatDateTime(project.updated_at)}
                       </div>
                     </div>
                     <StatusPill value={project.status} />
