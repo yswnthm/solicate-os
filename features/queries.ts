@@ -130,9 +130,6 @@ export async function getTodayData(userId: string) {
     inboxMessages,
     inboxEntries,
     changedProjects,
-    unassignedRes,
-    preparingInvoicesRes,
-    recentTransactionsRes,
     milestoneEntriesRes,
     phaseDeadlinesRes,
     activeProjectsRes,
@@ -142,20 +139,22 @@ export async function getTodayData(userId: string) {
   ] = await Promise.all([
     supabase
       .from("tasks")
-      .select("id, title, due_at, priority, status, project_id, projects(name)")
-      .eq("assignee_id", userId)
+      .select("id, title, due_at, priority, status, project_id, projects!inner(name, status), app_users!assignee_id(display_name)")
+      .or(`assignee_id.is.null,assignee_id.eq.${userId}`)
       .in("status", ["todo", "in_progress", "blocked"])
       .not("due_at", "is", null)
       .lt("due_at", nowIso)
+      .eq("projects.status", ACTIVE)
       .order("due_at"),
     supabase
       .from("tasks")
-      .select("id, title, due_at, priority, status, project_id, projects(name)")
-      .eq("assignee_id", userId)
+      .select("id, title, due_at, priority, status, project_id, projects!inner(name, status), app_users!assignee_id(display_name)")
+      .or(`assignee_id.is.null,assignee_id.eq.${userId}`)
       .in("status", ["todo", "in_progress", "blocked"])
       .not("due_at", "is", null)
       .gte("due_at", nowIso)
       .lte("due_at", endOfWeek)
+      .eq("projects.status", ACTIVE)
       .order("due_at"),
     supabase
       .from("issues")
@@ -181,36 +180,6 @@ export async function getTodayData(userId: string) {
       .eq("status", ACTIVE)
       .order("updated_at", { ascending: false })
       .limit(6),
-    // Open tasks on active projects with no assignee — work that is real but
-    // has no owner, so a blank assignee never hides it from the dashboard.
-    supabase
-      .from("tasks")
-      .select("id, title, due_at, priority, status, project_id, projects!inner(name, status)")
-      .is("assignee_id", null)
-      .in("status", ["todo", "in_progress", "blocked"])
-      .eq("projects.status", ACTIVE)
-      .order("due_at", { ascending: true, nullsFirst: false })
-      .limit(12),
-    // Invoices stuck in "preparing" — the money you still need to send.
-    supabase
-      .from("transactions")
-      .select("id, amount, invoice_number, transaction_date, from_person:people!transactions_from_person_id_fkey(id, name)")
-      .eq("type", "income")
-      .eq("invoice_status", "preparing")
-      .order("transaction_date", { ascending: true })
-      .limit(8),
-    // Recent non-cancelled transactions with allocations → compute what is
-    // still unallocated so money without a home is visible.
-    supabase
-      .from("transactions")
-      .select(`id, type, amount, status, transaction_date, invoice_status,
-               from_person:people!transactions_from_person_id_fkey(id, name),
-               to_person:people!transactions_to_person_id_fkey(id, name),
-               transaction_allocations(amount)`)
-      .neq("status", "cancelled")
-      .order("transaction_date", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(30),
     // Upcoming milestone entries (records of type milestone with a future date).
     supabase
       .from("entries")
@@ -265,16 +234,7 @@ export async function getTodayData(userId: string) {
       .limit(6),
   ]);
 
-  [overdue, upcoming, issues, inboxMessages, inboxEntries, changedProjects, unassignedRes, preparingInvoicesRes, recentTransactionsRes, milestoneEntriesRes, phaseDeadlinesRes, activeProjectsRes, activityRes, weekDecisionsRes, weekRecordsRes].forEach((r) => throwOnError(r.error));
-
-  // Under-allocated money, computed in JS from the recent transaction batch.
-  const underAllocated = (recentTransactionsRes.data ?? [])
-    .map((t) => {
-      const allocated = (t.transaction_allocations ?? []).reduce((s: number, a: any) => s + Number(a.amount), 0);
-      return { ...t, allocated, unallocated: Number(t.amount) - allocated };
-    })
-    .filter((t) => t.unallocated > 0)
-    .slice(0, 5);
+  [overdue, upcoming, issues, inboxMessages, inboxEntries, changedProjects, milestoneEntriesRes, phaseDeadlinesRes, activeProjectsRes, activityRes, weekDecisionsRes, weekRecordsRes].forEach((r) => throwOnError(r.error));
 
   // Stalled = active project whose most recent activity (or creation, if never
   // active) is 7+ days old. Brand-new projects are not flagged.
@@ -299,9 +259,6 @@ export async function getTodayData(userId: string) {
     inboxMessages: inboxMessages.data ?? [],
     inboxEntries: inboxEntries.data ?? [],
     changedProjects: changedProjects.data ?? [],
-    unassigned: unassignedRes.data ?? [],
-    preparingInvoices: preparingInvoicesRes.data ?? [],
-    underAllocated,
     milestones: milestoneEntriesRes.data ?? [],
     phaseDeadlines: phaseDeadlinesRes.data ?? [],
     stalled,

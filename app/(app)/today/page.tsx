@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 
-import { getFinanceDashboard, getTodayData } from "@/features/queries";
+import { getTodayData } from "@/features/queries";
 import { getTaskEditContext } from "@/features/update-actions";
 import { StatusPill } from "@/components/status-pill";
 import { requireActiveUser } from "@/lib/auth";
@@ -10,12 +10,9 @@ import { MorningBriefButton } from "@/components/morning-brief";
 import { WeekReviewButton } from "@/components/week-review";
 import { EditTaskButton } from "@/components/editing/edit-buttons";
 
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
-
 export default async function TodayPage() {
   const { user, profile } = await requireActiveUser();
-  const [data, finance] = await Promise.all([getTodayData(user.id), getFinanceDashboard()]);
+  const data = await getTodayData(user.id);
   const inboxCount = data.inboxMessages.length + data.inboxEntries.length;
 
   return (
@@ -34,14 +31,6 @@ export default async function TodayPage() {
         </div>
       </div>
 
-      {/* Finance pulse */}
-      <div className="bento-grid" style={{ marginBottom: "2rem" }}>
-        <Stat label="YTD Income" value={formatCurrency(finance.totalIncome)} note="Money in" color="var(--success)" />
-        <Stat label="YTD Expense" value={formatCurrency(finance.totalExpense)} note="Money out" color="var(--danger)" />
-        <Stat label="Net Profit" value={formatCurrency(finance.netProfit)} note="YTD" color="var(--ink)" />
-        <Stat label="Awaiting Payment" value={formatCurrency(finance.sentTotal)} note={`${finance.sentCount} invoice${finance.sentCount === 1 ? "" : "s"} sent`} color="var(--warning)" />
-      </div>
-
       {/* Main dashboard */}
       <div className="bento-grid">
         <div className="col-span-8" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -56,17 +45,9 @@ export default async function TodayPage() {
           <section className="section card card-secondary" style={{ margin: 0 }}>
             <div className="section-title">
               <h2>Upcoming (Next 7 days)</h2>
-              <span>Assigned to you</span>
+              <span>Across active projects</span>
             </div>
             <TaskList tasks={data.upcoming} empty="Nothing due in the next seven days." />
-          </section>
-
-          <section className="section card card-indigo" style={{ margin: 0 }}>
-            <div className="section-title">
-              <h2>Unassigned Work</h2>
-              <span>Open tasks with no owner</span>
-            </div>
-            <TaskList tasks={data.unassigned} empty="Every open task has an owner. Nice." />
           </section>
 
           <section className="section card card-dark" style={{ margin: 0 }}>
@@ -134,41 +115,6 @@ export default async function TodayPage() {
                       <div className="row-meta">{message.body_md.slice(0, 60)}...</div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {(data.preparingInvoices.length + data.underAllocated.length) > 0 && (
-            <section className="section card card-orange" style={{ margin: 0 }}>
-              <div className="section-title">
-                <h2>Finance — Needs Attention</h2>
-                <Link href="/finance" style={{ fontSize: 11, fontWeight: 700, color: "var(--island-ink)", padding: "4px 10px", borderRadius: "999px", textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.05em" }}>Finance →</Link>
-              </div>
-              <div className="list">
-                {data.preparingInvoices.map((inv: any) => (
-                  <Link className="row" href={`/finance/transactions/${inv.id}`} key={`inv-${inv.id}`}>
-                    <StatusPill value="preparing" />
-                    <div className="row-main">
-                      <div className="row-title">{inv.invoice_number || "Invoice"}</div>
-                      <div className="row-meta">{inv.from_person?.name} · {formatDate(inv.transaction_date)}</div>
-                    </div>
-                    <div className="muted" style={{ fontSize: 13 }} suppressHydrationWarning>{formatCurrency(inv.amount)}</div>
-                  </Link>
-                ))}
-                {data.underAllocated.map((t: any) => (
-                  <Link className="row" href={`/finance/transactions/${t.id}`} key={`u-${t.id}`}>
-                    <StatusPill value={t.type} />
-                    <div className="row-main">
-                      <div className="row-title" style={{ textTransform: "capitalize" }}>{t.type} — needs allocation</div>
-                      <div className="row-meta">
-                        {t.type === "income" ? t.from_person?.name : t.to_person?.name} · {formatDate(t.transaction_date)}
-                      </div>
-                    </div>
-                    <div className="muted" style={{ fontSize: 13 }} suppressHydrationWarning>
-                      {formatCurrency(t.unallocated)} unallocated
-                    </div>
-                  </Link>
                 ))}
               </div>
             </section>
@@ -282,18 +228,6 @@ export default async function TodayPage() {
   );
 }
 
-function Stat({ label, value, note, color }: { label: string; value: string; note: string; color: string }) {
-  return (
-    <div className="col-span-3 card" style={{ padding: "1rem 1.25rem" }}>
-      <div className="muted" style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
-      <div suppressHydrationWarning style={{ fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em", color, marginTop: "0.25rem" }}>
-        {value}
-      </div>
-      <div className="muted" style={{ fontSize: 12 }}>{note}</div>
-    </div>
-  );
-}
-
 function TaskList({ tasks, empty }: { tasks: any[]; empty: string }) {
   if (!tasks.length) return <div className="empty">{empty}</div>;
   return (
@@ -305,7 +239,7 @@ function TaskList({ tasks, empty }: { tasks: any[]; empty: string }) {
             <div className="row-title">{task.title}</div>
             <div className="row-meta">
               {task.phases?.name ? `${task.phases.name} · ` : ""}
-              {task.projects?.name} · due {task.due_at ? formatDate(task.due_at) : "no due date"}
+              {task.projects?.name} · {task.app_users?.display_name ? `assigned to ${task.app_users.display_name}` : "unassigned"} · due {task.due_at ? formatDate(task.due_at) : "no due date"}
             </div>
           </Link>
           <StatusPill value={task.status} />
