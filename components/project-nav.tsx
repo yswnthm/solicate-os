@@ -6,11 +6,10 @@ import { classNames } from "@/lib/utils";
 
 const TABS = [
   { key: "overview", label: "Overview" },
+  { key: "info", label: "Info" },
   { key: "timeline", label: "Timeline" },
   { key: "documents", label: "Documents" },
-  { key: "decisions", label: "Decisions" },
   { key: "finances", label: "Finances" },
-  { key: "participants", label: "Participants" },
   { key: "phases", label: "Phases" },
 ] as const;
 

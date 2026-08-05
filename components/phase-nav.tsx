@@ -6,16 +6,11 @@ import { classNames } from "@/lib/utils";
 
 const TABS = [
   { key: "dashboard", label: "Dashboard" },
-  { key: "scope", label: "Scope" },
-  { key: "proposal", label: "Proposal" },
-  { key: "finance", label: "Finance" },
-  { key: "timeline", label: "Timeline" },
+  { key: "documents", label: "Documents" },
   { key: "tasks", label: "Tasks" },
   { key: "issues", label: "Issues" },
-  { key: "decisions", label: "Decisions" },
-  { key: "notes", label: "Notes" },
-  { key: "documents", label: "Documents" },
-  { key: "records", label: "Records" },
+  { key: "finance", label: "Finance" },
+  { key: "timeline", label: "Timeline" },
 ] as const;
 
 export function PhaseNav({ projectId, phaseId }: { projectId: string; phaseId: string }) {

@@ -23,6 +23,7 @@ export default async function PhaseLayout({
       <PageHeader
         title={`${phase.position}. ${phase.name}`}
         description={`${project?.name ?? "Project"} · ${phase.description || "Phase workspace"}`}
+        style={{ marginTop: 12 }}
       >
         <StatusPill value={phase.status} />
         <EditPhaseButton phase={phase} label="Edit phase" />

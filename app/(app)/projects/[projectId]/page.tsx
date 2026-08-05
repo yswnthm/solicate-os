@@ -34,24 +34,8 @@ export default async function ProjectOverviewPage({
   const unphasedTasks = data.tasks.filter((t: any) => (hasPhases ? !t.phase_id : true));
   const unphasedIssues = data.issues.filter((i: any) => (hasPhases ? !i.phase_id : true));
 
-  const strategy = [
-    { title: "Objective", body: project.objective, key: "objective" },
-    { title: "Success definition", body: project.success_definition, key: "success_definition" },
-    { title: "Direction", body: project.direction, key: "direction" },
-  ].filter((b) => b.body);
-
   return (
     <div className="stack">
-      {strategy.length > 0 && (
-        <div className="strategy-grid">
-          {strategy.map((block) => (
-            <div className="strategy-block" key={block.key}>
-              <h4>{block.title}</h4>
-              <div className="prose">{block.body}</div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Metrics */}
       <div className="grid three" style={{ marginBottom: 8 }}>

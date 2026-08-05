@@ -17,6 +17,7 @@ export type Entry = {
   decision_state: string | null;
   project_id: string | null;
   phase_id: string | null;
+  phases?: any;
 };
 
 export type EntryEditContext = {
@@ -33,14 +34,44 @@ function EditControls({ entry, edit }: { entry: Entry; edit?: EntryEditContext }
   );
 }
 
-export function EntryCard({ entry, edit }: { entry: Entry; edit?: EntryEditContext }) {
+export function EntryCard({
+  entry,
+  edit,
+  showPhaseBadge = false,
+}: {
+  entry: Entry;
+  edit?: EntryEditContext;
+  showPhaseBadge?: boolean;
+}) {
+  const phaseObj = Array.isArray(entry.phases) ? entry.phases[0] : entry.phases;
+  const phaseLabel = phaseObj
+    ? `${phaseObj.position ? `Phase ${phaseObj.position} · ` : ""}${phaseObj.name}`
+    : "Project Level";
+
   return (
     <article className="card" key={entry.id}>
       <div
         className="section-title"
         style={{ borderBottom: "none", marginBottom: 0, paddingBottom: 0 }}
       >
-        <h3 style={{ margin: 0 }}>{entry.title}</h3>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <h3 style={{ margin: 0 }}>{entry.title}</h3>
+          {showPhaseBadge && (
+            <span
+              className="pill"
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                padding: "2px 8px",
+                background: "var(--surface-2)",
+                color: "var(--ink)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              {phaseLabel}
+            </span>
+          )}
+        </div>
         <EditControls entry={entry} edit={edit} />
       </div>
       <div className="row-meta" style={{ marginTop: 4 }}>
@@ -55,14 +86,16 @@ export function EntryCard({ entry, edit }: { entry: Entry; edit?: EntryEditConte
 export function EntryList({
   entries,
   edit,
+  showPhaseBadge = false,
 }: {
   entries: Entry[];
   edit?: EntryEditContext;
+  showPhaseBadge?: boolean;
 }) {
   return (
     <div className="list">
       {entries.map((entry) => (
-        <EntryCard key={entry.id} entry={entry} edit={edit} />
+        <EntryCard key={entry.id} entry={entry} edit={edit} showPhaseBadge={showPhaseBadge} />
       ))}
     </div>
   );

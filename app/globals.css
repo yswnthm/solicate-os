@@ -428,7 +428,7 @@ body.desktop-sidebar-collapsed .signout-btn {
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
-  margin-top: 48px; /* space for the floating top nav */
+  margin-top: 72px; /* space for the floating top nav */
   margin-bottom: 40px;
   flex-wrap: wrap;
 }
