@@ -23,42 +23,12 @@ export default async function ProjectOverviewPage({
   const project: any = data.project;
   if (!project) notFound();
 
-  const openTasks = data.tasks.filter(
-    (t: any) => t.status !== "done" && t.status !== "cancelled",
-  );
-  const openIssues = data.issues.filter(
-    (i: any) => !["resolved", "accepted", "closed"].includes(i.status),
-  );
-
   const hasPhases = data.phases.length > 0;
   const unphasedTasks = data.tasks.filter((t: any) => (hasPhases ? !t.phase_id : true));
   const unphasedIssues = data.issues.filter((i: any) => (hasPhases ? !i.phase_id : true));
 
   return (
     <div className="stack">
-
-      {/* Metrics */}
-      <div className="grid three" style={{ marginBottom: 8 }}>
-        <div className="card">
-          <p className="metric-label">Target date</p>
-          <div className="metric" style={{ fontSize: 19 }}>
-            {formatDate(project.target_date)}
-          </div>
-        </div>
-        <div className="card">
-          <p className="metric-label">Open tasks</p>
-          <div className="metric">{openTasks.length}</div>
-        </div>
-        <div className="card">
-          <p className="metric-label">Open issues</p>
-          <div
-            className="metric"
-            style={{ color: openIssues.length > 0 ? "var(--danger)" : undefined }}
-          >
-            {openIssues.length}
-          </div>
-        </div>
-      </div>
 
       {/* Phases */}
       <Section

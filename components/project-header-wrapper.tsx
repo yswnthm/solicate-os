@@ -44,7 +44,7 @@ export function ProjectHeaderWrapper({
     <>
       <PageHeader
         title={project.name}
-        description={`${project.people?.name ?? "Client"} ${project.code ? `· ${project.code}` : ""} · ${project.summary || "No working summary yet."}`}
+        description={`${project.people?.name ?? "Client"}${project.code ? ` · ${project.code}` : ""}`}
       >
         <StatusPill value={project.status} />
         <EditProjectButton project={project} clients={clients} label="Edit" />

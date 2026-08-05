@@ -471,25 +471,25 @@ body.desktop-sidebar-collapsed .signout-btn {
 
 .card {
   background: var(--surface);
-  border-radius: var(--radius-xl);
-  padding: 32px;
-  box-shadow: var(--shadow-float);
-  border: none;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line-2);
   transition: transform var(--transition-bounce), box-shadow var(--transition);
   display: flex;
   flex-direction: column;
 }
 a.card { cursor: pointer; text-decoration: none; display: flex; }
-a.card:hover { transform: translateY(-4px) scale(1.01); box-shadow: var(--shadow-lg); }
+a.card:hover { transform: translateY(-3px) scale(1.005); box-shadow: var(--shadow-md); }
 
-.card-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; color: inherit; letter-spacing: -0.02em; }
+.card-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: inherit; letter-spacing: -0.02em; }
 .card-desc { font-size: 14px; opacity: 0.8; margin-bottom: 16px; flex: 1; line-height: 1.6; }
 .card-icon { 
-  width: 48px; height: 48px; 
-  border-radius: var(--radius); 
+  width: 44px; height: 44px; 
+  border-radius: var(--radius-sm); 
   display: grid; place-items: center; 
-  font-size: 20px;
-  margin-bottom: 16px;
+  font-size: 18px;
+  margin-bottom: 14px;
   background: rgba(255,255,255,0.4);
 }
 
@@ -505,16 +505,17 @@ a.card:hover { transform: translateY(-4px) scale(1.01); box-shadow: var(--shadow
 .card-quaternary { background: var(--card-green); }
 .card-gray { background: var(--card-gray); }
 
-.metric { font-size: 36px; font-weight: 700; letter-spacing: -.03em; margin: 0; color: inherit; line-height: 1; }
-.metric-label { font-size: 13px; font-weight: 600; opacity: 0.7; margin-bottom: 8px; }
+.metric { font-size: 32px; font-weight: 700; letter-spacing: -.03em; margin: 0; color: inherit; line-height: 1; }
+.metric-label { font-size: 12px; font-weight: 600; opacity: 0.7; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
 
 /* ─── Lists & Sections ─────────────────────────────────────────────────────── */
 .section {
   background: var(--surface);
-  border-radius: var(--radius-xl);
-  padding: 32px;
-  box-shadow: var(--shadow-float);
-  margin-bottom: 24px;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line-2);
+  margin-bottom: 20px;
 }
 .section-title {
   display: flex;
@@ -1327,10 +1328,10 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
   .strategy-grid { grid-template-columns: minmax(0, 1fr); }
 }
 .strategy-block {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 18px 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
 }
 .strategy-block h4 {
   font-size: 12px;

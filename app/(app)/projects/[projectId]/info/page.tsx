@@ -50,7 +50,7 @@ export default async function ProjectInfoPage({
 
       {/* ─── 2. Client & Online Presence (Brand Info & Socials) ─── */}
       <Section title="Client & Online Presence">
-        <div className="card stack" style={{ gap: 16 }}>
+        <div className="stack" style={{ gap: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
             <div>
               <h3 style={{ margin: 0, fontSize: 16 }}>{clientPerson?.name || "Client"}</h3>
@@ -59,12 +59,12 @@ export default async function ProjectInfoPage({
             {clientPerson && <EditPersonButton person={clientPerson} label="Edit client info" />}
           </div>
 
-          <div className="grid two" style={{ gap: 16 }}>
-            <div className="card" style={{ background: "var(--surface-2)", border: "none" }}>
+          <div className="grid two" style={{ gap: 12 }}>
+            <div style={{ padding: "14px 16px", borderRadius: "var(--radius-sm)", background: "var(--surface-2)", border: "1px solid var(--line-2)" }}>
               <p className="metric-label" style={{ marginBottom: 4 }}>Primary Contact / Email</p>
               <div style={{ fontSize: 14, fontWeight: 500 }}>
                 {clientPerson?.email ? (
-                  <a href={`mailto:${clientPerson.email}`} style={{ color: "var(--accent)" }}>
+                  <a href={`mailto:${clientPerson.email}`} style={{ color: "var(--ink)", textDecoration: "underline" }}>
                     {clientPerson.email}
                   </a>
                 ) : (
@@ -73,7 +73,7 @@ export default async function ProjectInfoPage({
               </div>
             </div>
 
-            <div className="card" style={{ background: "var(--surface-2)", border: "none" }}>
+            <div style={{ padding: "14px 16px", borderRadius: "var(--radius-sm)", background: "var(--surface-2)", border: "1px solid var(--line-2)" }}>
               <p className="metric-label" style={{ marginBottom: 4 }}>Phone / Contact</p>
               <div style={{ fontSize: 14, fontWeight: 500 }}>
                 {clientPerson?.phone ? (
