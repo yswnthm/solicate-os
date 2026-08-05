@@ -1,11 +1,14 @@
 export const dynamic = "force-dynamic";
 import { signOut } from "@/features/actions";
 import { requireActiveUser } from "@/lib/auth";
+import { getAllModels } from "@/lib/ai";
+import { ModelManagement } from "@/components/model-management";
 import { PageHeader } from "@/components/page-header";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function SettingsPage() {
   const { user, profile } = await requireActiveUser();
+  const models = await getAllModels();
   return (
     <>
       <PageHeader title="Settings" description="Account and application configuration." />
@@ -16,6 +19,15 @@ export default async function SettingsPage() {
             Customize how Solicate OS looks on your device. Choose between light mode, dark mode, or follow system settings.
           </p>
           <ThemeToggle variant="segmented" />
+        </section>
+
+        <section className="card">
+          <h3>AI models</h3>
+          <p className="muted" style={{ fontSize: 13, marginTop: 4, marginBottom: 16 }}>
+            The model catalog the execution engine resolves at runtime. Active models are available as template
+            defaults and fallbacks.
+          </p>
+          <ModelManagement models={models} />
         </section>
 
         <section className="card">
