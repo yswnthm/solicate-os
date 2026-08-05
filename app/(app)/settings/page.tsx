@@ -1,29 +1,18 @@
 export const dynamic = "force-dynamic";
+import Link from "next/link";
 import { signOut } from "@/features/actions";
 import { requireActiveUser } from "@/lib/auth";
-import { getAllModels } from "@/lib/ai";
-import { listTemplates } from "@/lib/ai/template-store";
-import { isGeminiConfigured } from "@/lib/ai/providers/gemini";
-import { isGroqConfigured } from "@/lib/ai/providers/groq";
-import { isOpencodeConfigured } from "@/lib/ai/providers/opencode";
-import { AiSettingsPanel } from "@/components/ai-settings-section";
 import { PageHeader } from "@/components/page-header";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function SettingsPage() {
   const { user, profile } = await requireActiveUser();
-  const [models, templates] = await Promise.all([getAllModels(), listTemplates()]);
-  const providers = [
-    { name: "Groq", key: "GROQ_API_KEY", configured: isGroqConfigured(), home: "console.groq.com" },
-    { name: "Gemini", key: "GEMINI_API_KEY", configured: isGeminiConfigured(), home: "ai.google.dev" },
-    { name: "Opencode Zen", key: "OPENCODE_API_KEY", configured: isOpencodeConfigured(), home: "opencode.ai/auth" },
-  ];
 
   return (
     <>
       <PageHeader
         title="Settings"
-        description="Appearance, the AI engine, account, and operational guidelines."
+        description="Appearance, AI, account, and operational guidelines."
       />
       <div className="stack">
         <section className="card">
@@ -34,7 +23,19 @@ export default async function SettingsPage() {
           <ThemeToggle variant="segmented" />
         </section>
 
-        <AiSettingsPanel templates={templates} models={models} providers={providers} />
+        <section className="card">
+          <div className="ai-dashboard-head">
+            <div>
+              <h3>AI</h3>
+              <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                Templates, models, and provider keys behind Capture, Triage, Morning Brief, and Finance Capture.
+              </p>
+            </div>
+            <Link className="button secondary small" href="/settings/ai">
+              Open AI panel →
+            </Link>
+          </div>
+        </section>
 
         <section className="card">
           <h3>Account</h3>

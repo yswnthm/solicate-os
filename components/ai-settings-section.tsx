@@ -43,18 +43,8 @@ export function AiSettingsPanel({
   const [tab, setTab] = useState<TabKey>("models");
 
   return (
-    <section className="card">
-      <div className="ai-dashboard-head">
-        <div>
-          <h3>AI</h3>
-          <p className="muted" style={{ fontSize: 13, margin: "2px 0 0" }}>
-            The engine behind Capture, Triage, Morning Brief, and Finance Capture.
-          </p>
-        </div>
-        <span className="pill">{models.length} models</span>
-      </div>
-
-      <nav className="tabs" style={{ margin: "16px 0 0" }} aria-label="AI settings">
+    <div className="stack" style={{ gap: 20 }}>
+      <nav className="tabs" style={{ margin: 0 }} aria-label="AI settings">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -69,10 +59,22 @@ export function AiSettingsPanel({
         ))}
       </nav>
 
-      <div style={{ marginTop: 24 }}>
-        {tab === "models" && <ModelManagement models={models} />}
+      {tab === "models" && (
+        <section className="card">
+          <div className="section-title">
+            <h2>Model catalog</h2>
+            <span>Active models are available as template defaults and fallbacks</span>
+          </div>
+          <ModelManagement models={models} />
+        </section>
+      )}
 
-        {tab === "templates" && (
+      {tab === "templates" && (
+        <section className="card">
+          <div className="section-title">
+            <h2>AI templates</h2>
+            <span>Editing appends a version — nothing is overwritten</span>
+          </div>
           <div className="list">
             {templates.length === 0 ? (
               <div className="empty">No templates found. Run the AI seed migration.</div>
@@ -91,29 +93,30 @@ export function AiSettingsPanel({
               ))
             )}
           </div>
-        )}
+        </section>
+      )}
 
-        {tab === "keys" && (
-          <div className="stack" style={{ gap: 16 }}>
-            <div className="list">
-              {providers.map((p) => (
-                <div className="row" key={p.name}>
-                  <span className={`pill ${p.configured ? "active" : ""}`}>{p.configured ? "configured" : "missing"}</span>
-                  <div className="row-main">
-                    <div className="row-title">{p.name}</div>
-                    <div className="row-meta">
-                      {p.key} · {p.home}
-                    </div>
+      {tab === "keys" && (
+        <section className="card">
+          <div className="section-title">
+            <h2>Provider keys</h2>
+            <span>Read from server environment variables, never stored in the database</span>
+          </div>
+          <div className="list">
+            {providers.map((p) => (
+              <div className="row" key={p.name}>
+                <span className={`pill ${p.configured ? "active" : ""}`}>{p.configured ? "configured" : "missing"}</span>
+                <div className="row-main">
+                  <div className="row-title">{p.name}</div>
+                  <div className="row-meta">
+                    {p.key} · {p.home}
                   </div>
                 </div>
-              ))}
-            </div>
-            <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-              Keys are read from <code>.env.local</code> on the server only — they are never stored in the database.
-            </p>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
-    </section>
+        </section>
+      )}
+    </div>
   );
 }
