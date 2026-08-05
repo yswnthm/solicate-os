@@ -349,8 +349,8 @@ export default function GuidePage() {
             <p>
               Every row has an edit button that opens a reusable modal — relationships, clients, projects, people,
               phases, tasks, issues, records, participants, and conversations. Finance items in the Finance tab can
-              be edited too. Edits record who made them, and the <strong>Activity</strong> section on each project
-              keeps a readable trail of meaningful changes.
+              be edited too. Edits record who made them, and the <strong>Activity</strong> feed on each project
+              Timeline keeps a readable trail of meaningful changes.
             </p>
             <p>
               Anything logged anywhere is reachable from <Link href="/search">Search</Link> — which covers record

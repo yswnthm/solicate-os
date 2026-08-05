@@ -12,7 +12,7 @@ import { ProgressBar } from "@/components/shared/progress-bar";
 import { PhaseHealthPill } from "@/components/shared/health-pill";
 import { TaskRow } from "@/components/execution/task-row";
 import { IssueRow } from "@/components/execution/issue-row";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 export default async function ProjectOverviewPage({
   params,
@@ -373,25 +373,6 @@ export default async function ProjectOverviewPage({
           </div>
         ) : (
           <div className="empty">No conversations on this project.</div>
-        )}
-      </Section>
-
-      {/* Activity */}
-      <Section title="Activity" count={data.activity.length}>
-        {data.activity.length ? (
-          <div className="list">
-            {data.activity.map((event: any) => (
-              <div className="row" key={event.id}>
-                <StatusPill value={event.event_type} />
-                <div className="row-main">
-                  <div className="row-title">{event.summary}</div>
-                  <div className="row-meta">{formatDateTime(event.occurred_at)}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="empty">Meaningful work changes will appear here as you operate the project.</div>
         )}
       </Section>
     </div>
