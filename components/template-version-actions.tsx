@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
-  deleteTemplate,
+  deleteTemplatePermanently,
   duplicateTemplateAction,
   restoreTemplateVersionAction,
   setTemplateActiveVersionAction,
@@ -27,6 +28,7 @@ export function TemplateVersionActions({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const router = useRouter();
 
   const run = async (fn: () => Promise<unknown>, ok: string) => {
     setBusy(true);
@@ -69,8 +71,16 @@ export function TemplateVersionActions({
           type="button"
           disabled={busy}
           onClick={() => {
-            if (confirm(`Deactivate template "${slug}"? It will no longer load.`)) {
-              run(() => deleteTemplate(templateId), "Deactivated.");
+            if (confirm(`Permanently delete "${slug}" and all ${versions.length} of its versions? This cannot be undone.`)) {
+              setBusy(true);
+              setError(null);
+              setNotice(null);
+              deleteTemplatePermanently(templateId)
+                .then(() => router.push("/settings"))
+                .catch((e) => {
+                  setError(e instanceof Error ? e.message : "Delete failed.");
+                  setBusy(false);
+                });
             }
           }}
         >

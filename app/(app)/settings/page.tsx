@@ -2,16 +2,29 @@ export const dynamic = "force-dynamic";
 import { signOut } from "@/features/actions";
 import { requireActiveUser } from "@/lib/auth";
 import { getAllModels } from "@/lib/ai";
-import { ModelManagement } from "@/components/model-management";
+import { listTemplates } from "@/lib/ai/template-store";
+import { isGeminiConfigured } from "@/lib/ai/providers/gemini";
+import { isGroqConfigured } from "@/lib/ai/providers/groq";
+import { isOpencodeConfigured } from "@/lib/ai/providers/opencode";
+import { AiSettingsPanel } from "@/components/ai-settings-section";
 import { PageHeader } from "@/components/page-header";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function SettingsPage() {
   const { user, profile } = await requireActiveUser();
-  const models = await getAllModels();
+  const [models, templates] = await Promise.all([getAllModels(), listTemplates()]);
+  const providers = [
+    { name: "Groq", key: "GROQ_API_KEY", configured: isGroqConfigured(), home: "console.groq.com" },
+    { name: "Gemini", key: "GEMINI_API_KEY", configured: isGeminiConfigured(), home: "ai.google.dev" },
+    { name: "Opencode Zen", key: "OPENCODE_API_KEY", configured: isOpencodeConfigured(), home: "opencode.ai/auth" },
+  ];
+
   return (
     <>
-      <PageHeader title="Settings" description="Account and application configuration." />
+      <PageHeader
+        title="Settings"
+        description="Appearance, the AI engine, account, and operational guidelines."
+      />
       <div className="stack">
         <section className="card">
           <h3>Appearance</h3>
@@ -21,14 +34,7 @@ export default async function SettingsPage() {
           <ThemeToggle variant="segmented" />
         </section>
 
-        <section className="card">
-          <h3>AI models</h3>
-          <p className="muted" style={{ fontSize: 13, marginTop: 4, marginBottom: 16 }}>
-            The model catalog the execution engine resolves at runtime. Active models are available as template
-            defaults and fallbacks.
-          </p>
-          <ModelManagement models={models} />
-        </section>
+        <AiSettingsPanel templates={templates} models={models} providers={providers} />
 
         <section className="card">
           <h3>Account</h3>

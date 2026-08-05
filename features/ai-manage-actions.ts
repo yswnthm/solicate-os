@@ -156,4 +156,13 @@ export async function deleteTemplate(templateId: string) {
   revalidateTag(TAG_TEMPLATES);
 }
 
+/** Hard delete: removes the template and its version history (cascade). */
+export async function deleteTemplatePermanently(templateId: string) {
+  await requireActiveUser();
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("ai_templates").delete().eq("id", templateId);
+  throwOnError(error);
+  revalidateTag(TAG_TEMPLATES);
+}
+
 export type { AiProvider };

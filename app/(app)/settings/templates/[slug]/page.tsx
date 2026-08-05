@@ -4,13 +4,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getTemplateBySlug, listTemplateVersions } from "@/lib/ai/template-store";
+import { getActiveModels } from "@/lib/ai";
 import { TemplateVersionActions } from "@/components/template-version-actions";
+import { TemplateEditor } from "@/components/template-editor";
 import { requireActiveUser } from "@/lib/auth";
 
 export default async function TemplateDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   await requireActiveUser();
   const { slug } = await params;
-  const detail = await getTemplateBySlug(slug);
+  const [detail, activeModels] = await Promise.all([getTemplateBySlug(slug), getActiveModels()]);
   if (!detail) notFound();
 
   const versions = await listTemplateVersions(detail.id);
@@ -18,8 +20,8 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
 
   return (
     <>
-      <Link href="/ai/templates" style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none" }}>
-        ← All templates
+      <Link href="/settings" style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none" }}>
+        ← All settings
       </Link>
       <div className="page-header" style={{ marginBottom: 20 }}>
         <div className="page-header-text">
@@ -107,6 +109,12 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
             </div>
           )}
         </div>
+
+        <TemplateEditor
+          template={t}
+          versions={versions}
+          activeModelIds={activeModels.map((m) => m.model_id)}
+        />
 
         <TemplateVersionActions
           templateId={detail.id}

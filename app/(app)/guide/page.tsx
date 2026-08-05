@@ -126,9 +126,7 @@ export default function GuidePage() {
               ["People", "G U", "Client contacts, partners, and referrers."],
               ["Finance", "—", "Money reality: YTD income/expense/net, invoice pipeline, and the transaction ledger."],
               ["Search", "G S", "Find the original record, not a summary."],
-              ["AI — Templates", "—", "The versioned prompts behind every AI feature."],
-              ["AI — Settings", "—", "Provider key status behind the engine."],
-              ["Settings", "—", "Account, AI model catalog, sign out, and operational guidelines."],
+              ["Settings", "—", "Appearance, AI templates, AI models, provider keys, account, and guidelines."],
               ["Guide", "G ?", "You are here."],
             ]}
           />
@@ -136,8 +134,7 @@ export default function GuidePage() {
             <p>
               To navigate with the keyboard, press <Kbd>G</Kbd> then the letter within a second — e.g.{" "}
               <Kbd>G</Kbd> <Kbd>T</Kbd> opens Today. Shortcuts are ignored while you are typing in a field.
-              Finance and the AI pages have no <Kbd>G</Kbd> shortcut — reach them from the sidebar or{" "}
-              <Kbd>⌘K</Kbd>.
+              Finance has no <Kbd>G</Kbd> shortcut — reach it from the sidebar or <Kbd>⌘K</Kbd>.
             </p>
           </div>
         </Section>
@@ -169,8 +166,7 @@ export default function GuidePage() {
               <div className="row-main">
                 <div className="row-title">Go to</div>
                 <div className="row-meta">
-                  Today, Inbox, Projects, Clients, Relationships, People, Search, AI templates, AI
-                  settings, Guide.
+                  Today, Inbox, Projects, Clients, Relationships, People, Search, Settings, Guide.
                 </div>
               </div>
             </div>

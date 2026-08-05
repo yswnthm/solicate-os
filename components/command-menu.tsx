@@ -316,13 +316,9 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                       <span className="cmdk-icon">⌕</span>
                       <span className="cmdk-item-main"><span>Search</span></span>
                     </Command.Item>
-                    <Command.Item className="cmdk-item" onSelect={() => go("/ai/templates")}>
-                      <span className="cmdk-icon">▤</span>
-                      <span className="cmdk-item-main"><span>AI templates</span></span>
-                    </Command.Item>
-                    <Command.Item className="cmdk-item" onSelect={() => go("/ai/settings")}>
+                    <Command.Item className="cmdk-item" onSelect={() => go("/settings")}>
                       <span className="cmdk-icon">⚙</span>
-                      <span className="cmdk-item-main"><span>AI settings</span></span>
+                      <span className="cmdk-item-main"><span>Settings</span></span>
                     </Command.Item>
                     <Command.Item className="cmdk-item" onSelect={() => go("/guide")}>
                       <span className="cmdk-icon">?</span>
