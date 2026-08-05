@@ -32,7 +32,7 @@ export default async function SettingsPage() {
               </p>
             </div>
             <Link className="button secondary small" href="/settings/ai">
-              Open AI panel →
+              Open AI →
             </Link>
           </div>
         </section>

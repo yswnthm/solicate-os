@@ -20,8 +20,8 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
 
   return (
     <>
-      <Link href="/settings" style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none" }}>
-        ← All settings
+      <Link href="/settings/ai/templates" style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none" }}>
+        ← All templates
       </Link>
       <div className="page-header" style={{ marginBottom: 20 }}>
         <div className="page-header-text">
