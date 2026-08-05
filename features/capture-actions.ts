@@ -233,7 +233,6 @@ export async function approveCaptureActions(sessionId: string, decisions: unknow
   revalidatePath("/today");
   revalidatePath("/projects");
   revalidatePath("/inbox");
-  revalidatePath("/ai/drafter");
   revalidateTag("inbox");
   revalidateTag("projects");
   revalidateTag("clients");
