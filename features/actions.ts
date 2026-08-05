@@ -568,25 +568,4 @@ export async function advanceInvoiceStatus(formData: FormData) {
   revalidatePath("/finance/invoices");
 }
 
-/** @deprecated Use createTransaction. Kept for backward compat with existing UI. */
-export async function createFinanceItem(formData: FormData) {
-  const { user } = await requireActiveUser();
-  const projectId = id(formData.get("project_id"));
-  const phaseId = optional(formData.get("phase_id"));
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("finance_items_legacy").insert({
-    project_id: projectId,
-    phase_id: phaseId,
-    kind: z.enum(["invoice", "payment", "expense"]).parse(text(formData.get("kind"))),
-    title: z.string().min(1).parse(text(formData.get("title"))),
-    amount: z.coerce.number().positive().finite().parse(formData.get("amount")),
-    currency_code: (text(formData.get("currency_code")) || "INR").toUpperCase(),
-    occurred_on: optional(formData.get("occurred_on")) ?? new Date().toISOString().slice(0, 10),
-    notes: text(formData.get("notes")),
-    created_by_id: user.id,
-  });
-  if (error) throw new Error(error.message);
-  revalidatePath(projectPath(projectId));
-  if (phaseId) revalidatePath(`/projects/${projectId}/phases/${phaseId}`);
-  revalidatePath("/today");
-}
+

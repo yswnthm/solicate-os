@@ -128,30 +128,6 @@ export const ACTION_SPECS: Record<string, KindSpec> = {
     ],
   },
   "decision.supersede": { fields: [] },
-  "finance.invoice": {
-    fields: [
-      { key: "title", label: "Title", type: "text" },
-      { key: "amount", label: "Amount", type: "number" },
-      { key: "currency_code", label: "Currency", type: "text", placeholder: "INR" },
-      { key: "occurred_on", label: "Date", type: "date" },
-      { key: "notes", label: "Notes", type: "text" },
-    ],
-  },
-  "finance.payment": {
-    fields: [
-      { key: "title", label: "Title", type: "text" },
-      { key: "amount", label: "Amount", type: "number" },
-      { key: "currency_code", label: "Currency", type: "text", placeholder: "INR" },
-      { key: "occurred_on", label: "Date", type: "date" },
-      { key: "notes", label: "Notes", type: "text" },
-    ],
-  },
-  "finance.mark_paid": {
-    fields: [
-      select("payment_status", "Payment status", ["pending", "partial", "paid"]),
-      { key: "paid_at", label: "Paid on", type: "date" },
-    ],
-  },
   // ─── New finance ledger action specs ──────────────────────────────────────────
   "finance.transaction": {
     fields: [
@@ -216,9 +192,6 @@ export const KIND_LABELS: Record<string, string> = {
   "issue.resolve": "Resolve issue",
   "entry.create": "Record entry",
   "decision.supersede": "Supersede decision",
-  "finance.invoice": "Invoice (legacy)",
-  "finance.payment": "Payment received (legacy)",
-  "finance.mark_paid": "Mark invoice paid (legacy)",
   "finance.transaction": "New transaction",
   "finance.allocate": "Allocate funds",
   "finance.invoice_sent": "Mark invoice sent",

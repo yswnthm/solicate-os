@@ -10,7 +10,6 @@ import {
   clientSchema,
   conversationSchema,
   entrySchema,
-  financeItemSchema,
   issueSchema,
   messageSchema,
   participantSchema,
@@ -416,30 +415,5 @@ export async function deleteAllocation(id: string): Promise<EditResult> {
     if (existing?.transaction_id) paths.push(`/finance/transactions/${existing.transaction_id}`);
     if (existing?.project_id) paths.push(`/projects/${existing.project_id}`);
     refresh(paths);
-  });
-}
-
-/** @deprecated Use updateTransaction. Kept while existing UI is migrated. */
-export async function updateFinanceItem(id: string, input: unknown): Promise<EditResult> {
-  return runMutation(async () => {
-    await requireActiveUser();
-    const parsed = financeItemSchema.safeParse(input);
-    if (!parsed.success) return validationResult(parsed.error);
-    const supabase = await createSupabaseServerClient();
-    const { data: existing } = await supabase
-      .from("finance_items_legacy")
-      .select("project_id, phase_id")
-      .eq("id", id)
-      .maybeSingle();
-    const { error } = await supabase.from("finance_items_legacy").update(parsed.data).eq("id", id);
-    if (error) return { ok: false, error: error.message };
-    const projectId = parsed.data.project_id ?? existing?.project_id;
-    if (!projectId) return { ok: true };
-    const paths = [`/projects/${projectId}`];
-    if (parsed.data.phase_id) paths.push(`/projects/${projectId}/phases/${parsed.data.phase_id}`);
-    if (existing?.phase_id && existing.phase_id !== parsed.data.phase_id) {
-      paths.push(`/projects/${projectId}/phases/${existing.phase_id}`);
-    }
-    refresh(paths, ["projects"]);
   });
 }

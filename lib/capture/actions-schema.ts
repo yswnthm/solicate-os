@@ -50,10 +50,6 @@ const actionBase = z.object({
     "issue.resolve",
     "entry.create",
     "decision.supersede",
-    // Legacy finance kinds (kept for backward compat)
-    "finance.invoice",
-    "finance.payment",
-    "finance.mark_paid",
     // New finance ledger kinds
     "finance.transaction",
     "finance.allocate",
@@ -211,36 +207,6 @@ const decisionSupersede = z.object({
   }),
 });
 
-const financeInvoice = z.object({
-  kind: z.literal("finance.invoice"),
-  payload: z.object({
-    title: reqText,
-    amount: z.coerce.number().positive().finite(),
-    currency_code: optText,
-    occurred_on: optDate,
-    notes: optText,
-  }),
-});
-
-const financePayment = z.object({
-  kind: z.literal("finance.payment"),
-  payload: z.object({
-    title: reqText,
-    amount: z.coerce.number().positive().finite(),
-    currency_code: optText,
-    occurred_on: optDate,
-    notes: optText,
-  }),
-});
-
-const financeMarkPaid = z.object({
-  kind: z.literal("finance.mark_paid"),
-  payload: z.object({
-    payment_status: z.enum(["pending", "partial", "paid"]).optional(),
-    paid_at: optDate,
-  }),
-});
-
 // ─── New finance ledger action schemas ────────────────────────────────────────
 
 const financeTransaction = z.object({
@@ -309,10 +275,6 @@ const actions = [
   actionBase.merge(issueResolve),
   actionBase.merge(entryCreate),
   actionBase.merge(decisionSupersede),
-  // Legacy finance actions
-  actionBase.merge(financeInvoice),
-  actionBase.merge(financePayment),
-  actionBase.merge(financeMarkPaid),
   // New finance ledger actions
   actionBase.merge(financeTransaction),
   actionBase.merge(financeAllocate),

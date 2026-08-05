@@ -323,24 +323,6 @@ export const paymentMethodSchema = z.object({
   is_default: z.boolean().optional(),
 });
 
-// Legacy schema — kept for backward compat with updateFinanceItem
-const optCurrency = z
-  .union([z.string(), z.null(), z.undefined()])
-  .transform((v) => (typeof v === "string" && v.trim() ? v.trim().toUpperCase() : "INR"));
-
-/** @deprecated Use transactionSchema. Kept while finance_items_legacy exists. */
-export const financeItemSchema = z.object({
-  project_id: z.string().uuid(),
-  phase_id: optUuid,
-  kind: z.enum(["invoice", "payment", "expense"]),
-  title: req("Title is required."),
-  amount: z.coerce.number().positive("Enter an amount greater than zero.").finite(),
-  currency_code: optCurrency,
-  occurred_on: optDate,
-  notes: z.string().trim(),
-});
-
 export type RelationshipInput = z.infer<typeof relationshipSchema>;
-export type FinanceItemInput = z.infer<typeof financeItemSchema>;
 export type TransactionInput = z.infer<typeof transactionSchema>;
 export type AllocationInput = z.infer<typeof allocationSchema>;

@@ -303,47 +303,6 @@ export async function applyAction(userId: string, action: CaptureAction, resolve
       return { ok: true };
     }
 
-    case "finance.invoice":
-    case "finance.payment": {
-      // Legacy: kept for backward compat with old capture sessions.
-      const p = action.payload;
-      if (!projectId) return { ok: false, error: `${action.kind} needs a project.` };
-      const { data, error } = await supabase
-        .from("finance_items_legacy")
-        .insert({
-          project_id: projectId,
-          phase_id: phaseId,
-          kind: action.kind === "finance.invoice" ? "invoice" : "payment",
-          title: p.title,
-          amount: p.amount,
-          currency_code: (p.currency_code ?? "INR").toUpperCase(),
-          occurred_on: p.occurred_on ?? todayIso(),
-          notes: p.notes ?? "",
-          payment_status: "pending",
-          created_by_id: userId,
-        })
-        .select("id")
-        .single();
-      throwOnError(error);
-      return data ? { ok: true, createdId: String(data.id), createdKind: "finance" } : { ok: true };
-    }
-
-    case "finance.mark_paid": {
-      // Legacy: kept for backward compat with old capture sessions.
-      const p = action.payload;
-      if (!refId) return { ok: false, error: "finance.mark_paid needs an invoice reference." };
-      const { error } = await supabase
-        .from("finance_items_legacy")
-        .update({
-          payment_status: p.payment_status ?? "paid",
-          paid_at: p.paid_at ? new Date(p.paid_at).toISOString() : nowIso(),
-        })
-        .eq("id", refId)
-        .eq("kind", "invoice");
-      throwOnError(error);
-      return { ok: true };
-    }
-
     // ─── New Finance Ledger actions ───────────────────────────────────────────────────
 
     case "finance.transaction": {

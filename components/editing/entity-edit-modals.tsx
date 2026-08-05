@@ -8,7 +8,6 @@ import {
   updateClient,
   updateConversation,
   updateEntry,
-  updateFinanceItem,
   updateIssue,
   updateMessage,
   updatePerson,
@@ -66,7 +65,6 @@ const RELATIONSHIP_STATUS_OPTIONS = ["active", "inactive", "archived"].map((v) =
   value: v,
   label: label(v),
 }));
-const FINANCE_KIND_OPTIONS = ["invoice", "payment", "expense"].map((v) => ({ value: v, label: label(v) }));
 
 function toLocalDateTimeInput(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -990,82 +988,6 @@ export function EditRelationshipModal({
 }
 
 // ─── Finance items (invoices / payments / expenses) ─────────────────────────
-
-export function EditFinanceItemModal({
-  item,
-  projectId,
-  phases,
-  open,
-  onOpenChange,
-}: {
-  item: any;
-  projectId: string;
-  phases?: { id: string; position: number; name: string }[];
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const fields: FieldConfig[] = [
-    {
-      kind: "select",
-      name: "kind",
-      label: "Type",
-      options: FINANCE_KIND_OPTIONS,
-      width: "half",
-    },
-    { kind: "date", name: "occurred_on", label: "Date", width: "half" },
-    { kind: "text", name: "title", label: "Title", required: true, autoFocus: true },
-    {
-      kind: "number",
-      name: "amount",
-      label: "Amount",
-      min: 0,
-      step: "0.01",
-      width: "half",
-      required: true,
-    },
-    {
-      kind: "text",
-      name: "currency_code",
-      label: "Currency",
-      placeholder: "INR",
-      hint: "3-letter code",
-      width: "half",
-    },
-    ...(phases && phases.length > 0
-      ? [
-          {
-            kind: "select",
-            name: "phase_id",
-            label: "Phase",
-            options: phases.map((p) => ({ value: p.id, label: `${p.position}. ${p.name}` })),
-            placeholder: "Project-level",
-            width: "half",
-          } as FieldConfig,
-        ]
-      : []),
-    { kind: "textarea", name: "notes", label: "Notes", minHeight: 80 },
-  ];
-  return (
-    <EntityEditModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Edit finance item"
-      record={{
-        project_id: projectId,
-        phase_id: item.phase_id ?? "",
-        kind: item.kind,
-        title: item.title,
-        amount: item.amount ?? "",
-        currency_code: item.currency_code ?? "INR",
-        occurred_on: item.occurred_on ? String(item.occurred_on).slice(0, 10) : "",
-        notes: item.notes ?? "",
-      }}
-      fields={fields}
-      successMessage="Finance item updated."
-      onSave={async (values) => updateFinanceItem(item.id, values)}
-    />
-  );
-}
 
 export type EditTaskModalProps = Parameters<typeof EditTaskModal>[0];
 export type EditEntryModalProps = Parameters<typeof EditEntryModal>[0];

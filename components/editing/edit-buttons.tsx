@@ -7,7 +7,6 @@ import {
   EditClientModal,
   EditConversationModal,
   EditEntryModal,
-  EditFinanceItemModal,
   EditIssueModal,
   EditMessageModal,
   EditParticipantModal,
@@ -242,28 +241,6 @@ export function EditRelationshipButton({
         open={open}
         onOpenChange={setOpen}
       />
-    </>
-  );
-}
-
-export function EditFinanceItemButton({
-  item,
-  projectId,
-  phases,
-  label = "Edit",
-  className = "button ghost small",
-}: {
-  item: any;
-  projectId: string;
-  phases?: { id: string; position: number; name: string }[];
-  label?: string;
-  className?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <EditButton onClick={() => setOpen(true)} label={label} className={className} title="Edit finance item" />
-      <EditFinanceItemModal item={item} projectId={projectId} phases={phases} open={open} onOpenChange={setOpen} />
     </>
   );
 }
