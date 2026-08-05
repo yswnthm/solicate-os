@@ -76,7 +76,7 @@ export function TemplateVersionActions({
               setError(null);
               setNotice(null);
               deleteTemplatePermanently(templateId)
-                .then(() => router.push("/settings/ai/templates"))
+                .then(() => router.push("/settings"))
                 .catch((e) => {
                   setError(e instanceof Error ? e.message : "Delete failed.");
                   setBusy(false);

@@ -929,15 +929,6 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
   border-top: 1px solid var(--line-2);
 }
 
-/* ─── Settings AI dashboard ────────────────────────────────────────────────── */
-.ai-dashboard-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.ai-dashboard-head h3 { margin: 0; }
-
 /* ─── Editing System ──────────────────────────────────────────────────────── */
 .edit-fields {
   display: grid;
