@@ -126,7 +126,8 @@ export default function GuidePage() {
               ["People", "G U", "Client contacts, partners, and referrers."],
               ["Finance", "—", "Money reality: YTD income/expense/net, invoice pipeline, and the transaction ledger."],
               ["Search", "G S", "Find the original record, not a summary."],
-              ["AI — Templates / Models", "—", "The versioned prompts and the model catalog behind every AI feature."],
+              ["AI — Templates", "—", "The versioned prompts behind every AI feature."],
+              ["AI — Settings", "—", "The model catalog and provider key status behind the engine."],
               ["Settings", "—", "Account, sign out, and operational guidelines."],
               ["Guide", "G ?", "You are here."],
             ]}
@@ -169,7 +170,7 @@ export default function GuidePage() {
                 <div className="row-title">Go to</div>
                 <div className="row-meta">
                   Today, Inbox, Projects, Clients, Relationships, People, Search, AI templates, AI
-                  models, Guide.
+                  settings, Guide.
                 </div>
               </div>
             </div>
@@ -385,8 +386,7 @@ export default function GuidePage() {
             head={["Where", "What it does"]}
             rows={[
               ["AI — Templates", "The versioned prompts behind every AI feature. Editing appends a version — nothing is overwritten."],
-              ["AI — Models", "The model catalog. Toggle models on/off; a template's default falls back to the first active model."],
-              ["AI — Settings", "Provider key status (Groq, Gemini). Keys live in .env.local, never in the database."],
+              ["AI — Settings", "The model catalog and provider keys. Toggle models on/off; a template's default falls back to the first active model. Keys live in .env.local, never in the database."],
             ]}
           />
         </Section>

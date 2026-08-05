@@ -53,7 +53,6 @@ export async function AppShell({
 
           <div className="sidebar-group-label">AI</div>
           <NavLink href="/ai/templates">Templates</NavLink>
-          <NavLink href="/ai/models">Models</NavLink>
 
           <NavLink href="/guide">Guide</NavLink>
         </nav>

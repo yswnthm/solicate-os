@@ -6,7 +6,6 @@ import { classNames } from "@/lib/utils";
 
 const TABS = [
   { key: "templates", label: "Templates", href: "/ai/templates" },
-  { key: "models", label: "Models", href: "/ai/models" },
   { key: "settings", label: "Settings", href: "/ai/settings" },
 ] as const;
 
