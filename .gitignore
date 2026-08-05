@@ -5,3 +5,4 @@ node_modules/
 *.tsbuildinfo
 .vercel
 supabase/.temp/
+graphify-out/

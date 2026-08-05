@@ -1,7 +1,7 @@
 "use client";
 
 // The single model picker shared by every AI surface (message drafter, capture,
-// inbox triage, weekly summary, week-in-review, morning brief). Choosing a model
+// inbox triage, morning brief). Choosing a model
 // here overrides the template's default for that run only — the catalog and
 // template defaults remain the source of truth.
 

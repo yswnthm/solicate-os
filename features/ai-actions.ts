@@ -11,16 +11,12 @@ import {
   getInboxItemContext,
   getMorningBriefContext,
   getProjectsForContext,
-  getWeekReviewContext,
-  getWeeklySummaryContext,
 } from "@/lib/ai/context";
 import { runTemplate, prepareTemplate, formatPromptForChat } from "@/lib/ai/executor";
 import {
   batchDraftsSchema,
   morningBriefSchema,
   triageDraftSchema,
-  weekReviewSchema,
-  weeklySummarySchema,
   type TriageDraft,
 } from "@/lib/ai/schemas";
 import { getTemplateBySlug } from "@/lib/ai/template-store";
@@ -149,116 +145,6 @@ async function batchTriageContext() {
 export async function getBatchTriagePrompt(): Promise<string> {
   await requireActiveUser();
   return formatPromptForChat(await prepareTemplate({ slug: "inbox-triage-batch", context: await batchTriageContext() }));
-}
-
-// ─── Weekly summary ──────────────────────────────────────────────────────────
-
-export async function draftWeeklySummaryForProject(projectId: string, modelId?: string): Promise<string> {
-  await requireActiveUser();
-  const context = await getWeeklySummaryContext(id(projectId));
-  const result = await runTemplate({ slug: "weekly-summary", context, modelId });
-  return weeklySummarySchema.parse({ summary: result.data }).summary;
-}
-
-// Build the exact prompt that would be sent to the model, for use in ChatGPT.
-export async function getWeeklySummaryPrompt(projectId: string): Promise<string> {
-  await requireActiveUser();
-  const context = await getWeeklySummaryContext(id(projectId));
-  return formatPromptForChat(await prepareTemplate({ slug: "weekly-summary", context }));
-}
-
-// Files the approved weekly summary as a project update record.
-export async function approveWeeklySummary(projectId: string, summary: string) {
-  const { user } = await requireActiveUser();
-  const project = id(projectId);
-  const body = summary.trim();
-  if (!body) throw new Error("Summary cannot be empty.");
-
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("entries").insert({
-    project_id: project,
-    type: "update",
-    title: `Weekly update · ${new Date().toLocaleDateString("en-IN", { month: "long", day: "numeric" })}`,
-    body_md: body,
-    occurred_at: new Date().toISOString(),
-    triage_state: "filed",
-    decision_outcome: null,
-    decision_state: null,
-    created_by_id: user.id,
-  });
-  throwOnError(error);
-  revalidatePath(`/projects/${project}`);
-  revalidatePath("/today");
-}
-
-// ─── Week in review ──────────────────────────────────────────────────────────
-
-export async function draftWeekReviewAction(modelId?: string): Promise<string> {
-  const { user } = await requireActiveUser();
-  const supabase = await createSupabaseServerClient();
-
-  // On-demand dirty-check: reuse a cached week review when nothing changed.
-  // Triggers (migration 0020) flip is_stale on any record change; the 24h
-  // guard also forces a regen once the window has drifted far enough.
-  const fresh = await supabase
-    .from("ai_summaries")
-    .select("content")
-    .eq("kind", "week_review")
-    .is("project_id", null)
-    .eq("is_stale", false)
-    .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  throwOnError(fresh.error);
-  const cached = (fresh.data?.content as { review?: string } | null | undefined)?.review;
-  if (cached) return cached;
-
-  const context = await getWeekReviewContext();
-  const result = await runTemplate({ slug: "week-in-review", context, modelId });
-  const review = weekReviewSchema.parse({ review: result.data }).review;
-
-  const { error } = await supabase.from("ai_summaries").insert({
-    kind: "week_review",
-    project_id: null,
-    period_start: context.period?.from ?? null,
-    period_end: context.period?.to ?? null,
-    content: { review },
-    model: result.model?.model_id ?? "",
-    is_stale: false,
-    created_by_id: user.id,
-  });
-  throwOnError(error);
-  return review;
-}
-
-// Build the exact prompt that would be sent to the model, for use in ChatGPT.
-export async function getWeekReviewPrompt(): Promise<string> {
-  await requireActiveUser();
-  const context = await getWeekReviewContext();
-  return formatPromptForChat(await prepareTemplate({ slug: "week-in-review", context }));
-}
-
-// Files the approved week-in-review as a projectless note record.
-export async function saveWeekReview(review: string) {
-  const { user } = await requireActiveUser();
-  const body = review.trim();
-  if (!body) throw new Error("Review cannot be empty.");
-
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("entries").insert({
-    project_id: null,
-    type: "note",
-    title: `Week in review · week of ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`,
-    body_md: body,
-    occurred_at: new Date().toISOString(),
-    triage_state: "filed",
-    decision_outcome: null,
-    decision_state: null,
-    created_by_id: user.id,
-  });
-  throwOnError(error);
-  revalidatePath("/today");
 }
 
 // ─── Semantic memory maintenance ──────────────────────────────────────────────

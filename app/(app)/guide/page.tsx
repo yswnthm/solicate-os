@@ -101,15 +101,14 @@ export default function GuidePage() {
             </p>
             <p>
               <strong>2. Get the AI brief.</strong> <em>Morning brief</em> drafts a day plan from overdue items,
-              upcoming tasks, open issues, inbox, and project pulse. <em>Week in review</em> reads the last 7 days
-              across every project so you never start a week guessing what moved. Both are read-only until you save.
+              upcoming tasks, open issues, inbox, and project pulse. Read-only until you save.
             </p>
             <p>
               <strong>3. Capture &amp; triage in one place.</strong> <Kbd>G</Kbd> <Kbd>I</Kbd>. Drop instant notes, tasks, or decisions using the top Quick Capture bar, or press <Kbd>⌘⇧X</Kbd> for AI Deep Capture. File each item into its project (or let ✨ Triage all draft everything with AI). Zero inbox = the record is complete.
             </p>
             <p>
-              <strong>4. Close the loop weekly.</strong> On each active project use{" "}
-              <em>✨ Weekly summary</em> to draft the week&apos;s update, approve it as a record, and archive nothing.
+              <strong>4. Review the week.</strong> On Today, the <em>This Week</em> panel lists the week&apos;s decisions and
+              records, and <em>Stalled Projects</em> surfaces anything quiet for 7+ days.
             </p>
           </div>
         </Section>
@@ -219,20 +218,16 @@ export default function GuidePage() {
             <p>
               Open a project to its tabbed workspace: <strong>Overview</strong> (strategy, financials, counts,
               activity), <strong>Timeline</strong>, <strong>Documents</strong>, <strong>Decisions</strong>,{" "}
-              <strong>Finances</strong>, <strong>Milestones</strong>, <strong>Participants</strong>, and{" "}
+              <strong>Finances</strong>, <strong>Participants</strong>, and{" "}
               <strong>Phases</strong>. Projects set strategy — the objective, success definition, and direction —
               while the day-to-day lives in phases.
             </p>
             <p>
               Each <strong>phase</strong> has its own workspace: Dashboard (health, progress, open work), Scope,
-              Proposal, Finance, Timeline, Tasks, Issues, Decisions, Notes, Documents, Milestones, and Records.
+              Proposal, Finance, Timeline, Tasks, Issues, Decisions, Notes, Documents, and Records.
               Move a project through its life — <em>active → paused / completed → archived</em> — from the header
               status controls or the command palette. Group tasks into phases as the engagement grows, and log risks
               as issues with a severity.
-            </p>
-            <p>
-              On the project page, <Kbd>✨ Weekly summary</Kbd> drafts an update from the last 7 days of activity;
-              edit and Approve &amp; file it as a record.
             </p>
           </div>
         </Section>
@@ -370,8 +365,6 @@ export default function GuidePage() {
             head={["Where", "What it does"]}
             rows={[
               ["Today — Morning brief", "Drafts a day plan from overdue, upcoming, issues, inbox, and project pulse. Read-only until you save it as a note or copy it."],
-              ["Today — Week in review", "Reads every project's last 7 days: what moved, decisions, risks, momentum. Save as a note or copy."],
-              ["Project — Weekly summary", "Drafts a project update from 7 days of activity; Approve & file it as a record."],
               ["Inbox — AI triage", "Drafts title / type / project / body for inbox items; edit then approve & file, or skip."],
               ["Capture (AI)", "Turns a plain-English account of what happened into concrete updates — tasks, decisions, meetings, finance, milestones, even new projects and clients. Review each one before applying."],
               ["Finance Capture", "Logs income, expenses, allocations, and invoice updates from plain English, cross-referenced against your actual open invoices, projects, and transactions."],
@@ -418,7 +411,6 @@ export default function GuidePage() {
               ["Find something from months ago", "⌘K and type, or G S → search page"],
               ["Pause / complete a project", "Project header status controls, or ⌘K on the project page"],
               ["Start the day", "G T → Morning brief → drain the inbox (G I)"],
-              ["Close the week", "G T → Week in review, then ✨ Weekly summary on each active project"],
             ]}
           />
         </Section>

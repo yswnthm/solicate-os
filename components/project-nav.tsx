@@ -10,7 +10,6 @@ const TABS = [
   { key: "documents", label: "Documents" },
   { key: "decisions", label: "Decisions" },
   { key: "finances", label: "Finances" },
-  { key: "milestones", label: "Milestones" },
   { key: "participants", label: "Participants" },
   { key: "phases", label: "Phases" },
 ] as const;

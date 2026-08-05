@@ -119,7 +119,6 @@ export async function getTodayData(userId: string) {
   const now = new Date();
   const nowIso = now.toISOString();
   const endOfWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  const endOf30d = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const ACTIVE = "active";
   const DAY_MS = 86_400_000;
@@ -131,8 +130,6 @@ export async function getTodayData(userId: string) {
     inboxMessages,
     inboxEntries,
     changedProjects,
-    milestoneEntriesRes,
-    phaseDeadlinesRes,
     activeProjectsRes,
     activityRes,
     weekDecisionsRes,
@@ -181,27 +178,6 @@ export async function getTodayData(userId: string) {
       .eq("status", ACTIVE)
       .order("updated_at", { ascending: false })
       .limit(6),
-    // Upcoming milestone entries (records of type milestone with a future date).
-    supabase
-      .from("entries")
-      .select("id, title, occurred_at, project_id, projects!inner(name, status)")
-      .eq("type", "milestone")
-      .eq("triage_state", "filed")
-      .gte("occurred_at", nowIso)
-      .eq("projects.status", ACTIVE)
-      .order("occurred_at", { ascending: true })
-      .limit(8),
-    // Phase target dates landing in the next 30 days.
-    supabase
-      .from("phases")
-      .select("id, name, target_date, status, project_id, projects!inner(name, status)")
-      .not("target_date", "is", null)
-      .gte("target_date", nowIso)
-      .lte("target_date", endOf30d)
-      .in("status", ["planned", "active", "on_hold"])
-      .eq("projects.status", ACTIVE)
-      .order("target_date", { ascending: true })
-      .limit(8),
     // Active projects + their most recent activity → stalled detection.
     supabase
       .from("projects")
@@ -235,7 +211,7 @@ export async function getTodayData(userId: string) {
       .limit(6),
   ]);
 
-  [overdue, upcoming, issues, inboxMessages, inboxEntries, changedProjects, milestoneEntriesRes, phaseDeadlinesRes, activeProjectsRes, activityRes, weekDecisionsRes, weekRecordsRes].forEach((r) => throwOnError(r.error));
+  [overdue, upcoming, issues, inboxMessages, inboxEntries, changedProjects, activeProjectsRes, activityRes, weekDecisionsRes, weekRecordsRes].forEach((r) => throwOnError(r.error));
 
   // Stalled = active project whose most recent activity (or creation, if never
   // active) is 7+ days old. Brand-new projects are not flagged.
@@ -260,8 +236,6 @@ export async function getTodayData(userId: string) {
     inboxMessages: inboxMessages.data ?? [],
     inboxEntries: inboxEntries.data ?? [],
     changedProjects: changedProjects.data ?? [],
-    milestones: milestoneEntriesRes.data ?? [],
-    phaseDeadlines: phaseDeadlinesRes.data ?? [],
     stalled,
     weekDecisions: weekDecisionsRes.data ?? [],
     weekRecords: weekRecordsRes.data ?? [],

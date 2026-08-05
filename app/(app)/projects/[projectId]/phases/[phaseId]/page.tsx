@@ -77,7 +77,7 @@ export default async function PhaseDashboardPage({
         {data.entries.length ? (
           <TimelineList entries={data.entries.slice(0, 5)} />
         ) : (
-          <div className="empty">No records yet — notes, decisions, and milestones will appear here.</div>
+          <div className="empty">No records yet — notes, decisions, and milestones will appear here in order.</div>
         )}
       </Section>
 

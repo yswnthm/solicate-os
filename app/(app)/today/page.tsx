@@ -7,7 +7,6 @@ import { StatusPill } from "@/components/status-pill";
 import { requireActiveUser } from "@/lib/auth";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { MorningBriefButton } from "@/components/morning-brief";
-import { WeekReviewButton } from "@/components/week-review";
 import { EditTaskButton } from "@/components/editing/edit-buttons";
 
 export default async function TodayPage() {
@@ -24,7 +23,6 @@ export default async function TodayPage() {
         </div>
         <div className="page-header-actions">
           <MorningBriefButton />
-          <WeekReviewButton />
           <Link href="/capture" className="button secondary">
             + Capture
           </Link>
@@ -48,43 +46,6 @@ export default async function TodayPage() {
               <span>Across active projects</span>
             </div>
             <TaskList tasks={data.upcoming} empty="Nothing due in the next seven days." />
-          </section>
-
-          <section className="section card card-dark" style={{ margin: 0 }}>
-            <div className="section-title">
-              <h2>Milestones & Deadlines</h2>
-              <span>Next 30 days</span>
-            </div>
-            {(data.milestones.length + data.phaseDeadlines.length) > 0 ? (
-              <div className="list">
-                {data.phaseDeadlines.map((p: any) => (
-                  <Link className="row" href={`/projects/${p.project_id}`} key={`phase-${p.id}`}>
-                    <StatusPill value="phase" />
-                    <div className="row-main">
-                      <div className="row-title">{p.name}</div>
-                      <div className="row-meta">{p.projects?.name} · Phase deadline</div>
-                    </div>
-                    <span className="muted" style={{ fontSize: 13 }} suppressHydrationWarning>
-                      {formatDate(p.target_date)}
-                    </span>
-                  </Link>
-                ))}
-                {data.milestones.map((m: any) => (
-                  <Link className="row" href={`/projects/${m.project_id}`} key={`milestone-${m.id}`}>
-                    <StatusPill value="milestone" />
-                    <div className="row-main">
-                      <div className="row-title">{m.title}</div>
-                      <div className="row-meta">{m.projects?.name} · Milestone</div>
-                    </div>
-                    <span className="muted" style={{ fontSize: 13 }} suppressHydrationWarning>
-                      {formatDate(m.occurred_at)}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="empty">No milestones or phase deadlines in the next 30 days.</div>
-            )}
           </section>
         </div>
 

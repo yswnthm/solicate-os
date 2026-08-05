@@ -75,6 +75,11 @@ export function TimelineList({
       {entries.map((entry) => (
         <div key={entry.id} className="timeline-item">
           <div className="timeline-meta">
+            {entry.type === "milestone" && (
+              <span style={{ marginRight: 6 }}>
+                <StatusPill value="milestone" />
+              </span>
+            )}
             {formatDateTime(entry.occurred_at)} · {entry.type.replaceAll("_", " ")}
           </div>
           <div className="row-title" style={{ margin: "2px 0 4px" }}>

@@ -18,8 +18,6 @@ export const batchDraftsSchema = z.object({
 
 export type BatchDraft = z.infer<typeof batchDraftsSchema>["drafts"][number];
 
-export const weeklySummarySchema = z.object({ summary: z.string().trim().min(10) });
 export const morningBriefSchema = z.object({ brief: z.string().trim().min(10) });
-export const weekReviewSchema = z.object({ review: z.string().trim().min(10) });
 
 export const messageDraftSchema = z.object({ message: z.string().trim().min(1) });
