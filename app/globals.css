@@ -1082,7 +1082,212 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
 .pill.health-on_track { color: var(--success); background: var(--success-soft); }
 .pill.health-complete { color: var(--success); background: var(--success-soft); }
 
-/* ─── Timeline ─────────────────────────────────────────────────────────────── */
+/* ─── Timeline & Milestone Roadmap ───────────────────────────────────────── */
+.milestone-section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.milestones-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.milestone-track-wrapper {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 4px 2px 14px 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.milestone-track-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.milestone-card {
+  flex: 0 0 260px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.milestone-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.milestone-card.upcoming {
+  border-style: dashed;
+  border-color: rgba(245, 158, 11, 0.4);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.05) 0%, var(--surface-2) 100%);
+}
+
+.milestone-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  width: fit-content;
+}
+
+.milestone-badge.achieved {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.milestone-badge.pending {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.timeline-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.timeline-horizontal-container {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  padding-top: 36px;
+  padding-bottom: 16px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.timeline-horizontal-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Side Navigation Controls for Scroll Tracks */
+.scroll-track-container {
+  position: relative;
+  width: 100%;
+}
+
+.scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.scroll-btn:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--ink);
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.scroll-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.scroll-btn.left {
+  left: -19px;
+}
+
+.scroll-btn.right {
+  right: -19px;
+}
+
+.timeline-horizontal-track {
+  display: flex;
+  gap: 20px;
+  position: relative;
+  min-width: max-content;
+  padding-left: 12px;
+  padding-right: 24px;
+}
+
+.timeline-axis-line {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--line);
+  border-radius: 2px;
+}
+
+.timeline-h-item {
+  flex: 0 0 290px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-h-node {
+  position: absolute;
+  top: -29px;
+  left: 16px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--canvas), 0 0 0 5px var(--line);
+  z-index: 2;
+}
+
+.timeline-h-node.milestone {
+  background: var(--warning);
+  box-shadow: 0 0 0 3px var(--canvas), 0 0 0 5px rgba(245, 158, 11, 0.4);
+}
+
+.timeline-h-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.timeline-h-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
 .timeline {
   position: relative;
   padding-left: 22px;

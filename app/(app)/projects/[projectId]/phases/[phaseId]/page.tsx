@@ -1,12 +1,11 @@
 import Link from "next/link";
 
 import { getPhaseWorkspace } from "@/features/queries";
-import { StatusPill } from "@/components/status-pill";
 import { Section } from "@/components/shared/section";
 import { ProgressBar } from "@/components/shared/progress-bar";
 import { PhaseHealthPill } from "@/components/shared/health-pill";
 import { TimelineList } from "@/components/entries/entry-list";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 
 export default async function PhaseDashboardPage({
   params,
@@ -78,24 +77,6 @@ export default async function PhaseDashboardPage({
           <TimelineList entries={data.entries.slice(0, 5)} />
         ) : (
           <div className="empty">No records yet — notes, decisions, and milestones will appear here in order.</div>
-        )}
-      </Section>
-
-      <Section title="Activity" count={data.activity.length}>
-        {data.activity.length ? (
-          <div className="list">
-            {data.activity.slice(0, 20).map((event: any) => (
-              <div className="row" key={event.id}>
-                <StatusPill value={event.event_type} />
-                <div className="row-main">
-                  <div className="row-title">{event.summary}</div>
-                  <div className="row-meta">{formatDateTime(event.occurred_at)}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="empty">Changes inside this phase will appear here.</div>
         )}
       </Section>
     </div>
