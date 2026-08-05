@@ -27,7 +27,6 @@ export const UPDATE_TYPES: UpdateTypeDef[] = [
   { value: "decision", label: "Decision", description: "Record a decision or supersede an old one", kinds: ["entry.create", "decision.supersede"], entryTypes: ["decision"] },
   { value: "timeline", label: "Timeline", description: "Milestones and schedule changes", kinds: ["entry.create", "phase.create", "phase.update", "project.update"], entryTypes: ["milestone"] },
   { value: "finance", label: "Finance", description: "Record a transaction, allocate funds, or update invoice status", kinds: ["finance.transaction", "finance.allocate", "finance.invoice_sent", "finance.invoice_cleared", "finance.mark_completed"] },
-  { value: "message", label: "Message", description: "Draft a follow-up message", kinds: ["communication.draft"] },
   { value: "client", label: "Client", description: "Create a new client", kinds: ["client.create"], scope: "new_project" },
   { value: "project", label: "Project", description: "Create a project or change its status/details", kinds: ["project.create", "project.update", "project.update_status"] },
 ];

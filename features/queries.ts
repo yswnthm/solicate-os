@@ -103,12 +103,12 @@ export async function getInboxCount() {
 const getInboxCountCached = unstable_cache(
   async (accessToken: string | null) => {
     const supabase = createSupabaseServerClientWithToken(accessToken);
-    const [messages, entries] = await Promise.all([
-      supabase.from("messages").select("id", { count: "exact", head: true }).eq("triage_state", "inbox"),
-      supabase.from("entries").select("id", { count: "exact", head: true }).eq("triage_state", "inbox"),
-    ]);
-    throwOnError(messages.error ?? entries.error);
-    return (messages.count ?? 0) + (entries.count ?? 0);
+    const { count, error } = await supabase
+      .from("entries")
+      .select("id", { count: "exact", head: true })
+      .eq("triage_state", "inbox");
+    throwOnError(error);
+    return count ?? 0;
   },
   ["get-inbox-count"],
   { revalidate: 30, tags: ["inbox"] },
@@ -127,7 +127,6 @@ export async function getTodayData(userId: string) {
     overdue,
     upcoming,
     issues,
-    inboxMessages,
     inboxEntries,
     changedProjects,
     activeProjectsRes,
@@ -160,12 +159,6 @@ export async function getTodayData(userId: string) {
       .in("status", ["open", "investigating", "waiting_external"])
       .order("reported_at", { ascending: false })
       .limit(8),
-    supabase
-      .from("messages")
-      .select("id, body_md, sent_at, conversation_id, conversations(title, project_id)")
-      .eq("triage_state", "inbox")
-      .order("sent_at", { ascending: false })
-      .limit(6),
     supabase
       .from("entries")
       .select("id, title, type, occurred_at, project_id, projects(name)")
@@ -211,7 +204,7 @@ export async function getTodayData(userId: string) {
       .limit(6),
   ]);
 
-  [overdue, upcoming, issues, inboxMessages, inboxEntries, changedProjects, activeProjectsRes, activityRes, weekDecisionsRes, weekRecordsRes].forEach((r) => throwOnError(r.error));
+  [overdue, upcoming, issues, inboxEntries, changedProjects, activeProjectsRes, activityRes, weekDecisionsRes, weekRecordsRes].forEach((r) => throwOnError(r.error));
 
   // Stalled = active project whose most recent activity (or creation, if never
   // active) is 7+ days old. Brand-new projects are not flagged.
@@ -233,7 +226,6 @@ export async function getTodayData(userId: string) {
     overdue: overdue.data ?? [],
     upcoming: upcoming.data ?? [],
     issues: issues.data ?? [],
-    inboxMessages: inboxMessages.data ?? [],
     inboxEntries: inboxEntries.data ?? [],
     changedProjects: changedProjects.data ?? [],
     stalled,
@@ -241,15 +233,6 @@ export async function getTodayData(userId: string) {
     weekRecords: weekRecordsRes.data ?? [],
   };
 }
-
-// Cap message history per conversation; the workspace is a dashboard, not an archive.
-const CONVERSATION_MESSAGE_LIMIT = 100;
-const PROJECT_MESSAGE_LIMIT = 200;
-
-// AI-only caps — purpose-built for prompt payloads. UI queries use the
-// constants above and are NOT affected by these.
-const AI_CONVERSATION_MESSAGE_LIMIT = 20;
-const AI_PROJECT_MESSAGE_LIMIT = 40;
 
 // Slim project fetch for layouts/headers — the tabs render their own workspace.
 export async function getProjectHeader(projectId: string) {
@@ -265,7 +248,7 @@ export async function getProjectHeader(projectId: string) {
 
 export async function getProjectWorkspace(projectId: string) {
   const supabase = await createSupabaseServerClient();
-  const [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, finance, people, users] =
+  const [project, tasks, issues, entries, participants, activity, phases, finance, people, users] =
     await Promise.all([
       supabase.from("projects").select("*, people!projects_person_id_fkey(id, name)").eq("id", projectId).maybeSingle(),
       supabase
@@ -291,17 +274,6 @@ export async function getProjectWorkspace(projectId: string) {
         .select("person_id, role, role_label, communication_mode, financial_arrangement, financial_value, is_referral_source, currency_code, payment_status, terms_note, people(id, name)")
         .eq("project_id", projectId),
       supabase
-        .from("conversations")
-        .select("id, title, kind, channel, project_id, conversation_participants(people(id, name))")
-        .eq("project_id", projectId)
-        .order("last_message_at", { ascending: false, nullsFirst: false }),
-      supabase
-        .from("messages")
-        .select("id, body_md, sent_at, direction, conversation_id, people(name), app_users!sender_user_id(display_name), conversations!inner(project_id)")
-        .eq("conversations.project_id", projectId)
-        .order("sent_at", { ascending: false })
-        .limit(PROJECT_MESSAGE_LIMIT),
-      supabase
         .from("activity_events")
         .select("id, event_type, summary, occurred_at")
         .eq("project_id", projectId)
@@ -320,20 +292,9 @@ export async function getProjectWorkspace(projectId: string) {
       supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
       supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
     ]);
-  [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, finance, people, users].forEach((r) =>
+  [project, tasks, issues, entries, participants, activity, phases, finance, people, users].forEach((r) =>
     throwOnError(r.error),
   );
-
-  const messagesByConversation = new Map<string, Record<string, unknown>[]>();
-  for (const message of recentMessages.data ?? []) {
-    const list = messagesByConversation.get(message.conversation_id) ?? [];
-    if (list.length < CONVERSATION_MESSAGE_LIMIT) list.push(message);
-    messagesByConversation.set(message.conversation_id, list);
-  }
-  const conversationsWithMessages = (conversations.data ?? []).map((conversation) => ({
-    ...conversation,
-    messages: messagesByConversation.get(conversation.id) ?? [],
-  }));
 
   return {
     project: project.data,
@@ -341,8 +302,6 @@ export async function getProjectWorkspace(projectId: string) {
     issues: issues.data ?? [],
     entries: entries.data ?? [],
     participants: participants.data ?? [],
-    conversations: conversationsWithMessages,
-    recentMessages: recentMessages.data ?? [],
     activity: activity.data ?? [],
     phases: phases.data ?? [],
     finance: (finance.data ?? []).map((f: any) => ({
@@ -366,7 +325,6 @@ export async function getProjectWorkspace(projectId: string) {
  *
  * Changes vs the UI workspace:
  *   - entries      limit 40   (was 200), body_md truncated in context builders
- *   - messages     limit 40   (was 200), per-conversation cap = 20 (was 100)
  *   - tasks        limit 60   (was unbounded), no description_md
  *   - issues       limit 30   (was unbounded), no description_md
  *   - finance      limit 25   (was unbounded)
@@ -377,7 +335,7 @@ export async function getProjectWorkspace(projectId: string) {
  */
 export async function getProjectWorkspaceForAI(projectId: string) {
   const supabase = await createSupabaseServerClient();
-  const [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, finance, people, users] =
+  const [project, tasks, issues, entries, participants, activity, phases, finance, people, users] =
     await Promise.all([
       supabase.from("projects").select("*, people!projects_person_id_fkey(id, name)").eq("id", projectId).maybeSingle(),
       supabase
@@ -408,17 +366,6 @@ export async function getProjectWorkspaceForAI(projectId: string) {
         .select("person_id, role, role_label, communication_mode, financial_arrangement, financial_value, is_referral_source, currency_code, payment_status, terms_note, people(id, name)")
         .eq("project_id", projectId),
       supabase
-        .from("conversations")
-        .select("id, title, kind, channel, project_id, conversation_participants(people(id, name))")
-        .eq("project_id", projectId)
-        .order("last_message_at", { ascending: false, nullsFirst: false }),
-      supabase
-        .from("messages")
-        .select("id, body_md, sent_at, direction, conversation_id, people(name), app_users!sender_user_id(display_name), conversations!inner(project_id)")
-        .eq("conversations.project_id", projectId)
-        .order("sent_at", { ascending: false })
-        .limit(AI_PROJECT_MESSAGE_LIMIT),
-      supabase
         .from("activity_events")
         .select("id, event_type, summary, occurred_at")
         .eq("project_id", projectId)
@@ -439,20 +386,9 @@ export async function getProjectWorkspaceForAI(projectId: string) {
       supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
       supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
     ]);
-  [project, tasks, issues, entries, participants, conversations, recentMessages, activity, phases, finance, people, users].forEach((r) =>
+  [project, tasks, issues, entries, participants, activity, phases, finance, people, users].forEach((r) =>
     throwOnError(r.error),
   );
-
-  const messagesByConversation = new Map<string, Record<string, unknown>[]>();
-  for (const message of recentMessages.data ?? []) {
-    const list = messagesByConversation.get(message.conversation_id) ?? [];
-    if (list.length < AI_CONVERSATION_MESSAGE_LIMIT) list.push(message);
-    messagesByConversation.set(message.conversation_id, list);
-  }
-  const conversationsWithMessages = (conversations.data ?? []).map((conversation) => ({
-    ...conversation,
-    messages: messagesByConversation.get(conversation.id) ?? [],
-  }));
 
   return {
     project: project.data,
@@ -460,8 +396,6 @@ export async function getProjectWorkspaceForAI(projectId: string) {
     issues: issues.data ?? [],
     entries: entries.data ?? [],
     participants: participants.data ?? [],
-    conversations: conversationsWithMessages,
-    recentMessages: recentMessages.data ?? [],
     activity: activity.data ?? [],
     phases: phases.data ?? [],
     finance: (finance.data ?? []).map((f: any) => ({
@@ -623,7 +557,7 @@ export async function getRelationshipDetail(relationshipId: string) {
 
 export async function getClientDetail(clientId: string) {
   const supabase = await createSupabaseServerClient();
-  const [client, contacts, projects, conversations, people, relationships] = await Promise.all([
+  const [client, contacts, projects, people, relationships] = await Promise.all([
     supabase.from("people").select("*").eq("id", clientId).maybeSingle(),
     supabase
       .from("client_people")
@@ -634,11 +568,6 @@ export async function getClientDetail(clientId: string) {
       .select("id, name, code, status, target_date")
       .eq("client_id", clientId)
       .order("updated_at", { ascending: false }),
-    supabase
-      .from("conversations")
-      .select("id, title, kind, channel, project_id, last_message_at")
-      .eq("client_id", clientId)
-      .order("last_message_at", { ascending: false, nullsFirst: false }),
     supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
     supabase
       .from("relationships")
@@ -646,12 +575,11 @@ export async function getClientDetail(clientId: string) {
       .eq("client_id", clientId)
       .order("created_at", { ascending: false }),
   ]);
-  [client, contacts, projects, conversations, people, relationships].forEach((r) => throwOnError(r.error));
+  [client, contacts, projects, people, relationships].forEach((r) => throwOnError(r.error));
   return {
     client: client.data,
     contacts: contacts.data ?? [],
     projects: projects.data ?? [],
-    conversations: conversations.data ?? [],
     people: people.data ?? [],
     relationships: relationships.data ?? [],
   };
@@ -667,22 +595,14 @@ export async function getInboxData() {
 const getInboxDataCached = unstable_cache(
   async (accessToken: string | null) => {
     const supabase = createSupabaseServerClientWithToken(accessToken);
-    const [messages, entries] = await Promise.all([
-      supabase
-        .from("messages")
-        .select("id, body_md, sent_at, conversation_id, conversations(title, project_id, people!conversations_client_id_fkey(name))")
-        .eq("triage_state", "inbox")
-        .order("sent_at", { ascending: false })
-        .limit(100),
-      supabase
-        .from("entries")
-        .select("id, title, type, body_md, occurred_at, project_id, decision_outcome, projects(name)")
-        .eq("triage_state", "inbox")
-        .order("occurred_at", { ascending: false })
-        .limit(100),
-    ]);
-    [messages, entries].forEach((r) => throwOnError(r.error));
-    return { messages: messages.data ?? [], entries: entries.data ?? [] };
+    const { data, error } = await supabase
+      .from("entries")
+      .select("id, title, type, body_md, occurred_at, project_id, decision_outcome, projects(name)")
+      .eq("triage_state", "inbox")
+      .order("occurred_at", { ascending: false })
+      .limit(100);
+    throwOnError(error);
+    return { entries: data ?? [] };
   },
   ["get-inbox-data"],
   { revalidate: 30, tags: ["inbox"] },
@@ -693,9 +613,9 @@ export async function getPersonDetail(personId: string) {
   const personResult = await supabase.from("people").select("*").eq("id", personId).maybeSingle();
   throwOnError(personResult.error);
   const person = personResult.data;
-  if (!person) return { person: null, participations: [], clientLinks: [], conversations: [], relationships: [] };
+  if (!person) return { person: null, participations: [], clientLinks: [], relationships: [] };
 
-  const [participations, clientLinks, conversations, relationships] = await Promise.all([
+  const [participations, clientLinks, relationships] = await Promise.all([
     supabase
       .from("project_participants")
       .select("role, role_label, financial_arrangement, financial_value, currency_code, projects(id, name, status, code, people!projects_person_id_fkey(name))")
@@ -709,48 +629,35 @@ export async function getPersonDetail(personId: string) {
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     supabase
-      .from("conversation_participants")
-      .select("conversations(id, title, channel, project_id, last_message_at)")
-      .eq("person_id", personId)
-      .is("left_at", null)
-      .order("conversations(last_message_at)", { ascending: false }),
-    supabase
       .from("relationships")
       .select("id, type, source, status, summary, financial_arrangement, referral_commission, commission_currency, client:people!relationships_client_id_fkey(id, name, kind)")
       .or(`person_id.eq.${personId},client_id.eq.${personId}`)
       .order("created_at", { ascending: false }),
   ]);
-  [participations, clientLinks, conversations, relationships].forEach((r) => throwOnError(r.error));
+  [participations, clientLinks, relationships].forEach((r) => throwOnError(r.error));
   return {
     person: person,
     participations: participations.data ?? [],
     clientLinks: clientLinks.data ? [clientLinks.data] : [],
-    conversations: conversations.data ?? [],
     relationships: relationships.data ?? [],
   };
 }
 
-export async function searchRecords(query: string) {  if (!query.trim()) return { entries: [], messages: [], projects: [], people: [] };
+export async function searchRecords(query: string) {  if (!query.trim()) return { entries: [], projects: [], people: [] };
   const supabase = await createSupabaseServerClient();
   const search = query.trim();
-  const [entries, messages, projects, people] = await Promise.all([
+  const [entries, projects, people] = await Promise.all([
     supabase
       .from("entries")
       .select("id, project_id, title, type, occurred_at, projects(name)")
       .textSearch("search_vector", search, { type: "websearch" })
       .limit(20),
-    supabase
-      .from("messages")
-      .select("id, conversation_id, body_md, sent_at, conversations(title, project_id)")
-      .textSearch("search_vector", search, { type: "websearch" })
-      .limit(20),
     supabase.from("projects").select("id, name, code, status, people!projects_person_id_fkey(name)").ilike("name", `%${search}%`).limit(10),
     supabase.from("people").select("id, name, is_partner, email").ilike("name", `%${search}%`).limit(10),
   ]);
-  [entries, messages, projects, people].forEach((r) => throwOnError(r.error));
+  [entries, projects, people].forEach((r) => throwOnError(r.error));
   return {
     entries: entries.data ?? [],
-    messages: messages.data ?? [],
     projects: projects.data ?? [],
     people: people.data ?? [],
   };

@@ -16,7 +16,7 @@ export default function GuidePage() {
           <div className="prose">
             <p>
               Solicate OS is the internal agency operating system for Solicate — a living record of clients,
-              projects, decisions, and conversations. It is not a client portal or a public product; partners and
+              projects, and decisions. It is not a client portal or a public product; partners and
               client contacts are external records and never get login access.
             </p>
             <p>
@@ -72,7 +72,7 @@ export default function GuidePage() {
               <div className="row-main">
                 <div className="row-title">Inbox & Capture is the ingestion hub</div>
                 <div className="row-meta">
-                  Quick captures (notes, tasks, decisions, updates) and untriaged messages land in the unified Inbox &amp; Capture Hub.
+                  Quick captures (notes, tasks, decisions, updates) land in the unified Inbox &amp; Capture Hub.
                   Use the inline command bar for instant capture or switch tabs to AI Deep Capture for multi-update extraction.
                 </div>
               </div>
@@ -126,7 +126,6 @@ export default function GuidePage() {
               ["People", "G U", "Client contacts, partners, and referrers."],
               ["Finance", "—", "Money reality: YTD income/expense/net, invoice pipeline, and the transaction ledger."],
               ["Search", "G S", "Find the original record, not a summary."],
-              ["AI — Drafter", "—", "Draft a message to anyone on a project; mark sent to file it."],
               ["AI — Templates / Models", "—", "The versioned prompts and the model catalog behind every AI feature."],
               ["Settings", "—", "Account, sign out, and operational guidelines."],
               ["Guide", "G ?", "You are here."],
@@ -150,7 +149,7 @@ export default function GuidePage() {
                   Press <Kbd>⌘K</Kbd> (or <Kbd>Ctrl+K</Kbd>)
                 </div>
                 <div className="row-meta">
-                  Toggle the palette from anywhere. Type to search projects, people, records, and messages, or pick
+                  Toggle the palette from anywhere. Type to search projects, people, and records, or pick
                   from Recents, Go to, and Create. Type at least two characters and it searches live.
                 </div>
               </div>
@@ -169,7 +168,7 @@ export default function GuidePage() {
               <div className="row-main">
                 <div className="row-title">Go to</div>
                 <div className="row-meta">
-                  Today, Inbox, Projects, Clients, Relationships, People, Search, Message Drafter, AI templates, AI
+                  Today, Inbox, Projects, Clients, Relationships, People, Search, AI templates, AI
                   models, Guide.
                 </div>
               </div>
@@ -188,8 +187,7 @@ export default function GuidePage() {
                 <div className="row-title">Contextual actions</div>
                 <div className="row-meta">
                   On a project page the palette offers Add task, Log issue, Log record, and the status transitions
-                  (pause / complete / archive) pre-scoped to that project. On a client page it offers New
-                  conversation.
+                  (pause / complete / archive) pre-scoped to that project.
                 </div>
               </div>
             </div>
@@ -319,12 +317,11 @@ export default function GuidePage() {
               ["Allocation", "transaction → project (optionally a phase), or overhead"],
             ]}
           />
-          <h3 style={{ margin: "20px 0 8px" }}>Records &amp; conversations</h3>
+          <h3 style={{ margin: "20px 0 8px" }}>Records</h3>
           <Table
             head={["Entity", "Options"]}
             rows={[
               ["Record type", "note, meeting, decision, document, update, milestone, capture"],
-              ["Conversation", "kind: group / direct · channel: whatsapp / email / manual"],
             ]}
           />
           <h3 style={{ margin: "20px 0 8px" }}>Participants &amp; terms</h3>
@@ -348,13 +345,13 @@ export default function GuidePage() {
           <div className="prose">
             <p>
               Every row has an edit button that opens a reusable modal — relationships, clients, projects, people,
-              phases, tasks, issues, records, participants, and conversations. Finance items in the Finance tab can
+              phases, tasks, issues, records, and participants. Finance items in the Finance tab can
               be edited too. Edits record who made them, and the <strong>Activity</strong> feed on each project
               Timeline keeps a readable trail of meaningful changes.
             </p>
             <p>
               Anything logged anywhere is reachable from <Link href="/search">Search</Link> — which covers record
-              titles, record bodies, and message content (Postgres full-text search). From any page,{" "}
+              titles and record bodies (Postgres full-text search). From any page,{" "}
               <Kbd>⌘K</Kbd> and start typing to search before you even reach the Search page.
             </p>
           </div>
@@ -368,7 +365,6 @@ export default function GuidePage() {
               ["Inbox — AI triage", "Drafts title / type / project / body for inbox items; edit then approve & file, or skip."],
               ["Capture (AI)", "Turns a plain-English account of what happened into concrete updates — tasks, decisions, meetings, finance, milestones, even new projects and clients. Review each one before applying."],
               ["Finance Capture", "Logs income, expenses, allocations, and invoice updates from plain English, cross-referenced against your actual open invoices, projects, and transactions."],
-              ["Message Drafter", "Drafts a message to anyone on a project; mark sent to file it as an outbound message."],
             ]}
           />
           <p className="muted" style={{ marginTop: 12, fontSize: 13 }}>
@@ -376,19 +372,18 @@ export default function GuidePage() {
           </p>
         </Section>
 
-        <Section title="AI & the message drafter">
+        <Section title="AI engine">
           <div className="prose">
             <p>
               Every AI capability runs through the same engine: a <strong>template</strong> (prompt + output rules),
               automatically gathered <strong>context</strong>, and a <strong>model</strong> resolved from the catalog.
-              This is why the Message Drafter works with zero setup — it reads the project, phase, person, conversation
-              history, records, decisions, and financials by itself.
+              Context is pulled together by itself — project, phase, person,
+              records, decisions, and financials.
             </p>
           </div>
           <Table
             head={["Where", "What it does"]}
             rows={[
-              ["AI — Message Drafter", "Drafts a message to anyone on a project. Pick project → person, say what it should do, choose length/style, draft. Mark sent to file it as an outbound message (creating the conversation if needed)."],
               ["AI — Templates", "The versioned prompts behind every AI feature. Editing appends a version — nothing is overwritten."],
               ["AI — Models", "The model catalog. Toggle models on/off; a template's default falls back to the first active model."],
               ["AI — Settings", "Provider key status (Groq, Gemini). Keys live in .env.local, never in the database."],
@@ -406,7 +401,6 @@ export default function GuidePage() {
               ["Allocate money to a project", "Open the transaction → Add allocation, or Finance Capture → Allocation"],
               ["Record a client decision", "Phase → Decisions, or ⌘⇧X and mention the decision with an outcome"],
               ["File a meeting note", "Phase → Records → new record, or ⌘⇧X"],
-              ["Draft a follow-up message", "⌘K → Message Drafter"],
               ["Capture a stray thought", "⌘⇧X from anywhere — leave it unsorted and triage from Inbox later"],
               ["Find something from months ago", "⌘K and type, or G S → search page"],
               ["Pause / complete a project", "Project header status controls, or ⌘K on the project page"],

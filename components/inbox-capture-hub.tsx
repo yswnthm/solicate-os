@@ -18,12 +18,10 @@ interface InboxProject {
 
 export function InboxCaptureHub({
   entries,
-  messages,
   projects,
   captureOptions,
 }: {
   entries: any[];
-  messages: any[];
   projects: InboxProject[];
   captureOptions: CaptureFormOptions;
 }) {
@@ -32,7 +30,7 @@ export function InboxCaptureHub({
   const pathname = usePathname();
 
   const currentTab = (searchParams.get("tab") as "triage" | "capture") || "triage";
-  const totalUntriaged = messages.length + entries.length;
+  const totalUntriaged = entries.length;
 
   const setTab = (tab: "triage" | "capture") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -46,7 +44,7 @@ export function InboxCaptureHub({
         title="Inbox & Capture"
         description={
           currentTab === "triage"
-            ? "Triage incoming untriaged messages and records. File them into project history or dismiss."
+            ? "Triage incoming untriaged records. File them into project history or dismiss."
             : "Tell the operating system what happened in plain language. AI proposes updates — review before executing."
         }
       >
@@ -90,7 +88,7 @@ export function InboxCaptureHub({
       {currentTab === "triage" ? (
         <>
           <QuickCaptureStrip projects={projects} />
-          <InboxList entries={entries} messages={messages} projects={projects} />
+          <InboxList entries={entries} projects={projects} />
         </>
       ) : (
         <CaptureFlow options={captureOptions} />

@@ -1,5 +1,4 @@
 import { generate, resolveModel } from "@/lib/ai";
-import { getMessageDraftContext } from "@/lib/ai/context";
 import { getTemplateBySlug } from "@/lib/ai/template-store";
 import { consumeAiCall } from "@/lib/ai/rate-limit";
 import { logger } from "@/lib/logger";
@@ -37,15 +36,6 @@ export interface PreparedTemplate {
   template: TemplateVersion;
 }
 
-const CONTEXT_BUILDERS: Record<string, (variables?: Record<string, unknown>) => Promise<Record<string, unknown>>> = {
-  "message-drafter": async (variables) =>
-    (await getMessageDraftContext({
-      projectId: String(variables?.projectId ?? ""),
-      personId: String(variables?.personId ?? ""),
-      phaseId: variables?.phaseId ? String(variables.phaseId) : null,
-    })) as unknown as Record<string, unknown>,
-};
-
 /**
  * Load template → build context → merge payload → assemble system prompt →
  * resolve model. The exported result is identical to what runTemplate sends to
@@ -57,9 +47,7 @@ export async function prepareTemplate(input: RunTemplateInput): Promise<Prepared
   if (!detail) throw new Error(`AI template "${input.slug}" is not active.`);
   const tpl = detail.active;
 
-  const context =
-    input.context ??
-    (CONTEXT_BUILDERS[input.slug] ? await CONTEXT_BUILDERS[input.slug](input.variables) : {});
+  const context = input.context ?? {};
 
   const hasVariables = Boolean(input.variables && Object.keys(input.variables).length > 0);
   const payload = hasVariables ? { context, operator: input.variables } : context;
@@ -82,7 +70,7 @@ export function formatPromptForChat(prepared: PreparedTemplate): string {
 
 export async function runTemplate(input: RunTemplateInput): Promise<RunTemplateResult> {
   // Single enforcement point for the daily per-user AI budget. Every LLM call
-  // in the app flows through here, so one cap covers capture, triage, drafter,
+  // in the app flows through here, so one cap covers capture, triage,
   // summaries, and finance capture.
   const user = await getCurrentUser().catch(() => null);
   if (user?.id) {

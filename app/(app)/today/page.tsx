@@ -12,7 +12,7 @@ import { EditTaskButton } from "@/components/editing/edit-buttons";
 export default async function TodayPage() {
   const { user, profile } = await requireActiveUser();
   const data = await getTodayData(user.id);
-  const inboxCount = data.inboxMessages.length + data.inboxEntries.length;
+  const inboxCount = data.inboxEntries.length;
 
   return (
     <>
@@ -65,15 +65,6 @@ export default async function TodayPage() {
                     <div className="row-main">
                       <div className="row-title">{entry.title}</div>
                       <div className="row-meta">{entry.projects?.name} · {formatDateTime(entry.occurred_at)}</div>
-                    </div>
-                  </div>
-                ))}
-                {data.inboxMessages.slice(0, 2).map((message: any) => (
-                  <div className="row" key={message.id} style={{ background: "transparent", border: "none", boxShadow: "none", padding: "8px 0" }}>
-                    <StatusPill value="message" />
-                    <div className="row-main">
-                      <div className="row-title">{message.conversations?.title ?? "Message"}</div>
-                      <div className="row-meta">{message.body_md.slice(0, 60)}...</div>
                     </div>
                   </div>
                 ))}

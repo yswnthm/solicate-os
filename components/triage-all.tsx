@@ -150,7 +150,7 @@ export function TriageAllButton({ projects }: { projects: InboxProject[] }) {
             return (
               <div key={item.id} className="card" style={{ padding: 16 }}>
                 <div className="row-meta" style={{ marginBottom: 12 }}>
-                  <strong>{index + 1}. {item.kind === "entry" ? "Capture" : "Message"}</strong> — approve to file, or skip to leave in inbox.
+                  <strong>{index + 1}. Capture</strong> — approve to file, or skip to leave in inbox.
                 </div>
                 <div className="form" style={{ gap: 12 }}>
                   <div className="field">

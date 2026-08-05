@@ -13,8 +13,7 @@ export default async function SearchPage({
 }) {
   const { q = "" } = await searchParams;
   const results = await searchRecords(q);
-  const total =
-    results.entries.length + results.messages.length + results.projects.length + results.people.length;
+  const total = results.entries.length + results.projects.length + results.people.length;
 
   return (
     <>
@@ -116,37 +115,6 @@ export default async function SearchPage({
                   </div>
                 </>
               )}
-
-              {results.messages.length > 0 && (
-                <>
-                  <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-                    MESSAGES
-                  </p>
-                  <div className="list">
-                    {results.messages.map((message: any) => (
-                      <Link
-                        className="row"
-                        href={
-                          message.conversations?.project_id
-                            ? `/projects/${message.conversations.project_id}`
-                            : "/inbox"
-                        }
-                        key={`message-${message.id}`}
-                      >
-                        <StatusPill value="message" />
-                        <div className="row-main">
-                          <div className="row-title">
-                            {message.conversations?.title ?? "Conversation"}
-                          </div>
-                          <div className="row-meta">
-                            {message.body_md.slice(0, 180)} · {formatDateTime(message.sent_at)}
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </>
-              )}
             </div>
           ) : (
             <div className="empty">No records match &ldquo;{q}&rdquo;. Try a different term.</div>
@@ -154,7 +122,7 @@ export default async function SearchPage({
         </section>
       ) : (
         <div className="empty">
-          Search covers entry titles, entry bodies, and message content — backed by Postgres full-text search.
+          Search covers entry titles and entry bodies — backed by Postgres full-text search.
         </div>
       )}
     </>

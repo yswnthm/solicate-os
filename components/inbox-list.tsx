@@ -3,19 +3,19 @@
 import { useEffect, useOptimistic, useTransition, useState } from "react";
 import Link from "next/link";
 
-import { dismissInboxEntry, dismissInboxMessage, fileInboxEntryToProject, fileInboxMessage } from "@/features/actions";
+import { dismissInboxEntry, fileInboxEntryToProject } from "@/features/actions";
 import { approveInboxDraft, draftInboxTriage, getInboxTriagePrompt, getModelPickerOptions, type ModelPickerOptions } from "@/features/ai-actions";
 import { StatusPill } from "@/components/status-pill";
 import { Modal } from "@/components/modal";
 import { PromptModal } from "@/components/prompt-viewer";
-import { EditEntryButton, EditMessageButton } from "@/components/editing/edit-buttons";
+import { EditEntryButton } from "@/components/editing/edit-buttons";
 import { ModelPicker } from "@/components/model-picker";
 import { formatDateTime } from "@/lib/utils";
 import type { TriageDraft } from "@/lib/ai/schemas";
 
-type InboxState = { entries: any[]; messages: any[] };
-type Removed = { kind: "entry" | "message"; id: string };
-type ReviewState = { kind: "entry" | "message"; id: string } | null;
+type InboxState = { entries: any[] };
+type Removed = { id: string };
+type ReviewState = { id: string } | null;
 
 const ENTRY_TYPES = ["note", "meeting", "decision", "document", "update", "milestone", "capture"];
 
@@ -28,16 +28,11 @@ type InboxProject = {
 const clientName = (c: InboxProject["people"]) =>
   Array.isArray(c) ? c[0]?.name ?? null : c?.name ?? null;
 
-export function InboxList({
-  entries,
-  messages,
-  projects,
-}: InboxState & { projects: InboxProject[] }) {
+export function InboxList({ entries, projects }: InboxState & { projects: InboxProject[] }) {
   const [optimistic, addOptimistic] = useOptimistic(
-    { entries, messages },
+    { entries },
     (state: InboxState, removed: Removed): InboxState => ({
-      entries: removed.kind === "entry" ? state.entries.filter((e) => e.id !== removed.id) : state.entries,
-      messages: removed.kind === "message" ? state.messages.filter((m) => m.id !== removed.id) : state.messages,
+      entries: state.entries.filter((e) => e.id !== removed.id),
     }),
   );
   const [, startTransition] = useTransition();
@@ -61,13 +56,13 @@ export function InboxList({
       .catch(() => {});
   }, []);
 
-  const onGetPrompt = async (kind: "entry" | "message", itemId: string) => {
+  const onGetPrompt = async (itemId: string) => {
     setPromptBusy(true);
     setDraftError(null);
     setPrompt(null);
     setPromptOpen(true);
     try {
-      setPrompt(await getInboxTriagePrompt(kind, itemId));
+      setPrompt(await getInboxTriagePrompt("entry", itemId));
     } catch (e) {
       setDraftError(e instanceof Error ? e.message : "Failed to build the prompt.");
       setPromptOpen(false);
@@ -83,13 +78,13 @@ export function InboxList({
     });
   };
 
-  const onDraft = async (kind: "entry" | "message", itemId: string) => {
-    setDrafting({ kind, id: itemId });
+  const onDraft = async (itemId: string) => {
+    setDrafting({ id: itemId });
     setDraftError(null);
     try {
-      const result = await draftInboxTriage(kind, itemId, modelId || undefined);
+      const result = await draftInboxTriage("entry", itemId, modelId || undefined);
       setDraft({ ...result, project_id: result.project_id ?? "" });
-      setReview({ kind, id: itemId });
+      setReview({ id: itemId });
     } catch (e) {
       setDraftError(e instanceof Error ? e.message : "AI draft failed. Check GROQ_API_KEY.");
     } finally {
@@ -108,17 +103,17 @@ export function InboxList({
     if (!payload.title || !payload.body_md) return;
     setReview(null);
     setDraft(null);
-    addOptimistic({ kind: review.kind, id: review.id });
+    addOptimistic({ id: review.id });
     startTransition(async () => {
       try {
-        await approveInboxDraft(review.kind, review.id, payload);
+        await approveInboxDraft("entry", review.id, payload);
       } catch (e) {
         setDraftError(e instanceof Error ? e.message : "Approve failed.");
       }
     });
   };
 
-  const total = optimistic.entries.length + optimistic.messages.length;
+  const total = optimistic.entries.length;
 
   if (total === 0) {
     return (
@@ -156,16 +151,13 @@ export function InboxList({
         <div>
           <h3 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700 }}>Inbox is clear</h3>
           <p style={{ margin: 0, color: "var(--muted)", fontSize: 14 }}>
-            All incoming messages and quick notes are triaged. Use the quick capture bar above or launch a workflow below.
+            All incoming captures and quick notes are triaged. Use the quick capture bar above or launch a workflow below.
           </p>
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
           <Link href="/inbox?tab=capture" className="button secondary small">
             ⚡ AI Deep Capture →
-          </Link>
-          <Link href="/ai/drafter" className="button secondary small">
-            ✉️ Message Drafter →
           </Link>
           <Link href="/projects" className="button secondary small">
             📁 View Projects →
@@ -178,7 +170,7 @@ export function InboxList({
   const runFileTo = (formData: FormData) => {
     const entryId = String(formData.get("entry_id") ?? "");
     if (!fileTo) return;
-    addOptimistic({ kind: "entry", id: entryId });
+    addOptimistic({ id: entryId });
     setFileTo(null);
     startTransition(async () => {
       await fileInboxEntryToProject(formData);
@@ -196,16 +188,16 @@ export function InboxList({
       <button
         className="button ghost small"
         type="button"
-        onClick={() => onDraft("entry", entry.id)}
+        onClick={() => onDraft(entry.id)}
         disabled={drafting?.id === entry.id}
         title="Draft a filed record with AI, then approve"
       >
-        {drafting?.id === entry.id && drafting?.kind === "entry" ? "Drafting…" : "✨ Draft"}
+        {drafting?.id === entry.id ? "Drafting…" : "✨ Draft"}
       </button>
       <button
         className="button ghost small"
         type="button"
-        onClick={() => onGetPrompt("entry", entry.id)}
+        onClick={() => onGetPrompt(entry.id)}
         disabled={promptBusy}
         title="Copy the AI prompt for ChatGPT"
       >
@@ -219,58 +211,9 @@ export function InboxList({
       >
         File to…
       </button>
-      <form className="inline-form" action={(fd) => run({ kind: "entry", id: entry.id }, fd, dismissInboxEntry)}>
+      <form className="inline-form" action={(fd) => run({ id: entry.id }, fd, dismissInboxEntry)}>
         <input type="hidden" name="entry_id" value={entry.id} />
         <button className="button ghost small" type="submit" title="Dismiss">
-          Dismiss
-        </button>
-      </form>
-    </div>
-  );
-
-  const messageRowActions = (message: any) => (
-    <div className="row-actions-always">
-      {message.conversations?.project_id && (
-        <Link
-          className="button secondary small"
-          href={`/projects/${message.conversations.project_id}?thread=${message.conversation_id}`}
-          title="Open the conversation thread on the project"
-        >
-          Open thread
-        </Link>
-      )}
-      <EditMessageButton
-        message={message}
-        conversationId={message.conversation_id}
-        projectId={message.conversations?.project_id ?? null}
-      />
-      <button
-        className="button ghost small"
-        type="button"
-        onClick={() => onDraft("message", message.id)}
-        disabled={drafting?.id === message.id}
-        title="Draft a filed record with AI, then approve"
-      >
-        {drafting?.id === message.id && drafting?.kind === "message" ? "Drafting…" : "✨ Draft"}
-      </button>
-      <button
-        className="button ghost small"
-        type="button"
-        onClick={() => onGetPrompt("message", message.id)}
-        disabled={promptBusy}
-        title="Copy the AI prompt for ChatGPT"
-      >
-        Prompt
-      </button>
-      <form className="inline-form" action={(fd) => run({ kind: "message", id: message.id }, fd, fileInboxMessage)}>
-        <input type="hidden" name="message_id" value={message.id} />
-        <button className="button small" type="submit">
-          File
-        </button>
-      </form>
-      <form className="inline-form" action={(fd) => run({ kind: "message", id: message.id }, fd, dismissInboxMessage)}>
-        <input type="hidden" name="message_id" value={message.id} />
-        <button className="button ghost small" type="submit">
           Dismiss
         </button>
       </form>
@@ -310,29 +253,6 @@ export function InboxList({
         </section>
       )}
 
-      {optimistic.messages.length > 0 && (
-        <section className="section">
-          <div className="section-title">
-            <h2>Messages</h2>
-            <span>{optimistic.messages.length} untriaged</span>
-          </div>
-          <div className="list">
-            {optimistic.messages.map((message: any) => (
-              <div className="row" key={message.id}>
-                <StatusPill value="message" />
-                <div className="row-main">
-                  <div className="row-title">{message.conversations?.title ?? "Conversation"}</div>
-                  <div className="row-meta">
-                    {formatDateTime(message.sent_at)} · {message.body_md.slice(0, 140)}
-                  </div>
-                </div>
-                {messageRowActions(message)}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       <Modal
         isOpen={drafting !== null || (review !== null && draft !== null)}
         onClose={() => {
@@ -352,7 +272,7 @@ export function InboxList({
               fieldId="inbox-model"
             />
             {draft !== null && review !== null && (
-              <button className="button ghost small" onClick={() => onDraft(review.kind, review.id)} disabled={drafting !== null} style={{ marginTop: 8 }}>
+              <button className="button ghost small" onClick={() => onDraft(review.id)} disabled={drafting !== null} style={{ marginTop: 8 }}>
                 ↻ Redraft with selected model
               </button>
             )}

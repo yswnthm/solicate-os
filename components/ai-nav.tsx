@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { classNames } from "@/lib/utils";
 
 const TABS = [
-  { key: "drafter", label: "Message Drafter", href: "/ai/drafter" },
   { key: "templates", label: "Templates", href: "/ai/templates" },
   { key: "models", label: "Models", href: "/ai/models" },
   { key: "settings", label: "Settings", href: "/ai/settings" },

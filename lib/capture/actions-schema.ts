@@ -56,7 +56,6 @@ const actionBase = z.object({
     "finance.invoice_sent",
     "finance.invoice_cleared",
     "finance.mark_completed",
-    "communication.draft",
   ]),
   label: reqText,
   summary: reqText,
@@ -250,16 +249,6 @@ const financeMarkCompleted = z.object({
   payload: z.object({}),
 });
 
-const communicationDraft = z.object({
-  kind: z.literal("communication.draft"),
-  payload: z.object({
-    content: reqText,
-    intent: reqText,
-    length_label: z.enum(["very_short", "short", "medium", "detailed"]).optional(),
-    styles: z.array(z.string().trim().min(1)).optional(),
-  }),
-});
-
 const actions = [
   actionBase.merge(clientCreate),
   actionBase.merge(projectCreate),
@@ -281,7 +270,6 @@ const actions = [
   actionBase.merge(financeInvoiceSent),
   actionBase.merge(financeInvoiceCleared),
   actionBase.merge(financeMarkCompleted),
-  actionBase.merge(communicationDraft),
 ] as const;
 
 // Spreading the const tuple keeps each variant's literal kind + payload type,

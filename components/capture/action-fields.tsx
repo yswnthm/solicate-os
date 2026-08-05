@@ -167,13 +167,6 @@ export const ACTION_SPECS: Record<string, KindSpec> = {
     fields: [],
     refs: [{ key: "ref_id", label: "Transaction" }],
   },
-  "communication.draft": {
-    fields: [
-      { key: "intent", label: "Intent", type: "text" },
-      select("length_label", "Length", ["very_short", "short", "medium", "detailed"]),
-      { key: "content", label: "Message", type: "textarea" },
-    ],
-  },
 };
 
 export const KIND_LABELS: Record<string, string> = {
@@ -197,5 +190,4 @@ export const KIND_LABELS: Record<string, string> = {
   "finance.invoice_sent": "Mark invoice sent",
   "finance.invoice_cleared": "Mark invoice cleared",
   "finance.mark_completed": "Mark completed",
-  "communication.draft": "Message draft",
 };

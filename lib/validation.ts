@@ -160,20 +160,6 @@ export const entrySchema = z
     }
   });
 
-export const conversationSchema = z.object({
-  client_id: z.string().uuid(),
-  project_id: optUuid,
-  title: req("Conversation title is required."),
-  kind: z.enum(["direct", "group"]),
-  channel: z.enum(["whatsapp", "email", "manual", "other"]),
-});
-
-export const messageSchema = z.object({
-  conversation_id: z.string().uuid(),
-  project_id: optUuid,
-  body_md: req("Message body is required."),
-});
-
 export const participantSchema = z
   .object({
     project_id: z.string().uuid(),
@@ -225,8 +211,6 @@ export type PhaseInput = z.infer<typeof phaseSchema>;
 export type TaskInput = z.infer<typeof taskSchema>;
 export type IssueInput = z.infer<typeof issueSchema>;
 export type EntryInput = z.infer<typeof entrySchema>;
-export type ConversationInput = z.infer<typeof conversationSchema>;
-export type MessageInput = z.infer<typeof messageSchema>;
 export type ParticipantInput = z.infer<typeof participantSchema>;
 
 // ─── Relationships (Level 1) ────────────────────────────────────────────────

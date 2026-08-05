@@ -59,7 +59,7 @@ export default async function SettingsPage() {
             </p>
             <p>
               <strong style={{ color: "var(--ink-2)" }}>Projects are the unit of work.</strong> Tasks, issues,
-              entries, and conversations all live inside a project.
+              and entries all live inside a project.
             </p>
             <p>
               <strong style={{ color: "var(--ink-2)" }}>Tasks vs issues.</strong> A task is work to do. An issue is

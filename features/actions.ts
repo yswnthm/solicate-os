@@ -14,7 +14,7 @@ const text = (value: FormDataEntryValue | null) => z.string().trim().parse(value
 const optional = (value: FormDataEntryValue | null) => text(value) || null;
 const projectPath = (projectId: string) => `/projects/${projectId}`;
 
-// Activity events and conversations.last_message_at are written by DB triggers
+// Activity events are written by DB triggers
 // (supabase/migrations/0003_activity_triggers.sql), so mutations are a single
 // atomic round trip.
 
@@ -303,7 +303,7 @@ export async function quickCapture(formData: FormData) {
   revalidatePath("/today");
 }
 
-// ─── Participants & conversations ─────────────────────────────────────────────
+// ─── Participants ─────────────────────────────────────────────────────────────
 
 export async function addProjectParticipant(formData: FormData) {
   await requireActiveUser();
@@ -331,90 +331,7 @@ export async function addProjectParticipant(formData: FormData) {
   revalidatePath(projectPath(projectId));
 }
 
-export async function createConversation(formData: FormData) {
-  const { user } = await requireActiveUser();
-  const clientId = id(formData.get("client_id"));
-  const projectId = optional(formData.get("project_id"));
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
-    .from("conversations")
-    .insert({
-      client_id: clientId,
-      project_id: projectId,
-      kind: z.enum(["direct", "group"]).parse(text(formData.get("kind")) || "direct"),
-      channel: z.enum(["whatsapp", "email", "manual", "other"]).parse(text(formData.get("channel")) || "manual"),
-      title: z.string().min(1).parse(text(formData.get("title"))),
-      created_by_id: user.id,
-    })
-    .select("id")
-    .single();
-  if (error) throw new Error(error.message);
-  if (projectId) {
-    revalidatePath(projectPath(projectId));
-  }
-  redirect(projectId ? projectPath(projectId) : `/clients/${clientId}`);
-}
-
-export async function addConversationParticipant(formData: FormData) {
-  await requireActiveUser();
-  const conversationId = id(formData.get("conversation_id"));
-  const projectId = optional(formData.get("project_id"));
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("conversation_participants").insert({
-    conversation_id: conversationId,
-    person_id: id(formData.get("person_id")),
-  });
-  if (error) throw new Error(error.message);
-  if (projectId) revalidatePath(projectPath(projectId));
-}
-
-export async function createMessage(formData: FormData) {
-  const { user } = await requireActiveUser();
-  const conversationId = id(formData.get("conversation_id"));
-  const projectId = optional(formData.get("project_id"));
-  const direction = z.enum(["inbound", "outbound"]).parse(text(formData.get("direction")) || "inbound");
-  const sentAt = optional(formData.get("sent_at")) ?? new Date().toISOString();
-  const senderPersonId = direction === "inbound" ? optional(formData.get("sender_person_id")) : null;
-  if (direction === "inbound" && !senderPersonId) throw new Error("Inbound messages require an external sender.");
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("messages").insert({
-    conversation_id: conversationId,
-    sender_person_id: senderPersonId,
-    sender_user_id: direction === "outbound" ? user.id : null,
-    direction,
-    body_md: z.string().min(1).parse(text(formData.get("body_md"))),
-    sent_at: sentAt,
-    triage_state: direction === "inbound" ? "inbox" : "filed",
-    created_by_id: user.id,
-  });
-  if (error) throw new Error(error.message);
-  if (projectId) revalidatePath(projectPath(projectId));
-  revalidatePath("/inbox");
-  revalidateTag("inbox");
-  revalidatePath("/today");
-}
-
 // ─── Inbox ────────────────────────────────────────────────────────────────────
-
-export async function fileInboxMessage(formData: FormData) {
-  await requireActiveUser();
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("messages").update({ triage_state: "filed" }).eq("id", id(formData.get("message_id")));
-  if (error) throw new Error(error.message);
-  revalidatePath("/inbox");
-  revalidateTag("inbox");
-  revalidatePath("/today");
-}
-
-export async function dismissInboxMessage(formData: FormData) {
-  await requireActiveUser();
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("messages").update({ triage_state: "dismissed" }).eq("id", id(formData.get("message_id")));
-  if (error) throw new Error(error.message);
-  revalidatePath("/inbox");
-  revalidateTag("inbox");
-  revalidatePath("/today");
-}
 
 export async function fileInboxEntry(formData: FormData) {
   await requireActiveUser();

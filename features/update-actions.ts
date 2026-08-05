@@ -8,10 +8,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getProjectWorkspace } from "@/features/queries";
 import {
   clientSchema,
-  conversationSchema,
   entrySchema,
   issueSchema,
-  messageSchema,
   participantSchema,
   personSchema,
   phaseSchema,
@@ -245,52 +243,6 @@ export async function updateEntry(id: string, input: unknown): Promise<EditResul
       paths.push(`/projects/${existing.project_id}`);
       if (existing.phase_id) paths.push(`/projects/${existing.project_id}/phases/${existing.phase_id}`);
     }
-    refresh(paths, ["inbox"]);
-  });
-}
-
-// ─── Conversations ───────────────────────────────────────────────────────────
-
-export async function updateConversation(id: string, input: unknown): Promise<EditResult> {
-  return runMutation(async () => {
-    await requireActiveUser();
-    const parsed = conversationSchema.safeParse(input);
-    if (!parsed.success) return validationResult(parsed.error);
-    const supabase = await createSupabaseServerClient();
-    const { data: existing } = await supabase
-      .from("conversations")
-      .select("project_id, client_id")
-      .eq("id", id)
-      .maybeSingle();
-    const { error } = await supabase
-      .from("conversations")
-      .update({ title: parsed.data.title, kind: parsed.data.kind, channel: parsed.data.channel, project_id: parsed.data.project_id })
-      .eq("id", id);
-    if (error) return { ok: false, error: error.message };
-    const paths = [`/clients/${parsed.data.client_id}`];
-    if (parsed.data.project_id) paths.push(`/projects/${parsed.data.project_id}`);
-    if (existing?.project_id && existing.project_id !== parsed.data.project_id) {
-      paths.push(`/projects/${existing.project_id}`);
-    }
-    refresh(paths);
-  });
-}
-
-// ─── Messages (inbox corrections) ────────────────────────────────────────────
-
-export async function updateMessage(id: string, input: unknown): Promise<EditResult> {
-  return runMutation(async () => {
-    await requireActiveUser();
-    const parsed = messageSchema.safeParse(input);
-    if (!parsed.success) return validationResult(parsed.error);
-    const supabase = await createSupabaseServerClient();
-    const { error } = await supabase
-      .from("messages")
-      .update({ body_md: parsed.data.body_md })
-      .eq("id", id);
-    if (error) return { ok: false, error: error.message };
-    const paths = ["/inbox", "/today"];
-    if (parsed.data.project_id) paths.push(`/projects/${parsed.data.project_id}`);
     refresh(paths, ["inbox"]);
   });
 }

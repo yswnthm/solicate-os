@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { createConversation, createIssue, createPhase, createTask } from "@/features/actions";
+import { createIssue, createPhase, createTask } from "@/features/actions";
 import { getProjectWorkspace } from "@/features/queries";
 import { StatusPill } from "@/components/status-pill";
 import { ModalTrigger } from "@/components/modal-trigger";
 import { EditPhaseButton } from "@/components/editing/edit-buttons";
-import { ConversationThread } from "@/components/conversation-thread";
 import { Section } from "@/components/shared/section";
 import { ProgressBar } from "@/components/shared/progress-bar";
 import { PhaseHealthPill } from "@/components/shared/health-pill";
@@ -16,13 +15,10 @@ import { formatDate } from "@/lib/utils";
 
 export default async function ProjectOverviewPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ thread?: string }>;
 }) {
   const { projectId } = await params;
-  const { thread } = await searchParams;
   const data = await getProjectWorkspace(projectId);
   const project: any = data.project;
   if (!project) notFound();
@@ -300,79 +296,6 @@ export default async function ProjectOverviewPage({
           </div>
         ) : (
           <div className="empty">No project-level issues. Issues inside phases live on each phase tab.</div>
-        )}
-      </Section>
-
-      {/* Conversations */}
-      <Section
-        title="Conversations"
-        count={data.conversations.length}
-        action={
-          <ModalTrigger buttonLabel="+ New conversation" title="Create conversation" buttonClass="button ghost small">
-            <form className="form" action={createConversation}>
-              <input type="hidden" name="project_id" value={projectId} />
-              <input type="hidden" name="client_id" value={project.person_id} />
-              <div className="field">
-                <label>New conversation</label>
-                <input name="title" placeholder="Client + Sakshi WhatsApp" required />
-              </div>
-              <div className="form-grid">
-                <div className="field">
-                  <label>Type</label>
-                  <select name="kind">
-                    <option value="group">Group</option>
-                    <option value="direct">Direct</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Channel</label>
-                  <select name="channel">
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="email">Email</option>
-                    <option value="manual">Manual</option>
-                  </select>
-                </div>
-              </div>
-              <button className="button" type="submit" style={{ marginTop: 8 }}>
-                Create conversation
-              </button>
-            </form>
-          </ModalTrigger>
-        }
-      >
-        {data.conversations.length ? (
-          <div className="stack">
-            {data.conversations.map((conversation: any) => (
-              <details key={conversation.id} open={thread === conversation.id}>
-                <summary
-                  className="row"
-                  style={{ cursor: "pointer", listStyle: "none", border: "1px solid var(--line)", background: "var(--surface)" }}
-                >
-                  <div className="row-main">
-                    <div className="row-title">{conversation.title}</div>
-                    <div className="row-meta">
-                      {conversation.kind} · {conversation.channel} ·{" "}
-                      {(conversation.conversation_participants ?? [])
-                        .map((p: any) => p.people?.name)
-                        .filter(Boolean)
-                        .join(", ") || "No participants"}
-                    </div>
-                  </div>
-                  <div className="row-actions-always">
-                    <StatusPill value={conversation.channel} />
-                  </div>
-                </summary>
-                <ConversationThread
-                  conversationId={conversation.id}
-                  projectId={projectId}
-                  initialMessages={conversation.messages ?? []}
-                  people={data.people}
-                />
-              </details>
-            ))}
-          </div>
-        ) : (
-          <div className="empty">No conversations on this project.</div>
         )}
       </Section>
     </div>

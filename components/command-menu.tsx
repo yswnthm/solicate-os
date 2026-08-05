@@ -6,7 +6,6 @@ import { Command } from "cmdk";
 
 import {
   createClient,
-  createConversation,
   createEntry,
   createIssue,
   createPerson,
@@ -26,7 +25,6 @@ type PaletteMode =
   | "task"
   | "issue"
   | "record"
-  | "conversation"
   | "relationship";
 
 type Project = {
@@ -49,7 +47,6 @@ const MODE_TITLES: Record<Exclude<PaletteMode, "command">, string> = {
   task: "Add task",
   issue: "Log issue",
   record: "Log project record",
-  conversation: "New conversation",
   relationship: "New relationship",
 };
 
@@ -60,10 +57,9 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<{
     entries: any[];
-    messages: any[];
     projects: any[];
     people: any[];
-  }>({ entries: [], messages: [], projects: [], people: [] });
+  }>({ entries: [], projects: [], people: [] });
   const [searching, setSearching] = useState(false);
   const searchIdRef = useRef(0);
   const [, startTransition] = useTransition();
@@ -138,7 +134,7 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
   useEffect(() => {
     if (!open || mode !== "command" || search.trim().length < 2) {
       setSearching(false);
-      setResults({ entries: [], messages: [], projects: [], people: [] });
+      setResults({ entries: [], projects: [], people: [] });
       return;
     }
     const query = search.trim();
@@ -232,18 +228,6 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                 </Command.Group>
               )}
 
-              {context?.clientId && (
-                <Command.Group heading={`Actions for ${context.clientName}`} className="cmdk-group-heading">
-                  <Command.Item className="cmdk-item" onSelect={() => openInMode("conversation")}>
-                    <span className="cmdk-icon">◍</span>
-                    <span className="cmdk-item-main">
-                      <span>New conversation for {context.clientName}</span>
-                      <span className="cmdk-sub">WhatsApp, email, or manual thread</span>
-                    </span>
-                  </Command.Item>
-                </Command.Group>
-              )}
-
               {showResults && (
                 <Command.Group heading="Search results" className="cmdk-group-heading">
                   {results.projects.slice(0, 4).map((p: any) => (
@@ -281,20 +265,7 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                       </span>
                     </Command.Item>
                   ))}
-                  {results.messages.slice(0, 4).map((m: any) => (
-                    <Command.Item
-                      key={`m-${m.id}`}
-                      className="cmdk-item"
-                      onSelect={() => go(m.conversations?.project_id ? `/projects/${m.conversations.project_id}` : "/inbox")}
-                    >
-                      <span className="cmdk-icon">◍</span>
-                      <span className="cmdk-item-main">
-                        <span>{m.conversations?.title ?? "Message"}</span>
-                        <span className="cmdk-sub">{m.body_md.slice(0, 80)}</span>
-                      </span>
-                    </Command.Item>
-                  ))}
-                  {showResults && !searching && results.projects.length + results.people.length + results.entries.length + results.messages.length === 0 && (
+                  {showResults && !searching && results.projects.length + results.people.length + results.entries.length === 0 && (
                     <Command.Item className="cmdk-item" onSelect={() => go(`/search?q=${encodeURIComponent(search)}`)}>
                       <span className="cmdk-icon">⌕</span>
                       <span className="cmdk-item-main">
@@ -344,13 +315,6 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                     <Command.Item className="cmdk-item" onSelect={() => go("/search")}>
                       <span className="cmdk-icon">⌕</span>
                       <span className="cmdk-item-main"><span>Search</span></span>
-                    </Command.Item>
-                    <Command.Item className="cmdk-item" onSelect={() => go("/ai/drafter")}>
-                      <span className="cmdk-icon">✉</span>
-                      <span className="cmdk-item-main">
-                        <span>Message Drafter</span>
-                        <span className="cmdk-sub">Draft a message to anyone on a project</span>
-                      </span>
                     </Command.Item>
                     <Command.Item className="cmdk-item" onSelect={() => go("/ai/templates")}>
                       <span className="cmdk-icon">▤</span>
@@ -687,39 +651,6 @@ function CreateForm({
           </div>
           <button className="button" type="submit" style={{ marginTop: 8 }}>
             File record
-          </button>
-        </form>
-      )}
-
-      {mode === "conversation" && context?.clientId && (
-        <form className="form" action={createConversation} onSubmit={onDone}>
-          <input type="hidden" name="client_id" value={context.clientId} />
-          <p className="muted" style={{ margin: 0 }}>
-            Conversation will attach to {context.clientName}.
-          </p>
-          <div className="field">
-            <label htmlFor="palette-conversation-title">Title</label>
-            <input id="palette-conversation-title" name="title" placeholder="Client + Sakshi WhatsApp" required autoFocus />
-          </div>
-          <div className="form-grid">
-            <div className="field">
-              <label htmlFor="palette-conversation-kind">Type</label>
-              <select id="palette-conversation-kind" name="kind">
-                <option value="group">Group</option>
-                <option value="direct">Direct</option>
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="palette-conversation-channel">Channel</label>
-              <select id="palette-conversation-channel" name="channel">
-                <option value="whatsapp">WhatsApp</option>
-                <option value="email">Email</option>
-                <option value="manual">Manual</option>
-              </select>
-            </div>
-          </div>
-          <button className="button" type="submit" style={{ marginTop: 8 }}>
-            Create conversation
           </button>
         </form>
       )}

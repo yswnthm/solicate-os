@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { getPersonDetail } from "@/features/queries";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { EditPersonButton } from "@/components/editing/edit-buttons";
 
 export default async function PersonDetailPage({
@@ -14,7 +14,7 @@ export default async function PersonDetailPage({
   params: Promise<{ personId: string }>;
 }) {
   const { personId } = await params;
-  const { person, participations, clientLinks, conversations, relationships } = await getPersonDetail(personId);
+  const { person, participations, clientLinks, relationships } = await getPersonDetail(personId);
   if (!person) notFound();
 
   const contactMeta = [person.email, person.phone].filter(Boolean).join(" · ");
@@ -92,38 +92,6 @@ export default async function PersonDetailPage({
           </section>
         )}
 
-        {conversations.length > 0 && (
-          <section className="section">
-            <div className="section-title">
-              <h2>Conversations</h2>
-              <span>{conversations.length}</span>
-            </div>
-            <div className="list">
-              {conversations.map((c: any) => (
-                <Link
-                  className="row"
-                  href={
-                    c.conversations?.project_id
-                      ? `/projects/${c.conversations.project_id}`
-                      : `/clients/${person.organization_id ?? ""}`
-                  }
-                  key={c.conversations?.id}
-                >
-                  <StatusPill value={c.conversations?.channel ?? "other"} />
-                  <div className="row-main">
-                    <div className="row-title">{c.conversations?.title ?? "Conversation"}</div>
-                    <div className="row-meta">
-                      {c.conversations?.last_message_at
-                        ? `Last activity ${formatDateTime(c.conversations.last_message_at)}`
-                        : "No messages yet"}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
         {relationships.length > 0 && (
           <section className="section">
             <div className="section-title">
@@ -150,9 +118,9 @@ export default async function PersonDetailPage({
           </section>
         )}
 
-        {participations.length === 0 && clientLinks.length === 0 && conversations.length === 0 && relationships.length === 0 && (
+        {participations.length === 0 && clientLinks.length === 0 && relationships.length === 0 && (
           <div className="empty">
-            No linked projects, clients, relationships, or conversations yet.
+            No linked projects, clients, or relationships yet.
           </div>
         )}
       </div>

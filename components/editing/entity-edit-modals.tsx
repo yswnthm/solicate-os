@@ -6,10 +6,8 @@ import { Modal } from "@/components/modal";
 import { EntityEditModal, type FieldConfig, type Values } from "@/components/editing/entity-edit-modal";
 import {
   updateClient,
-  updateConversation,
   updateEntry,
   updateIssue,
-  updateMessage,
   updatePerson,
   updatePhase,
   updateProject,
@@ -43,8 +41,6 @@ const PHASE_STATUS_OPTIONS = ["planned", "active", "on_hold", "completed", "canc
   value: v,
   label: label(v),
 }));
-const CONVERSATION_KIND_OPTIONS = ["direct", "group"].map((v) => ({ value: v, label: label(v) }));
-const CHANNEL_OPTIONS = ["whatsapp", "email", "manual", "other"].map((v) => ({ value: v, label: label(v) }));
 const ROLE_OPTIONS = ["client_contact", "partner", "collaborator"].map((v) => ({ value: v, label: label(v) }));
 const COMMUNICATION_MODE_OPTIONS = ["solicate_leads", "partner_leads", "shared", "advisory_only"].map((v) => ({
   value: v,
@@ -709,95 +705,6 @@ export function EditEntryModal({
   );
 }
 
-// ─── Conversations ───────────────────────────────────────────────────────────
-
-export function EditConversationModal({
-  conversation,
-  clientId,
-  projects,
-  open,
-  onOpenChange,
-}: {
-  conversation: any;
-  clientId: string;
-  projects?: { id: string; name: string }[];
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const fields: FieldConfig[] = [
-    { kind: "text", name: "title", label: "Title", required: true, autoFocus: true },
-    { kind: "select", name: "kind", label: "Type", options: CONVERSATION_KIND_OPTIONS, width: "half" },
-    { kind: "select", name: "channel", label: "Channel", options: CHANNEL_OPTIONS, width: "half" },
-    ...(projects && projects.length > 0
-      ? [
-          {
-            kind: "select",
-            name: "project_id",
-            label: "Project",
-            options: projects.map((p) => ({ value: p.id, label: p.name })),
-            placeholder: "No project",
-          } as FieldConfig,
-        ]
-      : []),
-  ];
-  return (
-    <EntityEditModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Edit conversation"
-      record={{
-        client_id: clientId,
-        project_id: conversation.project_id ?? "",
-        title: conversation.title,
-        kind: conversation.kind,
-        channel: conversation.channel,
-      }}
-      fields={fields}
-      successMessage="Conversation updated."
-      onSave={async (values) => updateConversation(conversation.id, values)}
-    />
-  );
-}
-
-// ─── Messages (inbox corrections) ────────────────────────────────────────────
-
-export function EditMessageModal({
-  message,
-  conversationId,
-  projectId,
-  open,
-  onOpenChange,
-}: {
-  message: any;
-  conversationId: string;
-  projectId: string | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const fields: FieldConfig[] = [
-    {
-      kind: "textarea",
-      name: "body_md",
-      label: "Message body",
-      required: true,
-      minHeight: 140,
-      autoFocus: true,
-    },
-  ];
-  return (
-    <EntityEditModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Edit message"
-      description="Correct a transcription or wording error. The message stays in its conversation."
-      record={{ conversation_id: conversationId, project_id: projectId ?? "", body_md: message.body_md }}
-      fields={fields}
-      successMessage="Message updated."
-      onSave={async (values) => updateMessage(message.id, values)}
-    />
-  );
-}
-
 // ─── Project participants ────────────────────────────────────────────────────
 
 export function EditParticipantModal({
@@ -991,7 +898,6 @@ export function EditRelationshipModal({
 
 export type EditTaskModalProps = Parameters<typeof EditTaskModal>[0];
 export type EditEntryModalProps = Parameters<typeof EditEntryModal>[0];
-export type EditConversationModalProps = Parameters<typeof EditConversationModal>[0];
 export type EditParticipantModalProps = Parameters<typeof EditParticipantModal>[0];
 export type EditIssueModalProps = Parameters<typeof EditIssueModal>[0];
 export type EditProjectModalProps = Parameters<typeof EditProjectModal>[0];

@@ -4,7 +4,7 @@ import { getActiveProjectsForSelect, getCaptureFormOptions, getInboxData } from 
 import { InboxCaptureHub } from "@/components/inbox-capture-hub";
 
 export default async function InboxPage() {
-  const [{ messages, entries }, projects, captureOptions] = await Promise.all([
+  const [inbox, projects, captureOptions] = await Promise.all([
     getInboxData(),
     getActiveProjectsForSelect(),
     getCaptureFormOptions(),
@@ -12,8 +12,7 @@ export default async function InboxPage() {
 
   return (
     <InboxCaptureHub
-      entries={entries}
-      messages={messages}
+      entries={inbox.entries}
       projects={projects}
       captureOptions={captureOptions}
     />

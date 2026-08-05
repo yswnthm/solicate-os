@@ -389,32 +389,5 @@ export async function applyAction(userId: string, action: CaptureAction, resolve
       throwOnError(error);
       return { ok: true };
     }
-
-    case "communication.draft": {
-      const p = action.payload;
-      if (!projectId || !personId) {
-        return { ok: false, error: "communication.draft needs a project and a person." };
-      }
-      const { data, error } = await supabase
-        .from("message_drafts")
-        .insert({
-          project_id: projectId,
-          person_id: personId,
-          phase_id: phaseId,
-          content: p.content,
-          intent: p.intent,
-          length_label: p.length_label ?? "short",
-          styles: p.styles ?? [],
-          additional_context: "",
-          direction: "outbound",
-          model_id: "capture",
-          status: "draft",
-          created_by_id: userId,
-        })
-        .select("id")
-        .single();
-      throwOnError(error);
-      return data ? { ok: true, createdId: String(data.id), createdKind: "message_draft" } : { ok: true };
-    }
   }
 }

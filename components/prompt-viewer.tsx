@@ -51,7 +51,7 @@ export function PromptModal({
             </button>
           </div>
           <p className="field-hint" style={{ marginTop: 10, marginBottom: 0 }}>
-            Paste this into ChatGPT or any model. It includes your full project memory — notes, conversations, and
+            Paste this into ChatGPT or any model. It includes your full project memory — notes, records, and
             financials — so treat it as confidential. Nothing is written or sent to any API by this action.
           </p>
         </div>

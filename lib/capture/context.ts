@@ -9,7 +9,7 @@ import type { CaptureInput, ClarificationAnswers } from "@/lib/capture/types";
 //
 // Retrieval is intentionally bounded with TARGETED queries — only the 6 data
 // types the capture templates actually need are fetched. Participants,
-// conversations, messages, activity, global people/users are not fetched here
+// activity, global people/users are not fetched here
 // (capture gets people from the cached getPeople() catalog instead).
 
 function throwOnError(error: { message: string } | null) {
@@ -57,8 +57,8 @@ function clientNameOf(relation: unknown): string | null {
 /**
  * Build the full memory package for a capture session. Uses targeted direct
  * queries — only the 6 data types actually consumed by the capture templates
- * are fetched. Skips participants, conversations, messages, activity, and
- * global people/users (those aren't needed for capture analysis/proposal).
+ * are fetched. Skips participants, activity, and global people/users (those
+ * aren't needed for capture analysis/proposal).
  *
  * All text body fields are truncated in this layer to keep JSON payload small.
  */
@@ -156,7 +156,7 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
   const doneTasks = tasks.filter((t) => t.status === "done");
 
   // V3: retrieve archive records most similar to the capture. This surfaces
-  // older entries/decisions/messages the recent snapshot misses. Graceful
+  // older entries/decisions the recent snapshot misses. Graceful
   // no-op (returns []) when embeddings are not configured or the search fails.
   const semantic_matches = input.project_id ? await semanticSearch(input.text, input.project_id, 8) : [];
 

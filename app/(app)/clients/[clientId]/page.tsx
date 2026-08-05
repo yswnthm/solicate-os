@@ -2,13 +2,13 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { createConversation, createRelationship, linkPersonToClient } from "@/features/actions";
+import { createRelationship, linkPersonToClient } from "@/features/actions";
 import { getClientDetail } from "@/features/queries";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
-import { formatDate, formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import { ModalTrigger } from "@/components/modal-trigger";
-import { EditClientButton, EditConversationButton, EditRelationshipButton } from "@/components/editing/edit-buttons";
+import { EditClientButton, EditRelationshipButton } from "@/components/editing/edit-buttons";
 
 export default async function ClientPage({
   params,
@@ -16,7 +16,7 @@ export default async function ClientPage({
   params: Promise<{ clientId: string }>;
 }) {
   const { clientId } = await params;
-  const { client, contacts, projects, conversations, people, relationships } = await getClientDetail(clientId);
+  const { client, contacts, projects, people, relationships } = await getClientDetail(clientId);
   if (!client) notFound();
 
   const activeProjects = projects.filter((p: any) => p.status === "active");
@@ -236,78 +236,6 @@ export default async function ClientPage({
             </div>
           ) : (
             <div className="empty">No contacts linked yet.</div>
-          )}
-        </section>
-
-        {/* Conversations */}
-        <section className="section">
-          <div className="section-title">
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <h2>Conversations</h2>
-              <span>{conversations.length}</span>
-            </div>
-            <ModalTrigger buttonLabel="+ New conversation" title="New conversation" buttonClass="button ghost small">
-              <form className="form" action={createConversation}>
-                <input type="hidden" name="client_id" value={clientId} />
-                <div className="field">
-                  <label>New conversation</label>
-                  <input
-                    name="title"
-                    placeholder="Komal + Sakshi WhatsApp"
-                    required
-                  />
-                </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label>Type</label>
-                    <select name="kind">
-                      <option value="direct">Direct</option>
-                      <option value="group">Group</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Channel</label>
-                    <select name="channel">
-                      <option value="whatsapp">WhatsApp</option>
-                      <option value="email">Email</option>
-                      <option value="manual">Manual</option>
-                    </select>
-                  </div>
-                </div>
-                <button className="button" type="submit" style={{ marginTop: 8 }}>
-                  Create conversation
-                </button>
-              </form>
-            </ModalTrigger>
-          </div>
-          {conversations.length ? (
-            <div className="list">
-              {conversations.map((conversation: any) => (
-                <div className="row" key={conversation.id}>
-                  <Link
-                    className="row-main"
-                    href={
-                      conversation.project_id
-                        ? `/projects/${conversation.project_id}`
-                        : "/inbox"
-                    }
-                  >
-                    <div className="row-title">{conversation.title}</div>
-                    <div className="row-meta">
-                      {conversation.channel} · {formatDateTime(conversation.last_message_at)}
-                    </div>
-                  </Link>
-                  <StatusPill value={conversation.kind} />
-                  <EditConversationButton
-                    conversation={conversation}
-                    clientId={clientId}
-                    projects={projects.map((p: any) => ({ id: p.id, name: p.name }))}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty">No conversations recorded for this client.</div>
           )}
         </section>
       </div>

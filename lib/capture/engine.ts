@@ -329,7 +329,7 @@ export async function extractMoreCaptureActions(sessionId: string, modelId?: str
   const already = ((existing ?? []) as { kind: string; label: string }[]).map((a) => `${a.kind}: ${a.label}`);
   const instructions =
     already.length > 0
-      ? `EXTRACT MORE. The following actions are ALREADY PROPOSED. Propose ONLY additional actions that are clearly implied by the capture but not yet covered. Do NOT repeat, rename, or re-propose any listed action. Look for what a deeper review surfaces: exact amounts, milestones, follow-ups, next steps, timeline implications, and communication drafts.\n\nAlready proposed:\n${already.map((a) => `- ${a}`).join("\n")}`
+      ? `EXTRACT MORE. The following actions are ALREADY PROPOSED. Propose ONLY additional actions that are clearly implied by the capture but not yet covered. Do NOT repeat, rename, or re-propose any listed action. Look for what a deeper review surfaces: exact amounts, milestones, follow-ups, next steps, and timeline implications.\n\nAlready proposed:\n${already.map((a) => `- ${a}`).join("\n")}`
       : "EXTRACT MORE. Propose every additional action clearly implied by the capture that a first pass might have missed.";
 
   return runCaptureProposal(sessionId, toAnswers(session), modelId, instructions, `${sessionId.slice(0, 4)}x-`);
