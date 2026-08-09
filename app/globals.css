@@ -560,6 +560,83 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
 .row-title { font-size: 15px; font-weight: 700; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
 .row-meta { color: inherit; opacity: 0.6; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* Task rows with subtasks */
+.task-row { display: flex; flex-direction: column; }
+.task-row > .row { border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); }
+.task-row > .row + .subtask-list {
+  border: 1px solid var(--line-2);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--surface);
+  padding: 0 20px 14px;
+  margin-top: -1px;
+}
+
+.subtask-list { display: flex; flex-direction: column; gap: 8px; }
+.subtask-toggle {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin-left: -10px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  opacity: 0.6;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 9999px;
+  cursor: pointer;
+}
+.subtask-toggle:hover { opacity: 1; background: var(--surface-2); }
+.subtask-caret { font-size: 10px; opacity: 0.7; }
+
+.subtask-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.subtask-item { display: flex; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 8px; }
+.subtask-item:hover { background: var(--surface-2); }
+.subtask-item.done .subtask-title { text-decoration: line-through; opacity: 0.5; }
+.subtask-check {
+  width: 20px; height: 20px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px; line-height: 1;
+  cursor: pointer;
+}
+.subtask-check:hover { border-color: var(--ink); }
+.subtask-item.done .subtask-check { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.subtask-title { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subtask-delete {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  opacity: 0.4;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  visibility: hidden;
+}
+.subtask-item:hover .subtask-delete { visibility: visible; }
+.subtask-delete:hover { opacity: 1; color: var(--danger); }
+
+.subtask-add { display: flex; gap: 8px; padding: 2px 8px; }
+.subtask-add input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+}
+.subtask-add input:focus { outline: none; border-color: var(--ink); }
+
 .empty {
   color: inherit;
   opacity: 0.7;

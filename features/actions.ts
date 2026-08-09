@@ -183,6 +183,80 @@ export async function updateTaskStatus(formData: FormData) {
   revalidatePath("/today");
 }
 
+// ─── Subtasks ────────────────────────────────────────────────────────────────
+
+export async function addSubtask(formData: FormData) {
+  const { user } = await requireActiveUser();
+  const taskId = id(formData.get("task_id"));
+  const projectId = id(formData.get("project_id"));
+  const title = z.string().min(1).parse(text(formData.get("title")));
+  const supabase = await createSupabaseServerClient();
+  const { data: last } = await supabase
+    .from("task_subtasks")
+    .select("position")
+    .eq("task_id", taskId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const { error } = await supabase.from("task_subtasks").insert({
+    task_id: taskId,
+    title,
+    position: (last?.position ?? 0) + 1,
+    created_by_id: user.id,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(projectPath(projectId));
+}
+
+export async function toggleSubtask(formData: FormData) {
+  await requireActiveUser();
+  const subtaskId = id(formData.get("subtask_id"));
+  const taskId = id(formData.get("task_id"));
+  const projectId = id(formData.get("project_id"));
+  const supabase = await createSupabaseServerClient();
+  const { data: subtask, error: fetchError } = await supabase
+    .from("task_subtasks")
+    .select("done")
+    .eq("id", subtaskId)
+    .maybeSingle();
+  if (fetchError) throw new Error(fetchError.message);
+  const nowDone = !subtask?.done;
+  const { error } = await supabase.from("task_subtasks").update({ done: nowDone }).eq("id", subtaskId);
+  if (error) throw new Error(error.message);
+
+  if (nowDone) {
+    // Completing the last open subtask also completes the parent task.
+    const { data: remaining } = await supabase
+      .from("task_subtasks")
+      .select("id")
+      .eq("task_id", taskId)
+      .eq("done", false)
+      .limit(1);
+    if (!remaining || remaining.length === 0) {
+      const { data: task } = await supabase.from("tasks").select("status").eq("id", taskId).maybeSingle();
+      if (task && task.status !== "done") {
+        const { error: taskError } = await supabase
+          .from("tasks")
+          .update({ status: "done", completed_at: new Date().toISOString() })
+          .eq("id", taskId);
+        if (taskError) throw new Error(taskError.message);
+      }
+    }
+  }
+  revalidatePath(projectPath(projectId));
+  revalidatePath("/today");
+}
+
+export async function deleteSubtask(formData: FormData) {
+  await requireActiveUser();
+  const subtaskId = id(formData.get("subtask_id"));
+  const projectId = id(formData.get("project_id"));
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("task_subtasks").delete().eq("id", subtaskId);
+  if (error) throw new Error(error.message);
+  revalidatePath(projectPath(projectId));
+}
+
 // ─── Phases ───────────────────────────────────────────────────────────────────
 
 export async function createPhase(formData: FormData) {

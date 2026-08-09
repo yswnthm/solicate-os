@@ -292,9 +292,18 @@ export async function getProjectWorkspace(projectId: string) {
     throwOnError(r.error),
   );
 
+  const taskIds = (tasks.data ?? []).map((t: any) => t.id);
+  const subtasks = taskIds.length
+    ? (await supabase.from("task_subtasks").select("id, task_id, title, done, position").in("task_id", taskIds).order("position")).data ?? []
+    : [];
+  const tasksWithSubtasks = (tasks.data ?? []).map((t: any) => ({
+    ...t,
+    subtasks: subtasks.filter((s) => s.task_id === t.id),
+  }));
+
   return {
     project: project.data,
-    tasks: tasks.data ?? [],
+    tasks: tasksWithSubtasks,
     issues: [],
     entries: entries.data ?? [],
     participants: participants.data ?? [],
@@ -379,9 +388,18 @@ export async function getProjectWorkspaceForAI(projectId: string) {
     throwOnError(r.error),
   );
 
+  const taskIds = (tasks.data ?? []).map((t: any) => t.id);
+  const subtasks = taskIds.length
+    ? (await supabase.from("task_subtasks").select("id, task_id, title, done, position").in("task_id", taskIds).order("position")).data ?? []
+    : [];
+  const tasksWithSubtasks = (tasks.data ?? []).map((t: any) => ({
+    ...t,
+    subtasks: subtasks.filter((s) => s.task_id === t.id),
+  }));
+
   return {
     project: project.data,
-    tasks: tasks.data ?? [],
+    tasks: tasksWithSubtasks,
     issues: [],
     entries: entries.data ?? [],
     participants: participants.data ?? [],
@@ -469,6 +487,15 @@ export async function getPhaseWorkspace(phaseId: string) {
   ]);
   [project, tasks, entries, finance, phases, users].forEach((r) => throwOnError(r.error));
 
+  const taskIds = (tasks.data ?? []).map((t: any) => t.id);
+  const subtasks = taskIds.length
+    ? (await supabase.from("task_subtasks").select("id, task_id, title, done, position").in("task_id", taskIds).order("position")).data ?? []
+    : [];
+  const tasksWithSubtasks = (tasks.data ?? []).map((t: any) => ({
+    ...t,
+    subtasks: subtasks.filter((s) => s.task_id === t.id),
+  }));
+
   const recordIds = [
     phase.id,
     ...(tasks.data ?? []).map((t) => t.id),
@@ -486,7 +513,7 @@ export async function getPhaseWorkspace(phaseId: string) {
   return {
     phase,
     project: project.data,
-    tasks: tasks.data ?? [],
+    tasks: tasksWithSubtasks,
     issues: [],
     entries: entries.data ?? [],
     finance: (finance.data ?? []).map((f: any) => ({
