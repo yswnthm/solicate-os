@@ -9,14 +9,25 @@
 -- 'message'/'conversation' (shared with entity_links/record_history).
 
 -- ─── 1. triggers referencing messages/conversations ─────────────────────────
+-- The conversations tables may or may not exist on the target (0038 was never
+-- applied everywhere), so guard each drop by table existence.
 
-drop trigger if exists messages_touch_conversation on public.messages;
-drop trigger if exists messages_mark_ai_summaries_stale on public.messages;
-drop trigger if exists messages_updated_at on public.messages;
-drop trigger if exists conversations_log_created on public.conversations;
-drop trigger if exists conversations_log_updated on public.conversations;
-drop trigger if exists conversations_updated_at on public.conversations;
-drop trigger if exists message_drafts_updated_at on public.message_drafts;
+do $$
+begin
+  if to_regclass('public.messages') is not null then
+    drop trigger if exists messages_touch_conversation on public.messages;
+    drop trigger if exists messages_mark_ai_summaries_stale on public.messages;
+    drop trigger if exists messages_updated_at on public.messages;
+  end if;
+  if to_regclass('public.conversations') is not null then
+    drop trigger if exists conversations_log_created on public.conversations;
+    drop trigger if exists conversations_log_updated on public.conversations;
+    drop trigger if exists conversations_updated_at on public.conversations;
+  end if;
+  if to_regclass('public.message_drafts') is not null then
+    drop trigger if exists message_drafts_updated_at on public.message_drafts;
+  end if;
+end $$;
 
 -- ─── 2. functions ───────────────────────────────────────────────────────────
 
@@ -48,14 +59,25 @@ $$;
 
 -- ─── 3. RLS policies + workspace helper ─────────────────────────────────────
 
-drop policy if exists "workspace isolation conversations" on public.conversations;
-drop policy if exists "workspace isolation conversation participants" on public.conversation_participants;
-drop policy if exists "workspace isolation messages" on public.messages;
-drop policy if exists "workspace isolation message drafts" on public.message_drafts;
-drop policy if exists "active users manage conversations" on public.conversations;
-drop policy if exists "active users manage conversation participants" on public.conversation_participants;
-drop policy if exists "active users manage messages" on public.messages;
-drop policy if exists "active users manage message drafts" on public.message_drafts;
+do $$
+begin
+  if to_regclass('public.conversations') is not null then
+    drop policy if exists "workspace isolation conversations" on public.conversations;
+    drop policy if exists "active users manage conversations" on public.conversations;
+  end if;
+  if to_regclass('public.conversation_participants') is not null then
+    drop policy if exists "workspace isolation conversation participants" on public.conversation_participants;
+    drop policy if exists "active users manage conversation participants" on public.conversation_participants;
+  end if;
+  if to_regclass('public.messages') is not null then
+    drop policy if exists "workspace isolation messages" on public.messages;
+    drop policy if exists "active users manage messages" on public.messages;
+  end if;
+  if to_regclass('public.message_drafts') is not null then
+    drop policy if exists "workspace isolation message drafts" on public.message_drafts;
+    drop policy if exists "active users manage message drafts" on public.message_drafts;
+  end if;
+end $$;
 
 drop function if exists public.conversation_in_current_workspace(uuid);
 

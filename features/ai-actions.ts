@@ -130,7 +130,7 @@ export async function getBatchTriagePrompt(): Promise<string> {
 
 /**
  * Rebuild the semantic index for recent records. On-demand maintenance: chunk +
- * embed recent entries/tasks/issues and upsert into semantic_chunks.
+ * embed recent entries/tasks and upsert into semantic_chunks.
  * No-op friendly when no embedding provider is configured.
  */
 export async function reindexSemanticMemoryAction(): Promise<string> {
@@ -141,7 +141,7 @@ export async function reindexSemanticMemoryAction(): Promise<string> {
   const supabase = await createSupabaseServerClient();
   const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [entries, tasks, issues] = await Promise.all([
+  const [entries, tasks] = await Promise.all([
     supabase
       .from("entries")
       .select("id, project_id, type, title, body_md")
@@ -155,18 +155,11 @@ export async function reindexSemanticMemoryAction(): Promise<string> {
       .not("status", "eq", "cancelled")
       .order("updated_at", { ascending: false })
       .limit(300),
-    supabase
-      .from("issues")
-      .select("id, project_id, title, description_md")
-      .not("status", "eq", "closed")
-      .order("updated_at", { ascending: false })
-      .limit(300),
   ]);
-  [entries, tasks, issues].forEach((r) => throwOnError(r.error));
+  [entries, tasks].forEach((r) => throwOnError(r.error));
 
   let entryCount = 0;
   let taskCount = 0;
-  let issueCount = 0;
 
   for (const e of entries.data ?? []) {
     await indexSemanticSource("entry", String(e.id), String(e.project_id), `Entry (${e.type ?? ""}): ${e.title ?? ""}`, String(e.body_md ?? ""));
@@ -176,12 +169,8 @@ export async function reindexSemanticMemoryAction(): Promise<string> {
     await indexSemanticSource("task", String(t.id), String(t.project_id), `Task: ${t.title ?? ""}`, String(t.description_md ?? ""));
     taskCount++;
   }
-  for (const i of issues.data ?? []) {
-    await indexSemanticSource("issue", String(i.id), String(i.project_id), `Issue: ${i.title ?? ""}`, String(i.description_md ?? ""));
-    issueCount++;
-  }
 
-  return `Semantic memory indexed: ${entryCount} entries, ${taskCount} tasks, ${issueCount} issues.`;
+  return `Semantic memory indexed: ${entryCount} entries, ${taskCount} tasks.`;
 }
 
 // ─── Morning brief ───────────────────────────────────────────────────────────

@@ -22,7 +22,7 @@ export async function getMorningBriefContext(userId: string) {
     }),
     overdue: data.overdue.slice(0, 8).map((t: any) => `- ${t.title} (due ${new Date(t.due_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})`),
     upcoming: data.upcoming.slice(0, 8).map((t: any) => `- ${t.title} (due ${new Date(t.due_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})`),
-    issues: data.issues.slice(0, 6).map((i: any) => `- ${i.title} [${i.severity}]`),
+    issues: data.issues.slice(0, 6).map((i: any) => `- ${i.title} [${i.priority}]`),
     inboxCount: inbox.entries.length,
     inboxTop: inbox.entries.slice(0, 5).map((x: any) => `- ${x.title ?? "capture"}`),
     projectPulse: data.changedProjects.slice(0, 5).map((p: any) => `- ${p.name} (${p.status})`),

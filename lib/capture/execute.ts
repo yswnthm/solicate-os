@@ -231,16 +231,19 @@ export async function applyAction(userId: string, action: CaptureAction, resolve
     }
 
     case "issue.create": {
+      // Issues were consolidated into tasks (migration 0040): creating an
+      // "issue" now creates a task, mapping severity→priority like the import.
       const p = action.payload;
       if (!projectId) return { ok: false, error: "issue.create needs a project." };
+      const priority = p.severity === "critical" || p.severity === "high" ? "urgent" : "high";
       const { data, error } = await supabase
-        .from("issues")
+        .from("tasks")
         .insert({
           project_id: projectId,
           title: p.title,
           description_md: p.description_md ?? "",
-          severity: p.severity ?? "medium",
-          status: p.status ?? "open",
+          priority,
+          status: "todo",
           assignee_id: userId,
           phase_id: phaseId,
           created_by_id: userId,
@@ -248,21 +251,34 @@ export async function applyAction(userId: string, action: CaptureAction, resolve
         .select("id")
         .single();
       throwOnError(error);
-      return data ? { ok: true, createdId: String(data.id), createdKind: "issue" } : { ok: true };
+      return data ? { ok: true, createdId: String(data.id), createdKind: "task" } : { ok: true };
     }
 
     case "issue.resolve": {
       const p = action.payload;
-      if (!refId) return { ok: false, error: "issue.resolve needs an issue reference." };
-      const { error } = await supabase
-        .from("issues")
+      if (!refId) return { ok: false, error: "issue.resolve needs a task reference." };
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("description_md")
+        .eq("id", refId)
+        .maybeSingle();
+      throwOnError(error);
+      const resolution = p.resolution_summary?.trim();
+      const description =
+        resolution && data?.description_md
+          ? `${data.description_md}\n\n**Resolution:** ${resolution}`
+          : resolution
+            ? `**Resolution:** ${resolution}`
+            : data?.description_md ?? null;
+      const { error: updateError } = await supabase
+        .from("tasks")
         .update({
-          status: p.status ?? "resolved",
-          resolved_at: nowIso(),
-          resolution_summary: p.resolution_summary,
+          status: "done",
+          completed_at: nowIso(),
+          ...(description ? { description_md: description } : {}),
         })
         .eq("id", refId);
-      throwOnError(error);
+      throwOnError(updateError);
       return { ok: true };
     }
 

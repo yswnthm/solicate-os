@@ -73,15 +73,14 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
     project: Record<string, unknown> | null;
     phases: Record<string, unknown>[];
     tasks: Record<string, unknown>[];
-    issues: Record<string, unknown>[];
     finance: Record<string, unknown>[];
     entries: Record<string, unknown>[];
   } | null = null;
 
   if (input.project_id) {
     const pid = input.project_id;
-    // 6 targeted parallel queries — exactly what capture needs, nothing more.
-    const [project, phases, tasks, issues, entries, finance] = await Promise.all([
+    // 5 targeted parallel queries — exactly what capture needs, nothing more.
+    const [project, phases, tasks, entries, finance] = await Promise.all([
       supabase
         .from("projects")
         .select("*, people!projects_person_id_fkey(id, name)")
@@ -101,13 +100,6 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
         .order("due_at", { ascending: true, nullsFirst: false })
         .limit(60),
       supabase
-        .from("issues")
-        // No description_md
-        .select("id, title, status, severity, resolution_summary, phase_id, phases(id, name)")
-        .eq("project_id", pid)
-        .order("reported_at", { ascending: false })
-        .limit(30),
-      supabase
         .from("entries")
         .select("id, title, type, body_md, occurred_at, decision_outcome, decision_state, phase_id, phases(id, name)")
         .eq("project_id", pid)
@@ -121,12 +113,11 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
         .order("transaction_date", { ascending: false })
         .limit(25),
     ]);
-    [project, phases, tasks, issues, entries, finance].forEach((r) => throwOnError(r.error));
+    [project, phases, tasks, entries, finance].forEach((r) => throwOnError(r.error));
     projectData = {
       project: project.data as Record<string, unknown> | null,
       phases: (phases.data ?? []) as unknown as Record<string, unknown>[],
       tasks: (tasks.data ?? []) as unknown as Record<string, unknown>[],
-      issues: (issues.data ?? []) as unknown as Record<string, unknown>[],
       finance: (finance.data ?? []) as unknown as Record<string, unknown>[],
       entries: (entries.data ?? []) as unknown as Record<string, unknown>[],
     };
@@ -148,11 +139,13 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
 
   const phases = projectData?.phases ?? [];
   const tasks = projectData?.tasks ?? [];
-  const issues = projectData?.issues ?? [];
   const finance = projectData?.finance ?? [];
   const entries = projectData?.entries ?? [];
 
   const openTasks = tasks.filter((t) => !["done", "cancelled"].includes(String(t.status)));
+  // Issues were consolidated into tasks (migration 0040) — the open_issues
+  // snapshot is fed from open tasks so existing capture templates keep working.
+  const issues = openTasks;
   const doneTasks = tasks.filter((t) => t.status === "done");
 
   // V3: retrieve archive records most similar to the capture. This surfaces
@@ -195,7 +188,7 @@ export async function getCaptureContext(input: CaptureInput): Promise<CaptureCon
         id: i.id,
         title: i.title,
         status: i.status,
-        severity: i.severity,
+        severity: i.priority,
         phase: (i.phases as unknown as Record<string, unknown> | undefined)?.name ?? null,
       })),
     financials: finance.map((f: any) => ({

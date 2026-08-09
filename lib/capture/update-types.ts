@@ -19,7 +19,6 @@ export interface UpdateTypeDef {
 export const UPDATE_TYPES: UpdateTypeDef[] = [
   { value: "phase", label: "Phase", description: "Create, complete, pause, or update a phase", kinds: ["phase.create", "phase.complete", "phase.pause", "phase.update"] },
   { value: "task", label: "Task", description: "Create, complete, or reprioritize tasks", kinds: ["task.create", "task.complete", "task.update_priority"] },
-  { value: "issue", label: "Issue", description: "Log or resolve issues", kinds: ["issue.create", "issue.resolve"] },
   { value: "meeting", label: "Meeting", description: "File a meeting record", kinds: ["entry.create"], entryTypes: ["meeting"] },
   { value: "document", label: "Document", description: "File a document record", kinds: ["entry.create"], entryTypes: ["document"] },
   { value: "note", label: "Note", description: "File a plain note", kinds: ["entry.create"], entryTypes: ["note"] },
