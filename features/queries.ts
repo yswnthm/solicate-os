@@ -254,7 +254,7 @@ export async function getProjectWorkspace(projectId: string) {
       supabase.from("projects").select("*, people!projects_person_id_fkey(id, name)").eq("id", projectId).maybeSingle(),
       supabase
         .from("tasks")
-        .select("id, title, description_md, status, priority, due_at, phase_id, assignee_id, phases(id, name, position)")
+        .select("id, title, description_md, status, priority, due_at, phase_id, assignee_id, phases(id, name, position), app_users!tasks_assignee_id_fkey(id, display_name)")
         .eq("project_id", projectId)
         .order("status")
         .order("due_at", { ascending: true, nullsFirst: false }),
@@ -462,7 +462,7 @@ export async function getPhaseWorkspace(phaseId: string) {
       .maybeSingle(),
     supabase
       .from("tasks")
-      .select("id, title, description_md, status, priority, due_at, phase_id, assignee_id, phases(id, name, position)")
+      .select("id, title, description_md, status, priority, due_at, phase_id, assignee_id, phases(id, name, position), app_users!tasks_assignee_id_fkey(id, display_name)")
       .eq("phase_id", phaseId)
       .order("status")
       .order("due_at", { ascending: true, nullsFirst: false }),

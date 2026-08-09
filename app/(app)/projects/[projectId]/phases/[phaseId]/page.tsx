@@ -124,7 +124,7 @@ export default async function PhaseDashboardPage({
         }
       >
         {openTasks.length ? (
-          <div className="list">
+          <div className="todo-list">
             {openTasks.slice(0, 6).map((task) => (
               <TaskRow key={task.id} task={task} projectId={projectId} phases={phases} users={users} />
             ))}

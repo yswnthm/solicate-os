@@ -172,7 +172,7 @@ export default async function ProjectOverviewPage({
         }
       >
         {unphasedTasks.length ? (
-          <div className="list">
+          <div className="todo-list">
             {unphasedTasks.map((task: any) => (
               <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} users={data.users} />
             ))}

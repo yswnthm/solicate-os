@@ -27,7 +27,7 @@ export function SubtaskList({
     <div className="subtask-list" style={{ opacity: isPending ? 0.7 : 1 }}>
       <button type="button" className="subtask-toggle" onClick={() => setExpanded((v) => !v)}>
         <span className="subtask-caret">{expanded ? "▾" : "▸"}</span>
-        Subtasks {doneCount}/{optimistic.length}
+        Subtasks <span className="subtask-count">{doneCount}/{optimistic.length}</span>
       </button>
       {expanded && (
         <>
@@ -89,8 +89,8 @@ export function SubtaskList({
             <input type="hidden" name="task_id" value={taskId} />
             <input type="hidden" name="project_id" value={projectId} />
             <input name="title" placeholder="Add a step…" aria-label="Add a subtask" required />
-            <button className="button small secondary" type="submit">
-              Add
+            <button className="subtask-add-btn" type="submit">
+              + Add
             </button>
           </form>
         </>

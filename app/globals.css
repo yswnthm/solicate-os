@@ -560,82 +560,208 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
 .row-title { font-size: 15px; font-weight: 700; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
 .row-meta { color: inherit; opacity: 0.6; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Task rows with subtasks */
-.task-row { display: flex; flex-direction: column; }
-.task-row > .row { border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); }
-.task-row > .row + .subtask-list {
-  border: 1px solid var(--line-2);
-  border-top: none;
-  border-radius: 0 0 var(--radius) var(--radius);
+/* ─── Todo List (Todoist-style) ─────────────────────────────────────────────── */
+.todo-list {
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
-  padding: 0 20px 14px;
-  margin-top: -1px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.todo-list > .task-row + .task-row,
+.todo-list > .task-row + .todo-divider,
+.todo-list > .todo-divider + .task-row {
+  border-top: 1px solid var(--line-2);
 }
 
-.subtask-list { display: flex; flex-direction: column; gap: 8px; }
-.subtask-toggle {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  margin-left: -10px;
-  border: none;
-  background: transparent;
-  color: var(--ink);
-  opacity: 0.6;
-  font-size: 12.5px;
-  font-weight: 600;
-  border-radius: 9999px;
-  cursor: pointer;
+.task-row { display: flex; flex-direction: column; }
+.todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  transition: background var(--transition);
 }
-.subtask-toggle:hover { opacity: 1; background: var(--surface-2); }
-.subtask-caret { font-size: 10px; opacity: 0.7; }
+.todo-item:hover { background: var(--surface-hover); }
 
-.subtask-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.subtask-item { display: flex; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 8px; }
-.subtask-item:hover { background: var(--surface-2); }
-.subtask-item.done .subtask-title { text-decoration: line-through; opacity: 0.5; }
-.subtask-check {
-  width: 20px; height: 20px; flex-shrink: 0;
+.todo-check {
+  width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px;
   display: inline-flex; align-items: center; justify-content: center;
   border: 1.5px solid var(--line);
-  border-radius: 6px;
+  border-radius: 50%;
   background: transparent;
+  color: transparent;
+  font-size: 11px; line-height: 1;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.todo-check:hover { border-color: var(--ink); background: var(--accent-soft); color: var(--ink); }
+.todo-check.checked { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+
+.todo-check.cancelled {
+  border-color: var(--line-2);
+  background: var(--surface-2);
+  color: var(--muted-2);
+  cursor: default;
+}
+
+/* Priority colors — ring + filled state (Todoist flag palette) */
+.priority-urgent .todo-check { border-color: var(--danger); }
+.priority-urgent .todo-check:hover { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+.priority-high .todo-check { border-color: var(--warning); }
+.priority-high .todo-check:hover { background: var(--warning-soft); border-color: var(--warning); color: var(--warning); }
+.priority-low .todo-check { border-color: var(--muted-2); }
+.priority-low .todo-check:hover { background: var(--surface-hover); }
+.priority-urgent .todo-check.checked { background: var(--danger); border-color: var(--danger); color: #fff; }
+.priority-high .todo-check.checked { background: var(--warning); border-color: var(--warning); color: #fff; }
+.priority-low .todo-check.checked { background: var(--muted-2); border-color: var(--muted-2); color: var(--surface); }
+
+.todo-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.todo-title {
+  font-size: 14.5px; font-weight: 600;
+  color: var(--ink); letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.todo-item.done .todo-title { text-decoration: line-through; color: var(--muted); font-weight: 500; }
+.todo-item.cancelled .todo-title { text-decoration: line-through; color: var(--muted-2); font-weight: 500; }
+
+.todo-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; }
+.todo-meta span { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.todo-meta .meta-priority { text-transform: capitalize; }
+.todo-meta .meta-priority.urgent { color: var(--danger); }
+.todo-meta .meta-priority.high { color: var(--warning); }
+.todo-meta .meta-priority.low { color: var(--muted-2); }
+
+.todo-actions {
+  display: flex; align-items: center; gap: 6px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.todo-item:hover .todo-actions { opacity: 1; }
+@media (max-width: 768px) { .todo-actions { opacity: 1; } }
+
+.todo-edit {
+  border: none; background: transparent; color: var(--muted);
+  font-size: 12.5px; font-weight: 600; cursor: pointer;
+  padding: 5px 10px; border-radius: 8px; white-space: nowrap;
+}
+.todo-edit:hover { color: var(--ink); background: var(--surface-hover); }
+
+.todo-divider {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 16px 8px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--muted);
+}
+.todo-divider::after { content: ""; flex: 1; height: 1px; background: var(--line-2); }
+.todo-divider span { color: var(--muted-2); font-weight: 600; }
+
+/* Quick-add bar */
+.todo-add {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.todo-add:focus-within { border-color: var(--ink); box-shadow: 0 0 0 3px var(--accent-soft); }
+.todo-add-plus { color: var(--muted-2); font-size: 15px; flex-shrink: 0; }
+.todo-add input[name="title"] {
+  flex: 1; min-width: 0;
+  border: none; background: transparent;
+  font-size: 14px; color: var(--ink);
+  padding: 6px 4px;
+}
+.todo-add input[name="title"]::placeholder { color: var(--muted-2); }
+.todo-add input:focus { outline: none; }
+.todo-add select, .todo-add input[type="date"] {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
   color: var(--ink);
-  font-size: 12px; line-height: 1;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12.5px;
+}
+.todo-add-submit {
+  border: none; background: var(--accent); color: var(--accent-ink);
+  font-weight: 700; font-size: 13px;
+  padding: 7px 14px; border-radius: 9999px; cursor: pointer;
+  white-space: nowrap;
+}
+.todo-add-submit:hover { background: var(--accent-hover); }
+
+/* ─── Subtasks (tree-style under parent) ─────────────────────────────────── */
+.subtask-list { display: flex; flex-direction: column; gap: 2px; padding: 2px 0 10px; }
+.subtask-toggle {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-left: calc(16px + 20px + 12px - 12px);
+  padding: 5px 12px;
+  border: none; background: transparent;
+  color: var(--muted); font-size: 12px; font-weight: 600;
+  border-radius: 9999px; cursor: pointer;
+}
+.subtask-toggle:hover { color: var(--ink); background: var(--surface-hover); }
+.subtask-caret { font-size: 9px; opacity: 0.7; }
+.subtask-count { color: var(--muted-2); font-weight: 500; }
+
+.subtask-items {
+  list-style: none; margin: 0; padding: 2px 0 0 18px;
+  display: flex; flex-direction: column; gap: 2px;
+  margin-left: calc(16px + 20px + 12px);
+  border-left: 2px solid var(--line-2);
+}
+.subtask-item { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; }
+.subtask-item:hover { background: var(--surface-hover); }
+.subtask-item.done .subtask-title { text-decoration: line-through; opacity: 0.45; }
+.subtask-check {
+  width: 17px; height: 17px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  background: transparent; color: var(--surface);
+  font-size: 10px; line-height: 1;
   cursor: pointer;
 }
 .subtask-check:hover { border-color: var(--ink); }
-.subtask-item.done .subtask-check { background: var(--ink); border-color: var(--ink); color: var(--surface); }
-.subtask-title { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subtask-item.done .subtask-check { background: var(--ink); border-color: var(--ink); }
+.subtask-title { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .subtask-delete {
   flex-shrink: 0;
-  border: none;
-  background: transparent;
-  color: var(--ink);
-  opacity: 0.4;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
+  border: none; background: transparent;
+  color: var(--ink); opacity: 0.4;
+  font-size: 12px; cursor: pointer;
+  padding: 4px; border-radius: 6px;
   visibility: hidden;
 }
 .subtask-item:hover .subtask-delete { visibility: visible; }
 .subtask-delete:hover { opacity: 1; color: var(--danger); }
 
-.subtask-add { display: flex; gap: 8px; padding: 2px 8px; }
-.subtask-add input {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 12px;
-  font-size: 13.5px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ink);
+.subtask-add {
+  display: flex; align-items: center; gap: 2px;
+  margin-left: calc(16px + 20px + 12px);
+  padding-left: 18px;
+  padding-top: 4px;
 }
-.subtask-add input:focus { outline: none; border-color: var(--ink); }
+.subtask-add input {
+  flex: 1; min-width: 0;
+  padding: 7px 10px; font-size: 13px;
+  border: none; border-radius: 8px;
+  background: transparent; color: var(--ink);
+}
+.subtask-add input::placeholder { color: var(--muted-2); }
+.subtask-add input:focus { outline: none; background: var(--surface-2); }
+.subtask-add-btn {
+  border: none; background: transparent;
+  color: var(--muted); font-size: 12.5px; font-weight: 600;
+  padding: 6px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+}
+.subtask-add-btn:hover { color: var(--ink); background: var(--surface-hover); }
 
 .empty {
   color: inherit;

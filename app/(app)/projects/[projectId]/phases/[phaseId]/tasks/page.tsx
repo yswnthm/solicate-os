@@ -1,6 +1,5 @@
 import { getPhaseWorkspace } from "@/features/queries";
 import { createTask } from "@/features/actions";
-import { ModalTrigger } from "@/components/modal-trigger";
 import { Section } from "@/components/shared/section";
 import { TaskRow } from "@/components/execution/task-row";
 
@@ -12,64 +11,43 @@ export default async function PhaseTasksPage({
   const { projectId, phaseId } = await params;
   const { phase, tasks, phases, users } = await getPhaseWorkspace(phaseId);
 
+  const openTasks = tasks.filter((t: any) => t.status !== "done" && t.status !== "cancelled");
+  const closedTasks = tasks.filter((t: any) => t.status === "done" || t.status === "cancelled");
+
   return (
-    <Section
-      title="Tasks"
-      count={tasks.length}
-      action={
-        <ModalTrigger buttonLabel="+ New task" title="New phase task" buttonClass="button ghost small">
-          <form className="form" action={createTask}>
-            <input type="hidden" name="project_id" value={projectId} />
-            <input type="hidden" name="phase_id" value={phaseId} />
-            <p className="muted" style={{ margin: 0 }}>
-              Task will be scoped to {phase.position}. {phase.name}.
-            </p>
-            <div className="field">
-              <label>Task title</label>
-              <input name="title" placeholder="What needs to happen" required />
-            </div>
-            <div className="form-grid">
-              <div className="field">
-                <label>Priority</label>
-                <select name="priority">
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                  <option value="low">Low</option>
-                </select>
-              </div>
-              <div className="field">
-                <label>Due date</label>
-                <input name="due_at" type="date" />
-              </div>
-            </div>
-            <div className="field">
-              <label>Assignee</label>
-              <select name="assignee_id">
-                <option value="">Unassigned</option>
-                {users.map((user: any) => (
-                  <option key={user.id} value={user.id}>
-                    {user.display_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Description</label>
-              <textarea name="description_md" placeholder="Optional context or links" />
-            </div>
-            <button className="button" type="submit" style={{ marginTop: 8 }}>
-              Add task
-            </button>
-          </form>
-        </ModalTrigger>
-      }
-    >
+    <Section title="Tasks" count={openTasks.length}>
+      <form className="todo-add" action={createTask}>
+        <input type="hidden" name="project_id" value={projectId} />
+        <input type="hidden" name="phase_id" value={phaseId} />
+        <span className="todo-add-plus">＋</span>
+        <input name="title" placeholder={`Add a task to ${phase.position}. ${phase.name}…`} required />
+        <select name="priority" aria-label="Priority">
+          <option value="normal">Priority</option>
+          <option value="low">Low</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+        <input name="due_at" type="date" aria-label="Due date" />
+        <button className="todo-add-submit" type="submit">
+          Add
+        </button>
+      </form>
+
       {tasks.length ? (
-        <div className="list">
-          {tasks.map((task: any) => (
+        <div className="todo-list">
+          {openTasks.map((task: any) => (
             <TaskRow key={task.id} task={task} projectId={projectId} phases={phases} users={users} />
           ))}
+          {closedTasks.length > 0 && (
+            <>
+              <div className="todo-divider">
+                Completed <span>{closedTasks.length}</span>
+              </div>
+              {closedTasks.map((task: any) => (
+                <TaskRow key={task.id} task={task} projectId={projectId} phases={phases} users={users} />
+              ))}
+            </>
+          )}
         </div>
       ) : (
         <div className="empty">No tasks in this phase yet.</div>
