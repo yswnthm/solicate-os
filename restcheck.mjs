@@ -1,0 +1,10 @@
+const base = 'https://stillnesscuratedretreats.com/wp-json/wp/v2/pages';
+const r = await fetch(base+'?slug=reserve-old&_fields=id,link,slug,meta');
+const d = await r.json();
+const page = Array.isArray(d)?d[0]:d;
+console.log('id:', page?.id, '| slug:', page?.slug);
+const m = page?.meta ?? {};
+const keys = Object.keys(m);
+console.log('meta keys:', keys.length);
+console.log('yoast keys:', keys.filter(k=>k.includes('yoast')));
+console.log('robots meta present:', Object.keys(m).filter(k=>k.toLowerCase().includes('robots')));

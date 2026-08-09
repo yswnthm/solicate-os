@@ -3,7 +3,7 @@
 import { useState, useOptimistic, useTransition } from "react";
 import { addSubtask, deleteSubtask, toggleSubtask } from "@/features/actions";
 
-export type SubtaskItem = { id: string; title: string; done: boolean };
+export type SubtaskItem = { id: string; title: string; done: boolean; notes?: string | null };
 
 export function SubtaskList({
   taskId,
@@ -15,6 +15,7 @@ export function SubtaskList({
   initialSubtasks: SubtaskItem[];
 }) {
   const [expanded, setExpanded] = useState(initialSubtasks.length > 0);
+  const [openNotes, setOpenNotes] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [optimistic, addOptimistic] = useOptimistic(
     initialSubtasks,
@@ -56,7 +57,22 @@ export function SubtaskList({
                       {subtask.done ? "✓" : ""}
                     </button>
                   </form>
-                  <span className="subtask-title">{subtask.title}</span>
+                  {subtask.notes ? (
+                    <button
+                      type="button"
+                      className="subtask-title"
+                      onClick={() => setOpenNotes((cur) => (cur === subtask.id ? null : subtask.id))}
+                      aria-expanded={openNotes === subtask.id}
+                      title="Show notes"
+                    >
+                      {subtask.title}
+                    </button>
+                  ) : (
+                    <span className="subtask-title">{subtask.title}</span>
+                  )}
+                  {openNotes === subtask.id && subtask.notes && (
+                    <div className="subtask-notes">{subtask.notes}</div>
+                  )}
                   <form
                     action={async (formData) => {
                       addOptimistic(optimistic.filter((s) => s.id !== subtask.id));
@@ -80,7 +96,11 @@ export function SubtaskList({
             action={async (formData) => {
               const title = String(formData.get("title") ?? "").trim();
               if (!title) return;
-              addOptimistic([...optimistic, { id: `new-${Date.now()}`, title, done: false }]);
+              const notes = String(formData.get("notes") ?? "").trim();
+              addOptimistic([
+                ...optimistic,
+                { id: `new-${Date.now()}`, title, done: false, notes: notes || null },
+              ]);
               startTransition(async () => {
                 await addSubtask(formData);
               });
@@ -92,6 +112,11 @@ export function SubtaskList({
             <button className="subtask-add-btn" type="submit">
               + Add
             </button>
+            <input
+              name="notes"
+              placeholder="Notes (how to do it)…"
+              aria-label="Notes for the subtask"
+            />
           </form>
         </>
       )}

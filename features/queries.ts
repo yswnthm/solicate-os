@@ -256,6 +256,7 @@ export async function getProjectWorkspace(projectId: string) {
         .from("tasks")
         .select("id, title, description_md, status, priority, due_at, phase_id, assignee_id, phases(id, name, position), app_users!tasks_assignee_id_fkey(id, display_name)")
         .eq("project_id", projectId)
+        .order("position", { ascending: true, nullsFirst: false })
         .order("status")
         .order("due_at", { ascending: true, nullsFirst: false }),
       supabase
@@ -294,7 +295,7 @@ export async function getProjectWorkspace(projectId: string) {
 
   const taskIds = (tasks.data ?? []).map((t: any) => t.id);
   const subtasks = taskIds.length
-    ? (await supabase.from("task_subtasks").select("id, task_id, title, done, position").in("task_id", taskIds).order("position")).data ?? []
+    ? (await supabase.from("task_subtasks").select("id, task_id, title, done, position, notes").in("task_id", taskIds).order("position")).data ?? []
     : [];
   const tasksWithSubtasks = (tasks.data ?? []).map((t: any) => ({
     ...t,
@@ -390,7 +391,7 @@ export async function getProjectWorkspaceForAI(projectId: string) {
 
   const taskIds = (tasks.data ?? []).map((t: any) => t.id);
   const subtasks = taskIds.length
-    ? (await supabase.from("task_subtasks").select("id, task_id, title, done, position").in("task_id", taskIds).order("position")).data ?? []
+    ? (await supabase.from("task_subtasks").select("id, task_id, title, done, position, notes").in("task_id", taskIds).order("position")).data ?? []
     : [];
   const tasksWithSubtasks = (tasks.data ?? []).map((t: any) => ({
     ...t,
@@ -464,6 +465,7 @@ export async function getPhaseWorkspace(phaseId: string) {
       .from("tasks")
       .select("id, title, description_md, status, priority, due_at, phase_id, assignee_id, phases(id, name, position), app_users!tasks_assignee_id_fkey(id, display_name)")
       .eq("phase_id", phaseId)
+      .order("position", { ascending: true, nullsFirst: false })
       .order("status")
       .order("due_at", { ascending: true, nullsFirst: false }),
     supabase
@@ -489,7 +491,7 @@ export async function getPhaseWorkspace(phaseId: string) {
 
   const taskIds = (tasks.data ?? []).map((t: any) => t.id);
   const subtasks = taskIds.length
-    ? (await supabase.from("task_subtasks").select("id, task_id, title, done, position").in("task_id", taskIds).order("position")).data ?? []
+    ? (await supabase.from("task_subtasks").select("id, task_id, title, done, position, notes").in("task_id", taskIds).order("position")).data ?? []
     : [];
   const tasksWithSubtasks = (tasks.data ?? []).map((t: any) => ({
     ...t,

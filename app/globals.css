@@ -716,7 +716,7 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
   margin-left: calc(16px + 20px + 12px);
   border-left: 2px solid var(--line-2);
 }
-.subtask-item { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; }
+.subtask-item { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; }
 .subtask-item:hover { background: var(--surface-hover); }
 .subtask-item.done .subtask-title { text-decoration: line-through; opacity: 0.45; }
 .subtask-check {
@@ -731,6 +731,23 @@ a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-
 .subtask-check:hover { border-color: var(--ink); }
 .subtask-item.done .subtask-check { background: var(--ink); border-color: var(--ink); }
 .subtask-title { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.subtask-title {
+  background: none; border: none; padding: 0; text-align: left; cursor: pointer;
+}
+button.subtask-title:hover { color: var(--ink); }
+.subtask-notes {
+  flex: 1 1 100%;
+  margin: 2px 0 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .subtask-delete {
   flex-shrink: 0;
   border: none; background: transparent;

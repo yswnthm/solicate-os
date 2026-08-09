@@ -190,6 +190,7 @@ export async function addSubtask(formData: FormData) {
   const taskId = id(formData.get("task_id"));
   const projectId = id(formData.get("project_id"));
   const title = z.string().min(1).parse(text(formData.get("title")));
+  const notes = text(formData.get("notes"));
   const supabase = await createSupabaseServerClient();
   const { data: last } = await supabase
     .from("task_subtasks")
@@ -201,6 +202,7 @@ export async function addSubtask(formData: FormData) {
   const { error } = await supabase.from("task_subtasks").insert({
     task_id: taskId,
     title,
+    notes: notes || null,
     position: (last?.position ?? 0) + 1,
     created_by_id: user.id,
   });
