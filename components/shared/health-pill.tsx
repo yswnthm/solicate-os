@@ -11,8 +11,8 @@ export function PhaseHealthPill({
   issues,
 }: {
   phase: { status: string };
-  tasks: { status: string; due_at: string | null }[];
-  issues: { status: string; severity: string }[];
+  tasks: { status: string; priority?: string; due_at: string | null }[];
+  issues?: { status: string; severity: string }[];
 }) {
   const { label, tone } = phaseHealth({ status: phase.status, tasks, issues });
   return <HealthPill tone={tone} label={label} />;

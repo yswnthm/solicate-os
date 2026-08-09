@@ -7,7 +7,7 @@ import { Command } from "cmdk";
 import {
   createClient,
   createEntry,
-  createIssue,
+
   createPerson,
   createProject,
   createRelationship,
@@ -23,7 +23,6 @@ type PaletteMode =
   | "client"
   | "person"
   | "task"
-  | "issue"
   | "record"
   | "relationship";
 
@@ -45,7 +44,6 @@ const MODE_TITLES: Record<Exclude<PaletteMode, "command">, string> = {
   client: "New client",
   person: "New person",
   task: "Add task",
-  issue: "Log issue",
   record: "Log project record",
   relationship: "New relationship",
 };
@@ -208,13 +206,6 @@ export function CommandMenu({ projects, clients }: { projects: Project[]; client
                     <span className="cmdk-item-main">
                       <span>Add task to {context.projectName}</span>
                       <span className="cmdk-sub">New task, pre-scoped to this project</span>
-                    </span>
-                  </Command.Item>
-                  <Command.Item className="cmdk-item" onSelect={() => openInMode("issue")}>
-                    <span className="cmdk-icon">⚠</span>
-                    <span className="cmdk-item-main">
-                      <span>Log issue on {context.projectName}</span>
-                      <span className="cmdk-sub">Problem or risk, pre-scoped to this project</span>
                     </span>
                   </Command.Item>
                   <Command.Item className="cmdk-item" onSelect={() => openInMode("record")}>
@@ -594,30 +585,6 @@ function CreateForm({
         </form>
       )}
 
-      {mode === "issue" && context?.projectId && (
-        <form className="form" action={createIssue} onSubmit={onDone}>
-          <input type="hidden" name="project_id" value={context.projectId} />
-          <p className="muted" style={{ margin: 0 }}>
-            Issue will be logged on {context.projectName}.
-          </p>
-          <div className="field">
-            <label htmlFor="palette-issue-title">Issue</label>
-            <input id="palette-issue-title" name="title" placeholder="What is the problem or risk" required autoFocus />
-          </div>
-          <div className="field">
-            <label htmlFor="palette-issue-severity">Severity</label>
-            <select id="palette-issue-severity" name="severity">
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-              <option value="low">Low</option>
-            </select>
-          </div>
-          <button className="button" type="submit" style={{ marginTop: 8 }}>
-            Log issue
-          </button>
-        </form>
-      )}
 
       {mode === "record" && context?.projectId && (
         <form className="form" action={createEntry} onSubmit={onDone}>

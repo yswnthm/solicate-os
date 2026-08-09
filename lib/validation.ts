@@ -118,27 +118,6 @@ export const taskSchema = z.object({
   phase_id: optUuid,
 });
 
-export const issueSchema = z
-  .object({
-    project_id: z.string().uuid(),
-    title: req("Issue title is required."),
-    description_md: z.string().trim(),
-    severity: z.enum(["low", "medium", "high", "critical"]),
-    status: z.enum(["open", "investigating", "waiting_external", "resolved", "accepted", "closed"]),
-    assignee_id: optUuid,
-    phase_id: optUuid,
-    resolution_summary: z.string().trim(),
-  })
-  .superRefine((data, ctx) => {
-    const closed = ["resolved", "accepted", "closed"].includes(data.status);
-    if (closed && !data.resolution_summary) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["resolution_summary"],
-        message: "Add a resolution outcome to close this issue.",
-      });
-    }
-  });
 
 export const entrySchema = z
   .object({
@@ -209,7 +188,6 @@ export type PersonInput = z.infer<typeof personSchema>;
 export type ProjectInput = z.infer<typeof projectSchema>;
 export type PhaseInput = z.infer<typeof phaseSchema>;
 export type TaskInput = z.infer<typeof taskSchema>;
-export type IssueInput = z.infer<typeof issueSchema>;
 export type EntryInput = z.infer<typeof entrySchema>;
 export type ParticipantInput = z.infer<typeof participantSchema>;
 

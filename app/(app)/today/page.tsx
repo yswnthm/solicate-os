@@ -74,24 +74,24 @@ export default async function TodayPage() {
 
           <section className="section card card-indigo" style={{ margin: 0 }}>
             <div className="section-title">
-              <h2>Open Issues</h2>
-              <span>Across active projects</span>
+              <h2>Urgent Tasks</h2>
+              <span>High priority & urgent work</span>
             </div>
             {data.issues.length ? (
               <div className="list">
-                {data.issues.map((issue: any) => (
-                  <Link className="row" href={`/projects/${issue.project_id}`} key={issue.id}>
-                    <StatusPill value={issue.severity} />
+                {data.issues.map((task: any) => (
+                  <Link className="row" href={`/projects/${task.project_id}`} key={task.id}>
+                    <StatusPill value={task.priority ?? "urgent"} />
                     <div className="row-main">
-                      <div className="row-title">{issue.title}</div>
-                      <div className="row-meta">{issue.projects?.name}</div>
+                      <div className="row-title">{task.title}</div>
+                      <div className="row-meta">{task.projects?.name}</div>
                     </div>
-                    <StatusPill value={issue.status} />
+                    <StatusPill value={task.status} />
                   </Link>
                 ))}
               </div>
             ) : (
-              <div className="empty">No open issues across active projects.</div>
+              <div className="empty">No urgent tasks across active projects.</div>
             )}
           </section>
 

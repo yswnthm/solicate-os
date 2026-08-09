@@ -6,7 +6,6 @@ import { ProgressBar } from "@/components/shared/progress-bar";
 import { PhaseHealthPill } from "@/components/shared/health-pill";
 import { StatusPill } from "@/components/status-pill";
 import { TaskRow } from "@/components/execution/task-row";
-import { IssueRow } from "@/components/execution/issue-row";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default async function PhaseDashboardPage({
@@ -16,10 +15,10 @@ export default async function PhaseDashboardPage({
 }) {
   const { projectId, phaseId } = await params;
   const data = await getPhaseWorkspace(phaseId);
-  const { phase, tasks, issues, entries, finance, users, phases } = data;
+  const { phase, tasks, entries, finance, users, phases } = data;
 
   const openTasks = tasks.filter((t) => t.status !== "done" && t.status !== "cancelled");
-  const openIssues = issues.filter((i) => !["resolved", "accepted", "closed"].includes(i.status));
+  const urgentTasks = openTasks.filter((t) => t.priority === "urgent" || t.status === "blocked");
   const doneTasks = tasks.filter((t) => t.status === "done" || t.status === "cancelled").length;
   const progress = tasks.length ? Math.round((doneTasks / tasks.length) * 100) : 0;
 
@@ -37,7 +36,7 @@ export default async function PhaseDashboardPage({
           <div style={{ flex: 1, minWidth: 280 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
               <StatusPill value={phase.status} />
-              <PhaseHealthPill phase={phase} tasks={tasks} issues={issues} />
+              <PhaseHealthPill phase={phase} tasks={tasks} />
             </div>
             <h3 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 700 }}>
               {phase.position}. {phase.name}
@@ -71,12 +70,12 @@ export default async function PhaseDashboardPage({
           <p className="row-meta" style={{ marginTop: 4 }}>{tasks.length} total tasks in phase</p>
         </Link>
 
-        <Link href={`/projects/${projectId}/phases/${phaseId}/issues`} className="card hover-card" style={{ textDecoration: "none", color: "inherit" }}>
-          <p className="metric-label">Open Issues & Risks</p>
-          <div className="metric" style={{ color: openIssues.length > 0 ? "var(--danger)" : undefined }}>
-            {openIssues.length}
+        <Link href={`/projects/${projectId}/phases/${phaseId}/tasks?priority=urgent`} className="card hover-card" style={{ textDecoration: "none", color: "inherit" }}>
+          <p className="metric-label">Urgent & Blocked</p>
+          <div className="metric" style={{ color: urgentTasks.length > 0 ? "var(--danger)" : undefined }}>
+            {urgentTasks.length}
           </div>
-          <p className="row-meta" style={{ marginTop: 4 }}>{issues.length} total reported</p>
+          <p className="row-meta" style={{ marginTop: 4 }}>Need immediate sorting</p>
         </Link>
 
         <Link href={`/projects/${projectId}/phases/${phaseId}/finance`} className="card hover-card" style={{ textDecoration: "none", color: "inherit" }}>
@@ -114,48 +113,26 @@ export default async function PhaseDashboardPage({
         </Section>
       )}
 
-      {/* ─── Split Grid: Open Tasks & Open Issues ─── */}
-      <div className="grid two" style={{ gap: 24 }}>
-        <Section
-          title="Open Phase Tasks"
-          count={openTasks.length}
-          action={
-            <Link href={`/projects/${projectId}/phases/${phaseId}/tasks`} className="button ghost small">
-              All tasks →
-            </Link>
-          }
-        >
-          {openTasks.length ? (
-            <div className="list">
-              {openTasks.slice(0, 4).map((task) => (
-                <TaskRow key={task.id} task={task} projectId={projectId} phases={phases} users={users} />
-              ))}
-            </div>
-          ) : (
-            <div className="empty">All phase tasks are completed or cancelled.</div>
-          )}
-        </Section>
-
-        <Section
-          title="Open Phase Issues"
-          count={openIssues.length}
-          action={
-            <Link href={`/projects/${projectId}/phases/${phaseId}/issues`} className="button ghost small">
-              All issues →
-            </Link>
-          }
-        >
-          {openIssues.length ? (
-            <div className="list">
-              {openIssues.slice(0, 4).map((issue) => (
-                <IssueRow key={issue.id} issue={issue} projectId={projectId} users={users} phases={phases} />
-              ))}
-            </div>
-          ) : (
-            <div className="empty">No active issues or risks flagged in this phase.</div>
-          )}
-        </Section>
-      </div>
+      {/* ─── Open Tasks ─── */}
+      <Section
+        title="Open Phase Tasks"
+        count={openTasks.length}
+        action={
+          <Link href={`/projects/${projectId}/phases/${phaseId}/tasks`} className="button ghost small">
+            All tasks →
+          </Link>
+        }
+      >
+        {openTasks.length ? (
+          <div className="list">
+            {openTasks.slice(0, 6).map((task) => (
+              <TaskRow key={task.id} task={task} projectId={projectId} phases={phases} users={users} />
+            ))}
+          </div>
+        ) : (
+          <div className="empty">All phase tasks are completed or cancelled.</div>
+        )}
+      </Section>
     </div>
   );
 }

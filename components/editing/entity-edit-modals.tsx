@@ -7,7 +7,6 @@ import { EntityEditModal, type FieldConfig, type Values } from "@/components/edi
 import {
   updateClient,
   updateEntry,
-  updateIssue,
   updatePerson,
   updatePhase,
   updateProject,
@@ -24,11 +23,6 @@ const TASK_STATUS_OPTIONS = ["todo", "in_progress", "blocked", "done", "cancelle
   value: v,
   label: label(v),
 }));
-const ISSUE_STATUS_OPTIONS = ["open", "investigating", "waiting_external", "resolved", "accepted", "closed"].map((v) => ({
-  value: v,
-  label: label(v),
-}));
-const SEVERITY_OPTIONS = ["low", "medium", "high", "critical"].map((v) => ({ value: v, label: label(v) }));
 const ENTRY_TYPE_OPTIONS = ["note", "meeting", "decision", "document", "update", "milestone", "capture"].map((v) => ({
   value: v,
   label: label(v),
@@ -535,93 +529,6 @@ export function EditTaskModal({
   );
 }
 
-// ─── Issues ──────────────────────────────────────────────────────────────────
-
-export function EditIssueModal({
-  issue,
-  projectId,
-  users,
-  phases,
-  open,
-  onOpenChange,
-}: {
-  issue: any;
-  projectId: string;
-  users?: any[];
-  phases?: { id: string; position: number; name: string }[];
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const fields: FieldConfig[] = [
-    { kind: "text", name: "title", label: "Issue title", required: true, autoFocus: true },
-    {
-      kind: "select",
-      name: "severity",
-      label: "Severity",
-      options: SEVERITY_OPTIONS,
-      width: "half",
-    },
-    {
-      kind: "select",
-      name: "status",
-      label: "Status",
-      options: ISSUE_STATUS_OPTIONS,
-      width: "half",
-    },
-    ...(users && users.length > 0
-      ? [
-          {
-            kind: "select",
-            name: "assignee_id",
-            label: "Assignee",
-            options: users.map((u: any) => ({ value: u.id, label: u.display_name })),
-            placeholder: "Unassigned",
-            width: "half",
-          } as FieldConfig,
-        ]
-      : []),
-    ...(phases && phases.length > 0
-      ? [
-          {
-            kind: "select",
-            name: "phase_id",
-            label: "Phase",
-            options: phases.map((p) => ({ value: p.id, label: `${p.position}. ${p.name}` })),
-            placeholder: "Project-level (no phase)",
-            width: "half",
-          } as FieldConfig,
-        ]
-      : []),
-    { kind: "textarea", name: "description_md", label: "Description", minHeight: 110 },
-    {
-      kind: "textarea",
-      name: "resolution_summary",
-      label: "Resolution outcome",
-      hint: "Required when the issue is resolved, accepted, or closed.",
-      minHeight: 90,
-    },
-  ];
-  return (
-    <EntityEditModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Edit issue"
-      record={{
-        project_id: projectId,
-        title: issue.title,
-        description_md: issue.description_md ?? "",
-        severity: issue.severity,
-        status: issue.status,
-        assignee_id: issue.assignee_id ?? "",
-        phase_id: issue.phase_id ?? "",
-        resolution_summary: issue.resolution_summary ?? "",
-      }}
-      fields={fields}
-      successMessage="Issue updated."
-      onSave={async (values) => updateIssue(issue.id, values)}
-    />
-  );
-}
 
 // ─── Entries (notes / meetings / decisions / documents / milestones) ─────────
 
@@ -899,6 +806,5 @@ export function EditRelationshipModal({
 export type EditTaskModalProps = Parameters<typeof EditTaskModal>[0];
 export type EditEntryModalProps = Parameters<typeof EditEntryModal>[0];
 export type EditParticipantModalProps = Parameters<typeof EditParticipantModal>[0];
-export type EditIssueModalProps = Parameters<typeof EditIssueModal>[0];
 export type EditProjectModalProps = Parameters<typeof EditProjectModal>[0];
 export type { Values };

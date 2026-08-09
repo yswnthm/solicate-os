@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { createIssue, createPhase, createTask } from "@/features/actions";
+import { createPhase, createTask } from "@/features/actions";
 import { getProjectWorkspace } from "@/features/queries";
 import { StatusPill } from "@/components/status-pill";
 import { ModalTrigger } from "@/components/modal-trigger";
@@ -10,7 +10,6 @@ import { Section } from "@/components/shared/section";
 import { ProgressBar } from "@/components/shared/progress-bar";
 import { PhaseHealthPill } from "@/components/shared/health-pill";
 import { TaskRow } from "@/components/execution/task-row";
-import { IssueRow } from "@/components/execution/issue-row";
 import { formatDate } from "@/lib/utils";
 
 export default async function ProjectOverviewPage({
@@ -25,7 +24,6 @@ export default async function ProjectOverviewPage({
 
   const hasPhases = data.phases.length > 0;
   const unphasedTasks = data.tasks.filter((t: any) => (hasPhases ? !t.phase_id : true));
-  const unphasedIssues = data.issues.filter((i: any) => (hasPhases ? !i.phase_id : true));
 
   return (
     <div className="stack">
@@ -77,7 +75,6 @@ export default async function ProjectOverviewPage({
           <div className="list">
             {data.phases.map((phase: any) => {
               const phaseTasks = data.tasks.filter((t: any) => t.phase_id === phase.id);
-              const phaseIssues = data.issues.filter((i: any) => i.phase_id === phase.id);
               const phaseOpen = phaseTasks.filter(
                 (t: any) => t.status !== "done" && t.status !== "cancelled",
               ).length;
@@ -100,7 +97,7 @@ export default async function ProjectOverviewPage({
                     </div>
                   </div>
                   <div className="row-actions-always">
-                    <PhaseHealthPill phase={phase} tasks={phaseTasks} issues={phaseIssues} />
+                    <PhaseHealthPill phase={phase} tasks={phaseTasks} />
                     <EditPhaseButton phase={phase} />
                   </div>
                 </div>
@@ -112,9 +109,9 @@ export default async function ProjectOverviewPage({
         )}
       </Section>
 
-      {/* Ungrouped execution */}
+      {/* Execution / Tasks */}
       <Section
-        title={hasPhases ? "Ungrouped execution" : "Tasks"}
+        title={hasPhases ? "Ungrouped tasks" : "Tasks"}
         count={unphasedTasks.length}
         action={
           <ModalTrigger buttonLabel="+ New task" title="New task" buttonClass="button ghost small">
@@ -129,8 +126,8 @@ export default async function ProjectOverviewPage({
                   <label>Priority</label>
                   <select name="priority">
                     <option value="normal">Normal</option>
-                    <option value="high">High</option>
                     <option value="urgent">Urgent</option>
+                    <option value="high">High</option>
                     <option value="low">Low</option>
                   </select>
                 </div>
@@ -182,74 +179,6 @@ export default async function ProjectOverviewPage({
           </div>
         ) : (
           <div className="empty">No tasks outside a phase — phase them so execution stays scoped.</div>
-        )}
-      </Section>
-
-      <Section
-        title={hasPhases ? "Issues" : "Issues"}
-        count={unphasedIssues.length}
-        action={
-          <ModalTrigger buttonLabel="+ New issue" title="New issue" buttonClass="button ghost small">
-            <form className="form" action={createIssue}>
-              <input type="hidden" name="project_id" value={projectId} />
-              <div className="field">
-                <label>Issue</label>
-                <input name="title" placeholder="What is the problem or risk" required />
-              </div>
-              <div className="form-grid">
-                <div className="field">
-                  <label>Severity</label>
-                  <select name="severity">
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
-                    <option value="low">Low</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Assignee</label>
-                  <select name="assignee_id">
-                    <option value="">Unassigned</option>
-                    {data.users.map((user: any) => (
-                      <option key={user.id} value={user.id}>
-                        {user.display_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {hasPhases && (
-                <div className="field">
-                  <label>Phase</label>
-                  <select name="phase_id">
-                    <option value="">Project-level (no phase)</option>
-                    {data.phases.map((phase: any) => (
-                      <option key={phase.id} value={phase.id}>
-                        {phase.position}. {phase.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div className="field">
-                <label>Description</label>
-                <textarea name="description_md" placeholder="Evidence, risk context, or current state" />
-              </div>
-              <button className="button" type="submit" style={{ marginTop: 8 }}>
-                Open issue
-              </button>
-            </form>
-          </ModalTrigger>
-        }
-      >
-        {unphasedIssues.length ? (
-          <div className="list">
-            {unphasedIssues.map((issue: any) => (
-              <IssueRow key={issue.id} issue={issue} projectId={projectId} users={data.users} phases={data.phases} />
-            ))}
-          </div>
-        ) : (
-          <div className="empty">No project-level issues. Issues inside phases live on each phase tab.</div>
         )}
       </Section>
     </div>

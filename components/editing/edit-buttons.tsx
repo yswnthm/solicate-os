@@ -6,7 +6,6 @@ import { EditButton } from "@/components/editing/entity-edit-modal";
 import {
   EditClientModal,
   EditEntryModal,
-  EditIssueModal,
   EditParticipantModal,
   EditPersonModal,
   EditPhaseModal,
@@ -162,36 +161,6 @@ export function EditTaskButton({
   );
 }
 
-export function EditIssueButton({
-  issue,
-  projectId,
-  users,
-  phases,
-  label = "Edit",
-  className = "button ghost small",
-}: {
-  issue: any;
-  projectId: string;
-  users?: any[];
-  phases?: { id: string; position: number; name: string }[];
-  label?: string;
-  className?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <EditButton onClick={() => setOpen(true)} label={label} className={className} title="Edit issue" />
-      <EditIssueModal
-        issue={issue}
-        projectId={projectId}
-        users={users}
-        phases={phases}
-        open={open}
-        onOpenChange={setOpen}
-      />
-    </>
-  );
-}
 
 export function EditEntryButton({
   entry,

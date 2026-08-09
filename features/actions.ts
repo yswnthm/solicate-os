@@ -205,43 +205,6 @@ export async function createPhase(formData: FormData) {
   revalidatePath(projectPath(projectId));
 }
 
-// ─── Issues ───────────────────────────────────────────────────────────────────
-
-export async function createIssue(formData: FormData) {
-  const { user } = await requireActiveUser();
-  const projectId = id(formData.get("project_id"));
-  const title = z.string().min(1).parse(text(formData.get("title")));
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("issues").insert({
-    project_id: projectId,
-    title,
-    description_md: text(formData.get("description_md")),
-    severity: z.enum(["low", "medium", "high", "critical"]).parse(text(formData.get("severity")) || "medium"),
-    assignee_id: optional(formData.get("assignee_id")),
-    phase_id: optional(formData.get("phase_id")),
-    created_by_id: user.id,
-  });
-  if (error) throw new Error(error.message);
-  revalidatePath(projectPath(projectId));
-  revalidatePath("/today");
-}
-
-export async function resolveIssue(formData: FormData) {
-  await requireActiveUser();
-  const issueId = id(formData.get("issue_id"));
-  const projectId = id(formData.get("project_id"));
-  const resolution = z.string().min(1).parse(text(formData.get("resolution_summary")));
-  const status = z.enum(["resolved", "accepted", "closed"]).parse(text(formData.get("status")) || "resolved");
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("issues").update({
-    status,
-    resolved_at: new Date().toISOString(),
-    resolution_summary: resolution,
-  }).eq("id", issueId);
-  if (error) throw new Error(error.message);
-  revalidatePath(projectPath(projectId));
-  revalidatePath("/today");
-}
 
 // ─── Entries ──────────────────────────────────────────────────────────────────
 

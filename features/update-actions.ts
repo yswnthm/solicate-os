@@ -9,7 +9,6 @@ import { getProjectWorkspace } from "@/features/queries";
 import {
   clientSchema,
   entrySchema,
-  issueSchema,
   participantSchema,
   personSchema,
   phaseSchema,
@@ -176,37 +175,6 @@ export async function updateTask(id: string, input: unknown): Promise<EditResult
   });
 }
 
-// ─── Issues ──────────────────────────────────────────────────────────────────
-
-export async function updateIssue(id: string, input: unknown): Promise<EditResult> {
-  return runMutation(async () => {
-    await requireActiveUser();
-    const parsed = issueSchema.safeParse(input);
-    if (!parsed.success) return validationResult(parsed.error);
-    const supabase = await createSupabaseServerClient();
-    const { data: existing } = await supabase
-      .from("issues")
-      .select("status, resolved_at, project_id, phase_id")
-      .eq("id", id)
-      .maybeSingle();
-    const closed = ["resolved", "accepted", "closed"].includes(parsed.data.status);
-    const updates: Record<string, unknown> = { ...parsed.data };
-    if (closed) {
-      updates.resolved_at = existing?.resolved_at ?? nowIso();
-    } else {
-      updates.resolved_at = null;
-      updates.resolution_summary = null;
-    }
-    const { error } = await supabase.from("issues").update(updates).eq("id", id);
-    if (error) return { ok: false, error: error.message };
-    const paths = [`/projects/${parsed.data.project_id}`, "/today"];
-    if (parsed.data.phase_id) paths.push(`/projects/${parsed.data.project_id}/phases/${parsed.data.phase_id}`);
-    if (existing?.phase_id && existing.phase_id !== parsed.data.phase_id) {
-      paths.push(`/projects/${parsed.data.project_id}/phases/${existing.phase_id}`);
-    }
-    refresh(paths);
-  });
-}
 
 // ─── Entries (notes / meetings / decisions / documents / milestones) ─────────
 

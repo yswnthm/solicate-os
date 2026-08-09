@@ -154,10 +154,11 @@ export async function getTodayData(userId: string) {
       .eq("projects.status", ACTIVE)
       .order("due_at"),
     supabase
-      .from("issues")
-      .select("id, title, severity, status, project_id, projects(name)")
-      .in("status", ["open", "investigating", "waiting_external"])
-      .order("reported_at", { ascending: false })
+      .from("tasks")
+      .select("id, title, priority, status, project_id, projects(name)")
+      .in("priority", ["urgent", "high"])
+      .in("status", ["todo", "in_progress", "blocked"])
+      .order("created_at", { ascending: false })
       .limit(8),
     supabase
       .from("entries")
@@ -248,7 +249,7 @@ export async function getProjectHeader(projectId: string) {
 
 export async function getProjectWorkspace(projectId: string) {
   const supabase = await createSupabaseServerClient();
-  const [project, tasks, issues, entries, participants, activity, phases, finance, people, users] =
+  const [project, tasks, entries, participants, activity, phases, finance, people, users] =
     await Promise.all([
       supabase.from("projects").select("*, people!projects_person_id_fkey(id, name)").eq("id", projectId).maybeSingle(),
       supabase
@@ -257,11 +258,6 @@ export async function getProjectWorkspace(projectId: string) {
         .eq("project_id", projectId)
         .order("status")
         .order("due_at", { ascending: true, nullsFirst: false }),
-      supabase
-        .from("issues")
-        .select("id, title, description_md, status, severity, resolution_summary, assignee_id, phase_id, phases(id, name)")
-        .eq("project_id", projectId)
-        .order("reported_at", { ascending: false }),
       supabase
         .from("entries")
         .select("id, title, type, body_md, occurred_at, decision_outcome, decision_state, project_id, phase_id, phases(id, name)")
@@ -292,14 +288,14 @@ export async function getProjectWorkspace(projectId: string) {
       supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
       supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
     ]);
-  [project, tasks, issues, entries, participants, activity, phases, finance, people, users].forEach((r) =>
+  [project, tasks, entries, participants, activity, phases, finance, people, users].forEach((r) =>
     throwOnError(r.error),
   );
 
   return {
     project: project.data,
     tasks: tasks.data ?? [],
-    issues: issues.data ?? [],
+    issues: [],
     entries: entries.data ?? [],
     participants: participants.data ?? [],
     activity: activity.data ?? [],
@@ -335,7 +331,7 @@ export async function getProjectWorkspace(projectId: string) {
  */
 export async function getProjectWorkspaceForAI(projectId: string) {
   const supabase = await createSupabaseServerClient();
-  const [project, tasks, issues, entries, participants, activity, phases, finance, people, users] =
+  const [project, tasks, entries, participants, activity, phases, finance, people, users] =
     await Promise.all([
       supabase.from("projects").select("*, people!projects_person_id_fkey(id, name)").eq("id", projectId).maybeSingle(),
       supabase
@@ -346,13 +342,6 @@ export async function getProjectWorkspaceForAI(projectId: string) {
         .order("status")
         .order("due_at", { ascending: true, nullsFirst: false })
         .limit(60),
-      supabase
-        .from("issues")
-        // No description_md — saves significant tokens
-        .select("id, title, status, severity, resolution_summary, assignee_id, phase_id, phases(id, name)")
-        .eq("project_id", projectId)
-        .order("reported_at", { ascending: false })
-        .limit(30),
       supabase
         .from("entries")
         // body_md IS included — context builders truncate it to 300 chars
@@ -386,14 +375,14 @@ export async function getProjectWorkspaceForAI(projectId: string) {
       supabase.from("people").select("id, name, is_partner").is("archived_at", null).order("name"),
       supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
     ]);
-  [project, tasks, issues, entries, participants, activity, phases, finance, people, users].forEach((r) =>
+  [project, tasks, entries, participants, activity, phases, finance, people, users].forEach((r) =>
     throwOnError(r.error),
   );
 
   return {
     project: project.data,
     tasks: tasks.data ?? [],
-    issues: issues.data ?? [],
+    issues: [],
     entries: entries.data ?? [],
     participants: participants.data ?? [],
     activity: activity.data ?? [],
@@ -447,7 +436,7 @@ export async function getPhaseWorkspace(phaseId: string) {
     return { phase: null, project: null, tasks: [], issues: [], entries: [], finance: [], activity: [], phases: [], users: [] };
   }
 
-  const [project, tasks, issues, entries, finance, phases, users] = await Promise.all([
+  const [project, tasks, entries, finance, phases, users] = await Promise.all([
     supabase
       .from("projects")
       .select("id, name, code, status, summary, objective, person_id, people!projects_person_id_fkey(id, name)")
@@ -459,11 +448,6 @@ export async function getPhaseWorkspace(phaseId: string) {
       .eq("phase_id", phaseId)
       .order("status")
       .order("due_at", { ascending: true, nullsFirst: false }),
-    supabase
-      .from("issues")
-      .select("id, title, description_md, status, severity, resolution_summary, assignee_id, phase_id, phases(id, name)")
-      .eq("phase_id", phaseId)
-      .order("reported_at", { ascending: false }),
     supabase
       .from("entries")
       .select("id, title, type, body_md, occurred_at, decision_outcome, decision_state, project_id, phase_id, phases(id, name)")
@@ -483,12 +467,11 @@ export async function getPhaseWorkspace(phaseId: string) {
       .order("position"),
     supabase.from("app_users").select("id, display_name").eq("is_active", true).order("display_name"),
   ]);
-  [project, tasks, issues, entries, finance, phases, users].forEach((r) => throwOnError(r.error));
+  [project, tasks, entries, finance, phases, users].forEach((r) => throwOnError(r.error));
 
   const recordIds = [
     phase.id,
     ...(tasks.data ?? []).map((t) => t.id),
-    ...(issues.data ?? []).map((i) => i.id),
     ...(entries.data ?? []).map((e) => e.id),
   ];
   const activity = await supabase
@@ -504,7 +487,7 @@ export async function getPhaseWorkspace(phaseId: string) {
     phase,
     project: project.data,
     tasks: tasks.data ?? [],
-    issues: issues.data ?? [],
+    issues: [],
     entries: entries.data ?? [],
     finance: (finance.data ?? []).map((f: any) => ({
       ...f,

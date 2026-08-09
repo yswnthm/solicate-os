@@ -6,19 +6,18 @@ export type PhaseTone = "at_risk" | "watch" | "on_track" | "complete";
 
 export function phaseHealth(opts: {
   status: string;
-  tasks: { status: string; due_at: string | null }[];
-  issues: { status: string; severity: string }[];
+  tasks: { status: string; priority?: string; due_at: string | null }[];
+  issues?: { status: string; severity: string }[];
 }): { label: string; tone: PhaseTone } {
   if (opts.status === "completed" || opts.status === "cancelled") {
     return { label: opts.status === "completed" ? "Complete" : "Cancelled", tone: "complete" };
   }
   const openTasks = opts.tasks.filter((t) => t.status !== "done" && t.status !== "cancelled");
-  const openIssues = opts.issues.filter((i) => !["resolved", "accepted", "closed"].includes(i.status));
-  const blocking = openIssues.some((i) => i.severity === "critical" || i.severity === "high");
+  const urgentOrBlocked = openTasks.some((t) => t.priority === "urgent" || t.status === "blocked");
   const today = new Date().toISOString().slice(0, 10);
   const overdue = openTasks.some((t) => t.due_at && t.due_at < today);
-  if (blocking || overdue) return { label: "At risk", tone: "at_risk" };
-  if (openIssues.length > 0) return { label: "Watch", tone: "watch" };
+  if (urgentOrBlocked || overdue) return { label: "At risk", tone: "at_risk" };
+  if (openTasks.some((t) => t.priority === "high")) return { label: "Watch", tone: "watch" };
   if (openTasks.length > 0) return { label: "On track", tone: "on_track" };
   return { label: "No open work", tone: "on_track" };
 }
