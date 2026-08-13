@@ -1,15 +1,27 @@
 "use client";
 
 import { useState, useRef, useTransition, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { quickCapture } from "@/features/actions";
 
-export function CaptureFAB() {
+export function CaptureFAB({ projects = [] }: { projects?: any[] }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Mentions state
+  const [mentionSearch, setMentionSearch] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState<number | null>(null);
+  const [activeSuggestion, setActiveSuggestion] = useState(0);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  
+  const pathname = usePathname();
+  
+  const projectIdMatch = pathname.match(/\/projects\/([a-f0-9-]+)/);
+  const projectId = projectIdMatch ? projectIdMatch[1] : null;
 
   // Auto-focus textarea when modal opens
   useEffect(() => {
@@ -51,19 +63,51 @@ export function CaptureFAB() {
       if (e.key === "Escape") {
         setOpen(false);
         setTitle("");
+        setSelectedProjectId(null);
+        setMentionSearch(null);
       }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
+  const suggestions = projects
+    ? projects.filter(p => p.name.toLowerCase().includes((mentionSearch ?? "").toLowerCase()))
+    : [];
+
+  const handleSelectMention = (project: any) => {
+    if (mentionIndex === null) return;
+    
+    const before = title.slice(0, mentionIndex);
+    const after = title.slice(textareaRef.current?.selectionStart ?? title.length);
+    
+    const newTitle = before + `@${project.name} ` + after;
+    setTitle(newTitle);
+    setSelectedProjectId(project.id);
+    
+    setMentionSearch(null);
+    setMentionIndex(null);
+    setActiveSuggestion(0);
+    
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const newCursorPos = before.length + project.name.length + 2;
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 10);
+  };
+
   const handleSave = () => {
     if (!title.trim() || isPending) return;
     setError(null);
 
+    const finalProjectId = selectedProjectId || projectId;
+
     const formData = new FormData();
     formData.append("title", title.trim());
-    formData.append("type", "capture");
+    formData.append("type", finalProjectId ? "note" : "capture");
+    if (finalProjectId) formData.append("project_id", finalProjectId);
 
     startTransition(async () => {
       try {
@@ -73,6 +117,8 @@ export function CaptureFAB() {
           setSaved(false);
           setOpen(false);
           setTitle("");
+          setSelectedProjectId(null);
+          setMentionSearch(null);
         }, 700);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
@@ -81,6 +127,29 @@ export function CaptureFAB() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionSearch !== null && suggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActiveSuggestion(s => Math.min(s + 1, suggestions.length - 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActiveSuggestion(s => Math.max(s - 1, 0));
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleSelectMention(suggestions[activeSuggestion]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMentionSearch(null);
+        return;
+      }
+    }
+
     // Cmd/Ctrl + Enter to save
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
@@ -90,6 +159,27 @@ export function CaptureFAB() {
     if (e.key === "Escape") {
       setOpen(false);
       setTitle("");
+      setSelectedProjectId(null);
+      setMentionSearch(null);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setTitle(val);
+    
+    // Check if user is typing a mention
+    const cursor = e.target.selectionStart;
+    const textBeforeCursor = val.slice(0, cursor);
+    const mentionMatch = textBeforeCursor.match(/(?:^|\s)@([^@\s]*)$/);
+    
+    if (mentionMatch) {
+      setMentionSearch(mentionMatch[1]);
+      setMentionIndex(cursor - mentionMatch[1].length - 1);
+      setActiveSuggestion(0);
+    } else {
+      setMentionSearch(null);
+      setMentionIndex(null);
     }
   };
 
@@ -97,6 +187,8 @@ export function CaptureFAB() {
     setOpen(false);
     setTitle("");
     setError(null);
+    setSelectedProjectId(null);
+    setMentionSearch(null);
   };
 
   return (
@@ -194,7 +286,7 @@ export function CaptureFAB() {
                 Cancel
               </button>
               <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
-                New Capture
+                {selectedProjectId || projectId ? "Log to Project" : "New Capture"}
               </span>
               {/* Keyboard shortcut hint */}
               <span style={{ fontSize: 11, color: "var(--muted)", opacity: 0.5, letterSpacing: "0.03em" }}>
@@ -206,9 +298,9 @@ export function CaptureFAB() {
             <div style={{ padding: "20px 22px 12px" }}>
               <textarea
                 ref={textareaRef}
-                placeholder="What's on your mind?"
+                placeholder="What's on your mind? (Type @ to link a project)"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={handleChange}
                 onKeyDown={handleKeyDown}
                 disabled={isPending || saved}
                 rows={3}
@@ -228,6 +320,56 @@ export function CaptureFAB() {
                   boxSizing: "border-box",
                 }}
               />
+
+              {mentionSearch !== null && suggestions.length > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "70px",
+                    left: "22px",
+                    right: "22px",
+                    background: "rgba(20,20,20,0.9)",
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: 12,
+                    boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
+                    overflow: "hidden",
+                    maxHeight: 180,
+                    overflowY: "auto",
+                    zIndex: 20,
+                  }}
+                >
+                  {suggestions.map((p, i) => (
+                    <button
+                      key={p.id}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleSelectMention(p);
+                      }}
+                      onMouseEnter={() => setActiveSuggestion(i)}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "10px 16px",
+                        background: i === activeSuggestion ? "rgba(255,255,255,0.05)" : "transparent",
+                        border: "none",
+                        borderBottom: i < suggestions.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                        color: i === activeSuggestion ? "#fff" : "var(--muted)",
+                        fontSize: 14,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        transition: "background 0.1s ease, color 0.1s ease"
+                      }}
+                    >
+                      <span style={{ color: "var(--accent)", fontSize: 13, opacity: i === activeSuggestion ? 1 : 0.6 }}>#</span>
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Error */}

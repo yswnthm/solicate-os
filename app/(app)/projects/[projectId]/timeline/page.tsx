@@ -10,7 +10,7 @@ export default async function ProjectTimelinePage({ params }: { params: Promise<
     <div className="stack">
       <EntriesSection
         title="Timeline"
-        entries={data.entries}
+        entries={data.entries.filter((e: any) => e.triage_state === "filed")}
         edit={edit}
         timeline
         empty="Nothing recorded yet — notes, meetings, decisions, and milestones land here in order."

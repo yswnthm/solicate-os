@@ -71,7 +71,7 @@ export async function AppShell({
       </aside>
 
       {/* Global Capture FAB */}
-      <CaptureFAB />
+      <CaptureFAB projects={projects} />
 
       {/* Main column */}
       <div className="shell-main">

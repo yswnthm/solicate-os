@@ -1,7 +1,7 @@
 "use client";
 
 import { useOptimistic, useTransition, useState, useEffect, useRef } from "react";
-import { MoreHorizontal, Edit2, FolderPlus, Trash2 } from "lucide-react";
+import { MoreHorizontal, Edit2, FolderPlus, Trash2, CheckSquare } from "lucide-react";
 
 import { dismissInboxEntry, fileInboxEntryToProject } from "@/features/actions";
 import { Modal } from "@/components/modal";
@@ -50,6 +50,17 @@ export function InboxList({ entries, projects }: InboxState & { projects: InboxP
     setFileTo(null);
     startTransition(async () => {
       await fileInboxEntryToProject(formData);
+    });
+  };
+
+  const runMarkSorted = (entryId: string, projectId?: string) => {
+    addOptimistic({ id: entryId });
+    setActiveMenuId(null);
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.append("entry_id", entryId);
+      if (projectId) fd.append("project_id", projectId);
+      await fileInboxEntryToProject(fd);
     });
   };
 
@@ -116,6 +127,7 @@ export function InboxList({ entries, projects }: InboxState & { projects: InboxP
               setActiveMenuId(null);
               setFileTo(entry);
             }}
+            onMarkSorted={() => runMarkSorted(entry.id, entry.project_id)}
             onDismiss={() => runDismiss(entry.id)}
           />
         ))}
@@ -172,6 +184,7 @@ function RowItem({
   onCloseMenu,
   onEdit,
   onFile,
+  onMarkSorted,
   onDismiss,
 }: {
   entry: any;
@@ -180,6 +193,7 @@ function RowItem({
   onCloseMenu: () => void;
   onEdit: () => void;
   onFile: () => void;
+  onMarkSorted: () => void;
   onDismiss: () => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -268,6 +282,28 @@ function RowItem({
             >
               <Edit2 size={14} style={{ opacity: 0.7 }} />
               Edit note
+            </button>
+
+            <button
+              type="button"
+              onClick={onMarkSorted}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                fontSize: 13,
+                color: "var(--ink)",
+                background: "transparent",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+                textAlign: "left",
+                width: "100%",
+              }}
+            >
+              <CheckSquare size={14} style={{ opacity: 0.7, color: "var(--accent)" }} />
+              Mark as Sorted
             </button>
 
             <button

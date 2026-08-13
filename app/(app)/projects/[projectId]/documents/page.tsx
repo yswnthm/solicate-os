@@ -28,6 +28,7 @@ export default async function ProjectDocumentsPage({
   ] as const;
 
   const filteredEntries = data.entries.filter((entry) => {
+    if (entry.triage_state === "inbox") return false;
     if (activeTag === "all" || activeTag === "record") return true;
     if (activeTag === "document") return entry.type === "document";
     if (activeTag === "decision") return entry.type === "decision";
@@ -78,6 +79,7 @@ export default async function ProjectDocumentsPage({
         <div className="chip-group" style={{ marginBottom: 20 }}>
           {tags.map((t) => {
             const count = data.entries.filter((e) => {
+              if (e.triage_state === "inbox") return false;
               if (t.key === "all" || t.key === "record") return true;
               if (t.key === "document") return e.type === "document";
               if (t.key === "decision") return e.type === "decision";

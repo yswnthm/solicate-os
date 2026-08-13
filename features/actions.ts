@@ -384,6 +384,31 @@ export async function quickCapture(formData: FormData) {
   revalidatePath("/today");
 }
 
+// Quick capture directly to a project (skips inbox by setting triage_state to "filed")
+export async function logProjectEntry(formData: FormData) {
+  const { user } = await requireActiveUser();
+  const projectId = id(formData.get("project_id"));
+  const title = z.string().min(1).parse(text(formData.get("title")));
+  const rawType = optional(formData.get("type")) ?? "note";
+  const type = ["note", "meeting", "decision", "document", "update", "milestone", "capture"].includes(rawType)
+    ? rawType
+    : "note";
+  
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("entries").insert({
+    project_id: projectId,
+    type: type as any,
+    title,
+    occurred_at: new Date().toISOString(),
+    triage_state: "filed",
+    created_by_id: user.id,
+  });
+  
+  if (error) throw new Error(error.message);
+  revalidatePath(projectPath(projectId));
+  revalidatePath("/today");
+}
+
 // ─── Participants ─────────────────────────────────────────────────────────────
 
 export async function addProjectParticipant(formData: FormData) {
@@ -424,6 +449,18 @@ export async function fileInboxEntry(formData: FormData) {
   revalidatePath("/today");
 }
 
+export async function unfileInboxEntry(formData: FormData) {
+  await requireActiveUser();
+  const supabase = await createSupabaseServerClient();
+  const projectId = optional(formData.get("project_id"));
+  const { error } = await supabase.from("entries").update({ triage_state: "inbox" }).eq("id", id(formData.get("entry_id")));
+  if (error) throw new Error(error.message);
+  revalidatePath("/inbox");
+  revalidateTag("inbox");
+  revalidatePath("/today");
+  if (projectId) revalidatePath(`/projects/${projectId}`);
+}
+
 // File a capture AND route it to a destination project in one step.
 export async function fileInboxEntryToProject(formData: FormData) {
   await requireActiveUser();
@@ -443,11 +480,13 @@ export async function fileInboxEntryToProject(formData: FormData) {
 export async function dismissInboxEntry(formData: FormData) {
   await requireActiveUser();
   const supabase = await createSupabaseServerClient();
+  const projectId = optional(formData.get("project_id"));
   const { error } = await supabase.from("entries").update({ triage_state: "dismissed" }).eq("id", id(formData.get("entry_id")));
   if (error) throw new Error(error.message);
   revalidatePath("/inbox");
   revalidateTag("inbox");
   revalidatePath("/today");
+  if (projectId) revalidatePath(`/projects/${projectId}`);
 }
 
 // ─── Relationships (Level 1) ─────────────────────────────────────────────────

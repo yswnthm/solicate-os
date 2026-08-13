@@ -11,6 +11,8 @@ import { ProgressBar } from "@/components/shared/progress-bar";
 import { PhaseHealthPill } from "@/components/shared/health-pill";
 import { TaskRow } from "@/components/execution/task-row";
 import { formatDate } from "@/lib/utils";
+import { EntriesSection } from "@/components/entries/entries-section";
+import { InboxList } from "@/components/inbox-list";
 
 export default async function ProjectOverviewPage({
   params,
@@ -24,9 +26,16 @@ export default async function ProjectOverviewPage({
 
   const hasPhases = data.phases.length > 0;
   const unphasedTasks = data.tasks.filter((t: any) => (hasPhases ? !t.phase_id : true));
+  
+  const inboxEntries = data.entries.filter((e: any) => e.triage_state === "inbox");
+  const sortedCaptures = data.entries.filter((e: any) => e.triage_state === "filed" && e.type === "capture");
 
   return (
     <div className="stack">
+      {/* Project Inbox */}
+      <Section title="Project Inbox" count={inboxEntries.length}>
+        <InboxList entries={inboxEntries} projects={[{ id: projectId, name: data.project?.name ?? "" }]} />
+      </Section>
 
       {/* Phases */}
       <Section
@@ -181,6 +190,15 @@ export default async function ProjectOverviewPage({
           <div className="empty">No tasks outside a phase — phase them so execution stays scoped.</div>
         )}
       </Section>
+
+      {/* Sorted Inbox (Filed Captures & Notes) */}
+      <EntriesSection
+        title="Sorted Inbox"
+        entries={sortedCaptures}
+        edit={{ projects: [{ id: projectId, name: data.project?.name ?? "" }], phases: data.phases }}
+        defaultOpen={false}
+        empty="No filed notes or captures yet."
+      />
     </div>
   );
 }

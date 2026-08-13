@@ -4,8 +4,9 @@ import { useState, useRef } from "react";
 import { StatusPill } from "@/components/status-pill";
 import { EditEntryButton } from "@/components/editing/edit-buttons";
 import { ModalTrigger } from "@/components/modal-trigger";
-import { createEntry } from "@/features/actions";
+import { createEntry, unfileInboxEntry } from "@/features/actions";
 import { formatDateTime } from "@/lib/utils";
+import { Inbox } from "lucide-react";
 
 export type Entry = {
   id: string;
@@ -29,6 +30,19 @@ function EditControls({ entry, edit }: { entry: Entry; edit?: EntryEditContext }
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <StatusPill value={entry.type} />
+      
+      <form action={unfileInboxEntry} title="Send back to Inbox">
+        <input type="hidden" name="entry_id" value={entry.id} />
+        {entry.project_id && <input type="hidden" name="project_id" value={entry.project_id} />}
+        <button
+          type="submit"
+          className="button ghost small icon-only"
+          style={{ padding: "4px 6px", height: "auto" }}
+        >
+          <Inbox size={14} style={{ opacity: 0.7 }} />
+        </button>
+      </form>
+
       <EditEntryButton entry={entry} projects={edit?.projects} phases={edit?.phases} />
     </div>
   );

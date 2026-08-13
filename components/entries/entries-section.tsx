@@ -8,6 +8,7 @@ export function EntriesSection({
   types,
   timeline = false,
   empty = "Nothing recorded here yet.",
+  defaultOpen = true,
 }: {
   title: string;
   entries: Entry[];
@@ -15,10 +16,11 @@ export function EntriesSection({
   types?: string[];
   timeline?: boolean;
   empty?: string;
+  defaultOpen?: boolean;
 }) {
   const filtered = types ? entries.filter((e) => types.includes(e.type)) : entries;
   return (
-    <Section title={title} count={filtered.length}>
+    <Section title={title} count={filtered.length} defaultOpen={defaultOpen}>
       {filtered.length ? (
         timeline ? (
           <TimelineList entries={filtered} edit={edit} />

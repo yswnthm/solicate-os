@@ -512,7 +512,6 @@ a.card:hover { background: var(--surface-hover); transform: none; box-shadow: no
   padding: 0;
   box-shadow: none;
   border: none;
-  margin-bottom: 28px;
 }
 .section-title {
   display: flex;

@@ -281,9 +281,8 @@ export async function getProjectWorkspace(projectId: string) {
         .order("due_at", { ascending: true, nullsFirst: false }),
       supabase
         .from("entries")
-        .select("id, title, type, body_md, occurred_at, decision_outcome, decision_state, project_id, phase_id, phases(id, name)")
+        .select("id, title, type, body_md, occurred_at, decision_outcome, decision_state, project_id, phase_id, triage_state, phases(id, name)")
         .eq("project_id", projectId)
-        .eq("triage_state", "filed")
         .order("occurred_at", { ascending: false })
         .limit(200),
       supabase
