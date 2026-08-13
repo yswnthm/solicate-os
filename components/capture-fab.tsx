@@ -219,42 +219,32 @@ export function CaptureFAB({ projects = [] }: { projects?: any[] }) {
         >
           <div className="capture-modal-card">
             {/* Top bar */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "16px 20px 14px",
-                borderBottom: "1px solid var(--line)",
-              }}
-            >
+            <div className="capture-modal-header">
               <button
                 onClick={handleClose}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--muted)",
-                  fontSize: 14,
-                  cursor: "pointer",
-                  padding: 0,
-                  fontFamily: "inherit",
-                }}
+                className="capture-cancel-btn"
+                type="button"
               >
                 Cancel
               </button>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              <span className="capture-modal-title">
                 {selectedProjectId || projectId ? "Log to Project" : "New Capture"}
               </span>
-              {/* Keyboard shortcut hint */}
-              <span style={{ fontSize: 11, color: "var(--muted)", opacity: 0.5, letterSpacing: "0.03em" }}>
-                ⌘↵ save
-              </span>
+              <button
+                onClick={handleSave}
+                disabled={isPending || !title.trim() || saved}
+                className="button small capture-save-btn"
+                type="button"
+              >
+                {saved ? "Saved ✓" : isPending ? "Saving…" : "Save"}
+              </button>
             </div>
 
             {/* Textarea */}
-            <div style={{ padding: "20px 22px 12px" }}>
+            <div style={{ padding: "16px 20px 12px" }}>
               <textarea
                 ref={textareaRef}
+                autoFocus
                 placeholder="What's on your mind? (Type @ to link a project)"
                 value={title}
                 onChange={handleChange}
@@ -268,10 +258,10 @@ export function CaptureFAB({ projects = [] }: { projects?: any[] }) {
                   outline: "none",
                   color: "var(--ink)",
                   fontSize: 16,
-                  lineHeight: 1.65,
+                  lineHeight: 1.6,
                   resize: "none",
                   fontFamily: "inherit",
-                  minHeight: 80,
+                  minHeight: 90,
                   maxHeight: 340,
                   overflowY: "auto",
                   boxSizing: "border-box",
@@ -283,12 +273,12 @@ export function CaptureFAB({ projects = [] }: { projects?: any[] }) {
                   style={{
                     position: "absolute",
                     bottom: "70px",
-                    left: "22px",
-                    right: "22px",
-                    background: "rgba(20,20,20,0.9)",
+                    left: "20px",
+                    right: "20px",
+                    background: "rgba(20,20,20,0.95)",
                     backdropFilter: "blur(12px)",
                     WebkitBackdropFilter: "blur(12px)",
-                    border: "1px solid rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.08)",
                     borderRadius: 12,
                     boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
                     overflow: "hidden",
@@ -309,7 +299,7 @@ export function CaptureFAB({ projects = [] }: { projects?: any[] }) {
                         width: "100%",
                         textAlign: "left",
                         padding: "10px 16px",
-                        background: i === activeSuggestion ? "rgba(255,255,255,0.05)" : "transparent",
+                        background: i === activeSuggestion ? "rgba(255,255,255,0.08)" : "transparent",
                         border: "none",
                         borderBottom: i < suggestions.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
                         color: i === activeSuggestion ? "#fff" : "var(--muted)",
@@ -333,7 +323,7 @@ export function CaptureFAB({ projects = [] }: { projects?: any[] }) {
             {error && (
               <div
                 style={{
-                  margin: "0 22px 12px",
+                  margin: "0 20px 12px",
                   padding: "10px 14px",
                   background: "rgba(239,68,68,0.1)",
                   border: "1px solid rgba(239,68,68,0.2)",
@@ -345,32 +335,6 @@ export function CaptureFAB({ projects = [] }: { projects?: any[] }) {
                 ⚠ {error}
               </div>
             )}
-
-            {/* Footer */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                padding: "12px 20px 18px",
-                gap: 10,
-              }}
-            >
-              <button
-                onClick={handleSave}
-                disabled={isPending || !title.trim() || saved}
-                className="button"
-                style={{
-                  fontSize: 14,
-                  padding: "9px 24px",
-                  borderRadius: 999,
-                  opacity: !title.trim() ? 0.4 : 1,
-                  transition: "opacity 0.15s",
-                }}
-              >
-                {saved ? "Saved ✓" : isPending ? "Saving…" : "Save"}
-              </button>
-            </div>
           </div>
         </div>
       )}
