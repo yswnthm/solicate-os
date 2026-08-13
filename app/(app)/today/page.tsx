@@ -59,7 +59,9 @@ export default async function TodayPage() {
                     <StatusPill value={entry.type} />
                     <div className="row-main">
                       <div className="row-title">{entry.title}</div>
-                      <div className="row-meta">{entry.projects?.name} · {formatDateTime(entry.occurred_at)}</div>
+                      <div className="row-meta">
+                        {entry.projects?.name} · <span suppressHydrationWarning>{formatDateTime(entry.occurred_at)}</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -157,9 +159,9 @@ export default async function TodayPage() {
                   <Link className="row" href={`/projects/${project.id}`} key={project.id}>
                     <div className="row-main">
                       <div className="row-title">{project.name}</div>
-                      <div className="row-meta">
-                        {project.people?.name} · {formatDateTime(project.updated_at)}
-                      </div>
+                        <div className="row-meta">
+                          {project.people?.name} · <span suppressHydrationWarning>{formatDateTime(project.updated_at)}</span>
+                        </div>
                     </div>
                     <StatusPill value={project.status} />
                   </Link>

@@ -75,8 +75,8 @@ export function EntryCard({
         </div>
         <EditControls entry={entry} edit={edit} />
       </div>
-      <div className="row-meta" style={{ fontSize: "12.5px", opacity: 0.6 }}>
-        {formatDateTime(entry.occurred_at)}
+      <div className="entry-meta" style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12 }}>
+        <span suppressHydrationWarning>{formatDateTime(entry.occurred_at)}</span>
         {entry.decision_outcome ? ` · Outcome: ${entry.decision_outcome}` : ""}
       </div>
       {entry.body_md ? <div className="entry-body">{entry.body_md}</div> : null}
@@ -207,9 +207,9 @@ export function TimelineList({
                         <span className={`milestone-badge ${isUpcoming ? "pending" : "achieved"}`}>
                           {isUpcoming ? "⚡ Target Milestone" : "✓ Achieved"}
                         </span>
-                        <span style={{ fontSize: 11, color: "var(--muted-2)" }}>
-                          {formatDateTime(m.occurred_at)}
-                        </span>
+                        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>
+                          <span suppressHydrationWarning>{formatDateTime(m.occurred_at)}</span>
+                        </div>
                       </div>
                       <div className="row-title" style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
                         {m.title}
@@ -294,7 +294,7 @@ export function TimelineList({
                     <div className="timeline-h-card">
                       <div>
                         <div className="timeline-meta" style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span>{formatDateTime(entry.occurred_at)}</span>
+                          <span suppressHydrationWarning>{formatDateTime(entry.occurred_at)}</span>
                           <StatusPill value={entry.type} />
                         </div>
                         <div className="row-title" style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
@@ -330,7 +330,9 @@ export function TimelineList({
                       <StatusPill value="milestone" />
                     </span>
                   )}
-                  {formatDateTime(entry.occurred_at)} · {entry.type.replaceAll("_", " ")}
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12, display: "flex", justifyContent: "space-between" }}>
+                  <span suppressHydrationWarning>{formatDateTime(entry.occurred_at)}</span> · {entry.type.replaceAll("_", " ")}
+                </div>
                 </div>
                 <div className="row-title" style={{ margin: "2px 0 4px" }}>
                   {entry.title}

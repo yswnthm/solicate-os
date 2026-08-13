@@ -38,10 +38,10 @@ export function SubtaskList({
                 <li key={subtask.id} className={subtask.done ? "subtask-item done" : "subtask-item"}>
                   <form
                     action={async (formData) => {
-                      addOptimistic(
-                        optimistic.map((s) => (s.id === subtask.id ? { ...s, done: !s.done } : s)),
-                      );
                       startTransition(async () => {
+                        addOptimistic(
+                          optimistic.map((s) => (s.id === subtask.id ? { ...s, done: !s.done } : s)),
+                        );
                         await toggleSubtask(formData);
                       });
                     }}
@@ -75,8 +75,8 @@ export function SubtaskList({
                   )}
                   <form
                     action={async (formData) => {
-                      addOptimistic(optimistic.filter((s) => s.id !== subtask.id));
                       startTransition(async () => {
+                        addOptimistic(optimistic.filter((s) => s.id !== subtask.id));
                         await deleteSubtask(formData);
                       });
                     }}
@@ -97,11 +97,11 @@ export function SubtaskList({
               const title = String(formData.get("title") ?? "").trim();
               if (!title) return;
               const notes = String(formData.get("notes") ?? "").trim();
-              addOptimistic([
-                ...optimistic,
-                { id: `new-${Date.now()}`, title, done: false, notes: notes || null },
-              ]);
               startTransition(async () => {
+                addOptimistic([
+                  ...optimistic,
+                  { id: `new-${Date.now()}`, title, done: false, notes: notes || null },
+                ]);
                 await addSubtask(formData);
               });
             }}

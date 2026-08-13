@@ -37,8 +37,8 @@ export function ProjectStatusControl({
         <form
           key={opt.next}
           action={async (formData) => {
-            addOptimisticStatus(opt.next);
             startTransition(async () => {
+              addOptimisticStatus(opt.next);
               await updateProjectStatus(formData);
             });
           }}
@@ -77,8 +77,8 @@ export function TaskStatusControl({
   return (
     <form
       action={async (formData) => {
-        addOptimisticStatus(nextStatus);
         startTransition(async () => {
+          addOptimisticStatus(nextStatus);
           await updateTaskStatus(formData);
         });
       }}

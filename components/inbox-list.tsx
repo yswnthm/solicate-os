@@ -34,9 +34,9 @@ export function InboxList({ entries, projects }: InboxState & { projects: InboxP
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const runDismiss = (entryId: string) => {
-    addOptimistic({ id: entryId });
     setActiveMenuId(null);
     startTransition(async () => {
+      addOptimistic({ id: entryId });
       const fd = new FormData();
       fd.append("entry_id", entryId);
       await dismissInboxEntry(fd);
@@ -46,17 +46,17 @@ export function InboxList({ entries, projects }: InboxState & { projects: InboxP
   const runFileTo = (formData: FormData) => {
     const entryId = String(formData.get("entry_id") ?? "");
     if (!fileTo) return;
-    addOptimistic({ id: entryId });
     setFileTo(null);
     startTransition(async () => {
+      addOptimistic({ id: entryId });
       await fileInboxEntryToProject(formData);
     });
   };
 
   const runMarkSorted = (entryId: string, projectId?: string) => {
-    addOptimistic({ id: entryId });
     setActiveMenuId(null);
     startTransition(async () => {
+      addOptimistic({ id: entryId });
       const fd = new FormData();
       fd.append("entry_id", entryId);
       if (projectId) fd.append("project_id", projectId);
@@ -218,7 +218,7 @@ function RowItem({
         </div>
         <div className="row-meta" style={{ fontSize: 12, marginTop: 4, opacity: 0.7 }}>
           {entry.projects?.name ? `${entry.projects.name} · ` : ""}
-          {formatDateTime(entry.occurred_at)}
+          <span suppressHydrationWarning>{formatDateTime(entry.occurred_at)}</span>
         </div>
       </div>
 

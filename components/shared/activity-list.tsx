@@ -30,7 +30,7 @@ export function ActivityList({ events }: { events: ActivityEvent[] }) {
           <div key={event.id} className="activity-compact-item">
             <span className="activity-dot" style={{ backgroundColor: dotColor }} title={event.event_type} />
             <div className="activity-summary">{event.summary}</div>
-            <div className="activity-time">{formatDateTime(event.occurred_at)}</div>
+            <div className="activity-time"><span suppressHydrationWarning>{formatDateTime(event.occurred_at)}</span></div>
           </div>
         );
       })}

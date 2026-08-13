@@ -18,8 +18,8 @@ export function TaskCheck({
   return (
     <form
       action={async (formData) => {
-        addOptimistic(!optimisticDone);
         startTransition(async () => {
+          addOptimistic(!optimisticDone);
           await updateTaskStatus(formData);
         });
       }}

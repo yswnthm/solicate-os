@@ -106,8 +106,8 @@ export default async function SearchPage({
                         <StatusPill value={entry.type} />
                         <div className="row-main">
                           <div className="row-title">{entry.title}</div>
-                          <div className="row-meta">
-                            {entry.projects?.name} · {formatDateTime(entry.occurred_at)}
+                          <div className="row-meta" style={{ fontSize: 12, marginTop: 4, opacity: 0.7 }}>
+                            {entry.projects?.name} · <span suppressHydrationWarning>{formatDateTime(entry.occurred_at)}</span>
                           </div>
                         </div>
                       </Link>
