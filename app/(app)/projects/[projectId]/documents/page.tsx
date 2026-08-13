@@ -75,7 +75,7 @@ export default async function ProjectDocumentsPage({
           </ModalTrigger>
         }
       >
-        <div className="tabs" style={{ marginBottom: 20 }}>
+        <div className="chip-group" style={{ marginBottom: 20 }}>
           {tags.map((t) => {
             const count = data.entries.filter((e) => {
               if (t.key === "all" || t.key === "record") return true;
@@ -90,9 +90,9 @@ export default async function ProjectDocumentsPage({
               <Link
                 key={t.key}
                 href={`/projects/${projectId}/documents${t.key === "all" ? "" : `?tag=${t.key}`}`}
-                className={classNames("tab", isActive && "active")}
+                className={classNames("chip", isActive && "active")}
               >
-                {t.label} <span className="tab-count">({count})</span>
+                {t.label} <span className="chip-count">({count})</span>
               </Link>
             );
           })}

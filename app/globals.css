@@ -1,15 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
-  /* Premium Light Canvas */
-  --canvas: #f2efe9;
+  /* Clean Minimal Canvas */
+  --canvas: #fafafa;
   --surface: #ffffff;
-  --surface-2: #faf9f6;
+  --surface-2: #f4f4f5;
   --surface-hover: rgba(0, 0, 0, 0.04);
   
   /* Glass and Floating Panels */
   --glass-bg: rgba(255, 255, 255, 0.95);
-  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-border: rgba(0, 0, 0, 0.08);
   
   /* Deep Dark Contrast (Sidebar/Islands) */
   --island-bg: #111111;
@@ -22,24 +22,24 @@
   --ink-2: #525252;
   --muted: #737373;
   --muted-2: #a3a3a3;
-  --line: rgba(0,0,0,0.1);
-  --line-2: rgba(0,0,0,0.06);
+  --line: rgba(0,0,0,0.08);
+  --line-2: rgba(0,0,0,0.05);
   
-  /* Vibrant Pastel Bento Colors */
+  /* Accent Colors */
   --accent: #E4FF00;
   --accent-hover: #D4ED00;
   --accent-soft: rgba(228, 255, 0, 0.2);
   --accent-ink: #111;
   
-  --card-yellow: #fef3c7;
-  --card-pink: #fce7f3;
-  --card-purple: #f3e8ff;
-  --card-green: #dcfce7;
-  --card-blue: #e0f2fe;
-  --card-gray: #f3f4f6;
-  --card-indigo: #e0e7ff;
-  --card-orange: #ffedd5;
-  --card-row-bg: #ffffff;
+  --card-yellow: transparent;
+  --card-pink: transparent;
+  --card-purple: transparent;
+  --card-green: transparent;
+  --card-blue: transparent;
+  --card-gray: transparent;
+  --card-indigo: transparent;
+  --card-orange: transparent;
+  --card-row-bg: transparent;
 
   --danger: #ef4444;
   --danger-soft: #fee2e2;
@@ -109,16 +109,16 @@
   --accent-soft: rgba(228, 255, 0, 0.16);
   --accent-ink: #000000;
   
-  /* Dark Mode Bento Cards - True Pitch Dark Tinted Hues */
-  --card-yellow: #121006;
-  --card-pink: #140710;
-  --card-purple: #100616;
-  --card-green: #061208;
-  --card-blue: #061018;
-  --card-gray: #0a0a0a;
-  --card-indigo: #080a18;
-  --card-orange: #140a04;
-  --card-row-bg: #0e0e0e;
+  /* Dark Mode Cards - Minimal Clean Layout */
+  --card-yellow: transparent;
+  --card-pink: transparent;
+  --card-purple: transparent;
+  --card-green: transparent;
+  --card-blue: transparent;
+  --card-gray: transparent;
+  --card-indigo: transparent;
+  --card-orange: transparent;
+  --card-row-bg: transparent;
 
   --danger: #f87171;
   --danger-soft: rgba(248, 113, 113, 0.18);
@@ -470,106 +470,100 @@ body.desktop-sidebar-collapsed .signout-btn {
 }
 
 .card {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--line-2);
-  transition: transform var(--transition-bounce), box-shadow var(--transition);
+  background: transparent;
+  border-radius: var(--radius);
+  padding: 0;
+  box-shadow: none;
+  border: none;
+  transition: background var(--transition);
   display: flex;
   flex-direction: column;
 }
-a.card { cursor: pointer; text-decoration: none; display: flex; }
-a.card:hover { transform: translateY(-3px) scale(1.005); box-shadow: var(--shadow-md); }
+a.card { cursor: pointer; text-decoration: none; display: flex; padding: 16px; border-radius: var(--radius-sm); }
+a.card:hover { background: var(--surface-hover); transform: none; box-shadow: none; }
 
-.card-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: inherit; letter-spacing: -0.02em; }
-.card-desc { font-size: 14px; opacity: 0.8; margin-bottom: 16px; flex: 1; line-height: 1.6; }
+.card-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: inherit; letter-spacing: -0.01em; }
+.card-desc { font-size: 13.5px; opacity: 0.75; margin-bottom: 12px; flex: 1; line-height: 1.5; }
 .card-icon { 
-  width: 44px; height: 44px; 
+  width: 36px; height: 36px; 
   border-radius: var(--radius-sm); 
   display: grid; place-items: center; 
-  font-size: 18px;
-  margin-bottom: 14px;
+  font-size: 16px;
+  margin-bottom: 12px;
   background: var(--surface-hover);
   border: 1px solid var(--line-2);
 }
 
-/* Bento Card Colors */
-.card-primary { background: var(--card-yellow); }
-.card-secondary { background: var(--card-blue); }
-.card-tertiary { background: var(--card-pink); }
-.card-indigo { background: var(--card-indigo); }
-.card-orange { background: var(--card-orange); }
-.card-dark { background: var(--island-bg); color: var(--island-ink); }
-.card-secondary { background: var(--card-pink); }
-.card-tertiary { background: var(--card-purple); }
-.card-quaternary { background: var(--card-green); }
-.card-gray { background: var(--card-gray); }
+/* Bento Card Colors - Seamless Reset */
+.card-primary, .card-secondary, .card-tertiary, .card-indigo, .card-orange, .card-dark, .card-quaternary, .card-gray {
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  border: none;
+}
 
 .metric { font-size: 32px; font-weight: 700; letter-spacing: -.03em; margin: 0; color: inherit; line-height: 1; }
-.metric-label { font-size: 12px; font-weight: 600; opacity: 0.7; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.metric-label { font-size: 12px; font-weight: 600; opacity: 0.6; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
 
 /* ─── Lists & Sections ─────────────────────────────────────────────────────── */
 .section {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--line-2);
-  margin-bottom: 20px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  border: none;
+  margin-bottom: 28px;
 }
 .section-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
-  padding-bottom: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--line-2);
   color: inherit;
 }
-.section-title h2 { font-size: 20px; font-weight: 800; color: inherit; letter-spacing: -0.02em; }
-.section-title span { color: inherit; opacity: 0.6; font-size: 14px; font-weight: 500; }
+.section-title h2 { font-size: 17px; font-weight: 700; color: inherit; letter-spacing: -0.02em; }
+.section-title span { color: inherit; opacity: 0.55; font-size: 13px; font-weight: 500; }
 
-.list { display: flex; flex-direction: column; gap: 12px; }
+.list { display: flex; flex-direction: column; gap: 0; }
 .row {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--line-2);
-  transition: transform var(--transition-bounce), box-shadow var(--transition);
+  gap: 14px;
+  padding: 12px 10px;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  border: none;
+  border-bottom: 1px solid var(--line-2);
+  transition: background var(--transition);
   color: var(--ink);
 }
-a.row:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-float); }
+a.row:hover { background: var(--surface-hover); transform: none; box-shadow: none; }
 
-/* Bento specific rows */
-.card-primary .row, .card-secondary .row, .card-tertiary .row, .card-indigo .row, .card-orange .row {
-  background: var(--card-row-bg);
-  border: 1px solid var(--line-2);
-  box-shadow: var(--shadow-sm);
-}
-.card-dark .row {
-  background: var(--surface-2);
-  color: var(--ink);
-  border: 1px solid var(--line);
+/* Clean Minimal Rows */
+.card-primary .row, .card-secondary .row, .card-tertiary .row, .card-indigo .row, .card-orange .row, .card-dark .row {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line-2);
+  box-shadow: none;
+  color: inherit;
 }
 
-.row-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.row-title { font-size: 15px; font-weight: 700; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
-.row-meta { color: inherit; opacity: 0.6; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.row-title { font-size: 14.5px; font-weight: 600; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
+.row-meta { color: inherit; opacity: 0.6; font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ─── Todo List (Todoist-style) ─────────────────────────────────────────────── */
+/* ─── Todo List (Clean & Minimal) ─────────────────────────────────────────────── */
 .todo-list {
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--line-2);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
 }
 .todo-list > .task-row + .task-row,
 .todo-list > .task-row + .todo-divider,
@@ -782,15 +776,15 @@ button.subtask-title:hover { color: var(--ink); }
 .subtask-add-btn:hover { color: var(--ink); background: var(--surface-hover); }
 
 .empty {
-  color: inherit;
-  opacity: 0.7;
-  padding: 48px 24px;
+  color: var(--muted);
+  opacity: 0.8;
+  padding: 32px 16px;
   text-align: center;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
-  background: var(--surface-2);
-  border-radius: var(--radius-lg);
-  border: 1px dashed var(--line);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--line-2);
 }
 
 /* ─── Status Pills ───────────────────────────────────────────────────────── */
@@ -1262,27 +1256,82 @@ button.subtask-title:hover { color: var(--ink); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ─── Project & Phase Tabs ─────────────────────────────────────────────────── */
+/* ─── Project & Phase Tabs (Clean Underline Minimal) ─────────────────────────────────── */
 .tabs {
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  border-bottom: 1px solid var(--line-2);
   margin: 0 0 28px;
+  padding-bottom: 0;
+  overflow-x: auto;
 }
 .tab {
-  padding: 7px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
+  padding: 10px 2px;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--muted);
-  border: 1px solid transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
   transition: all var(--transition);
   white-space: nowrap;
   cursor: pointer;
+  margin-bottom: -1px;
+  text-decoration: none;
 }
-.tab:hover { color: var(--ink); background: var(--surface-2); }
-.tab.active { color: var(--island-ink); background: var(--island-bg); box-shadow: var(--shadow-sm); }
-.tab .tab-count { color: inherit; opacity: 0.7; font-weight: 500; margin-left: 6px; }
+.tab:hover { color: var(--ink); }
+.tab.active { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+.tab .tab-count { color: var(--muted-2); font-size: 12.5px; font-weight: 500; margin-left: 4px; }
+
+/* ─── Entry Cards ──────────────────────────────────────────────────────────── */
+.entry-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line-2);
+  gap: 6px;
+}
+.entry-card:last-child { border-bottom: none; }
+
+.entry-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.entry-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.entry-card-title {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.entry-phase-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--line-2);
+}
+.entry-body {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
 
 /* ─── Progress ─────────────────────────────────────────────────────────────── */
 .progress {
@@ -1306,10 +1355,10 @@ button.subtask-title:hover { color: var(--ink); }
 
 /* ─── Timeline & Milestone Roadmap ───────────────────────────────────────── */
 .milestone-section {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 18px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line-2);
+  padding: 0 0 24px 0;
   margin-bottom: 24px;
 }
 
@@ -1324,7 +1373,7 @@ button.subtask-title:hover { color: var(--ink); }
 
 .milestone-track-wrapper {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   overflow-x: auto;
   padding: 4px 2px 14px 2px;
   scrollbar-width: none;
@@ -1336,10 +1385,10 @@ button.subtask-title:hover { color: var(--ink); }
 }
 
 .milestone-card {
-  flex: 0 0 260px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  flex: 0 0 250px;
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -1349,14 +1398,13 @@ button.subtask-title:hover { color: var(--ink); }
 }
 
 .milestone-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
+  border-color: var(--line);
+  background: var(--surface-hover);
 }
 
 .milestone-card.upcoming {
   border-style: dashed;
-  border-color: rgba(245, 158, 11, 0.4);
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.05) 0%, var(--surface-2) 100%);
+  border-color: var(--line-2);
 }
 
 .milestone-badge {

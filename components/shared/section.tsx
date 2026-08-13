@@ -25,30 +25,19 @@ export function Section({
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            type="button"
-            className="button ghost small"
+          <span
             style={{
-              padding: "2px 6px",
-              fontSize: 11,
-              lineHeight: 1,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minWidth: 22,
-              height: 22,
-              borderRadius: 4,
+              fontSize: 10,
+              color: "var(--muted)",
+              display: "inline-block",
+              transition: "transform 150ms ease",
+              transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
             }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsOpen((prev) => !prev);
-            }}
-            aria-label={isOpen ? "Collapse section" : "Expand section"}
           >
-            {isOpen ? "▼" : "▶"}
-          </button>
+            ▶
+          </span>
           <h2 style={{ margin: 0 }}>{title}</h2>
-          {typeof count === "number" && <span>{count}</span>}
+          {typeof count === "number" && <span>({count})</span>}
         </div>
         {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
       </div>

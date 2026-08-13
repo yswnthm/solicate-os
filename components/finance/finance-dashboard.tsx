@@ -22,45 +22,45 @@ export function FinanceDashboard({ data }: { data: DashboardData }) {
   return (
     <div className="finance-dashboard">
       <div className="bento-grid" style={{ marginBottom: "2rem" }}>
-        {/* YTD Income (Purple) */}
-        <div className="col-span-4 card hover-lift" style={{ padding: "1.5rem", backgroundColor: "var(--card-purple)", border: "none", boxShadow: "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem" }}>
-            <div style={{ width: "24px", height: "24px", borderRadius: "6px", backgroundColor: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--surface)" }}>
+        {/* YTD Income */}
+        <div className="col-span-4 card" style={{ padding: "1.25rem 0", borderBottom: "1px solid var(--line-2)", borderRadius: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "0.75rem" }}>
+            <div style={{ width: "24px", height: "24px", borderRadius: "6px", backgroundColor: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
-            <div style={{ fontSize: "0.95rem", fontWeight: 600 }}>YTD Income</div>
+            <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--muted)" }}>YTD Income</div>
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-            <div suppressHydrationWarning style={{ fontSize: "2.25rem", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--ink)" }}>{formatCurrency(data.totalIncome)}</div>
-            <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--ink-2)" }}>+14% vs last year</div>
+            <div suppressHydrationWarning style={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--ink)" }}>{formatCurrency(data.totalIncome)}</div>
+            <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--success)" }}>+14% vs last year</div>
           </div>
         </div>
 
-        {/* YTD Expense (Orange) */}
-        <div className="col-span-4 card hover-lift" style={{ padding: "1.5rem", backgroundColor: "var(--card-orange)", border: "none", boxShadow: "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem" }}>
-            <div style={{ width: "24px", height: "24px", borderRadius: "6px", backgroundColor: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--surface)" }}>
+        {/* YTD Expense */}
+        <div className="col-span-4 card" style={{ padding: "1.25rem 0", borderBottom: "1px solid var(--line-2)", borderRadius: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "0.75rem" }}>
+            <div style={{ width: "24px", height: "24px", borderRadius: "6px", backgroundColor: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
             </div>
-            <div style={{ fontSize: "0.95rem", fontWeight: 600 }}>YTD Expense</div>
+            <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--muted)" }}>YTD Expense</div>
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-            <div suppressHydrationWarning style={{ fontSize: "2.25rem", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--ink)" }}>{formatCurrency(data.totalExpense)}</div>
-            <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--ink-2)" }}>-2% vs last year</div>
+            <div suppressHydrationWarning style={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--ink)" }}>{formatCurrency(data.totalExpense)}</div>
+            <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--muted-2)" }}>-2% vs last year</div>
           </div>
         </div>
 
-        {/* YTD Net Profit (Blue) */}
-        <div className="col-span-4 card hover-lift" style={{ padding: "1.5rem", backgroundColor: "var(--card-blue)", border: "none", boxShadow: "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem" }}>
-            <div style={{ width: "24px", height: "24px", borderRadius: "6px", backgroundColor: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--surface)" }}>
+        {/* YTD Net Profit */}
+        <div className="col-span-4 card" style={{ padding: "1.25rem 0", borderBottom: "1px solid var(--line-2)", borderRadius: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "0.75rem" }}>
+            <div style={{ width: "24px", height: "24px", borderRadius: "6px", backgroundColor: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <div style={{ fontSize: "0.95rem", fontWeight: 600 }}>Net Profit</div>
+            <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--muted)" }}>Net Profit</div>
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-            <div suppressHydrationWarning style={{ fontSize: "2.25rem", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--ink)" }}>{formatCurrency(data.netProfit)}</div>
-            <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--ink-2)" }}>+22% vs last year</div>
+            <div suppressHydrationWarning style={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--ink)" }}>{formatCurrency(data.netProfit)}</div>
+            <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--success)" }}>+22% vs last year</div>
           </div>
         </div>
       </div>
@@ -68,11 +68,11 @@ export function FinanceDashboard({ data }: { data: DashboardData }) {
       <div className="bento-grid" style={{ marginTop: "2rem" }}>
         
         {/* Invoice Pipeline */}
-        <section className="dashboard-section col-span-6 card" style={{ margin: 0, padding: "1.5rem" }}>
-          <h2 style={{ fontSize: "1.1rem", marginBottom: "1rem" }}>Invoice Pipeline</h2>
+        <section className="dashboard-section col-span-6 card" style={{ margin: 0, padding: 0 }}>
+          <h2 style={{ fontSize: "1.1rem", marginBottom: "1rem", borderBottom: "1px solid var(--line-2)", paddingBottom: "8px" }}>Invoice Pipeline</h2>
           
           <div className="pipeline-stages" style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-            <div className="pipeline-stage" style={{ flex: 1, padding: "1rem", background: "var(--bg-inset)", borderRadius: "8px" }}>
+            <div className="pipeline-stage" style={{ flex: 1, padding: "1rem", border: "1px solid var(--line-2)", borderRadius: "12px" }}>
               <div className="muted" style={{ fontSize: "0.85rem", textTransform: "uppercase" }}>Preparing</div>
               <div suppressHydrationWarning style={{ fontSize: "1.5rem", fontWeight: "600", marginTop: "0.25rem" }}>
                 {formatCurrency(data.preparingTotal)}
@@ -82,7 +82,7 @@ export function FinanceDashboard({ data }: { data: DashboardData }) {
               </div>
             </div>
             
-            <div className="pipeline-stage" style={{ flex: 1, padding: "1rem", background: "var(--bg-inset)", borderRadius: "8px" }}>
+            <div className="pipeline-stage" style={{ flex: 1, padding: "1rem", border: "1px solid var(--line-2)", borderRadius: "12px" }}>
               <div className="muted" style={{ fontSize: "0.85rem", textTransform: "uppercase" }}>Sent (Awaiting)</div>
               <div suppressHydrationWarning style={{ fontSize: "1.5rem", fontWeight: "600", marginTop: "0.25rem", color: "var(--warning)" }}>
                 {formatCurrency(data.sentTotal)}

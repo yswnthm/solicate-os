@@ -49,36 +49,23 @@ export function EntryCard({
     : "Project Level";
 
   return (
-    <article className="card" key={entry.id}>
-      <div
-        className="section-title"
-        style={{ borderBottom: "none", marginBottom: 0, paddingBottom: 0 }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <h3 style={{ margin: 0 }}>{entry.title}</h3>
+    <article className="entry-card" key={entry.id}>
+      <div className="entry-card-header">
+        <div className="entry-card-title-group">
+          <h3 className="entry-card-title">{entry.title}</h3>
           {showPhaseBadge && (
-            <span
-              className="pill"
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                padding: "2px 8px",
-                background: "var(--surface-2)",
-                color: "var(--ink)",
-                border: "1px solid var(--border)",
-              }}
-            >
+            <span className="entry-phase-badge">
               {phaseLabel}
             </span>
           )}
         </div>
         <EditControls entry={entry} edit={edit} />
       </div>
-      <div className="row-meta" style={{ marginTop: 4 }}>
+      <div className="row-meta" style={{ fontSize: "12.5px", opacity: 0.6 }}>
         {formatDateTime(entry.occurred_at)}
         {entry.decision_outcome ? ` · Outcome: ${entry.decision_outcome}` : ""}
       </div>
-      {entry.body_md ? <div className="prose">{entry.body_md}</div> : null}
+      {entry.body_md ? <div className="entry-body">{entry.body_md}</div> : null}
     </article>
   );
 }
