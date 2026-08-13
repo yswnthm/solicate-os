@@ -70,7 +70,7 @@ export default function GuidePage() {
             </div>
             <div className="row">
               <div className="row-main">
-                <div className="row-title">Inbox & Capture is the ingestion hub</div>
+                <div className="row-title">Inbox is the ingestion hub</div>
                 <div className="row-meta">
                   Quick captures (notes, tasks, decisions, updates) land in the unified Inbox &amp; Capture Hub.
                   Use the inline command bar for instant capture or switch tabs to AI Deep Capture for multi-update extraction.
@@ -118,7 +118,7 @@ export default function GuidePage() {
             head={["Page", "Shortcut", "What it is for"]}
             rows={[
               ["Today", "G T", "Daily command center: overdue, upcoming, open issues, recent projects, inbox preview."],
-              ["Inbox & Capture", "G I", "Unified ingestion center: inline quick capture bar, untriaged queue filing, and AI Deep Capture mode."],
+              ["Inbox", "G I", "Ingestion center: untriaged notes queue and filing."],
               ["AI Deep Capture", "⌘⇧X", "Describe what happened in plain English; AI proposes multi-table operational updates."],
               ["Projects", "G P", "All delivery work with active/paused counts."],
               ["Clients", "G C", "Businesses and individuals Solicate serves."],

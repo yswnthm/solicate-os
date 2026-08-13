@@ -1,5 +1,7 @@
 "use client";
 
+import { PanelLeft } from "lucide-react";
+
 // Mobile drawer toggle: slides the sidebar in/out on <900px viewports.
 export function SidebarToggle() {
   return (
@@ -16,7 +18,7 @@ export function SidebarToggle() {
         }
       }}
     >
-      ☰
+      <PanelLeft size={18} />
     </button>
   );
 }

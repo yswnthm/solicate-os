@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { CaptureFAB } from "@/components/capture-fab";
+import { LogOut } from "lucide-react";
 import { signOut } from "@/features/actions";
 import { CommandMenu } from "@/components/command-menu";
 import { SearchTriggerButton } from "@/components/search-trigger-button";
@@ -44,8 +46,8 @@ export async function AppShell({
 
         <nav className="sidebar-nav" aria-label="Primary">
           <NavLink href="/today">Today</NavLink>
-          <NavLink href="/inbox" count={inboxCount}>
-            Inbox & Capture
+          <NavLink href="/inbox">
+            Inbox
           </NavLink>
           <NavLink href="/projects">Projects</NavLink>
           <NavLink href="/people">People & Relationships</NavLink>
@@ -61,12 +63,15 @@ export async function AppShell({
             <span className="user-name">{displayName}</span>
             <form action={signOut} style={{ display: "flex" }}>
               <button type="submit" className="signout-btn" title="Sign out">
-                ⎋
+                <LogOut size={16} />
               </button>
             </form>
           </div>
         </div>
       </aside>
+
+      {/* Global Capture FAB */}
+      <CaptureFAB />
 
       {/* Main column */}
       <div className="shell-main">

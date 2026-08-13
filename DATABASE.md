@@ -99,7 +99,7 @@ Every write should set `created_by_id` / `updated_by_id` (trigger
 ## 5. Schema workflow / migrations
 
 - Migrations live in `supabase/migrations/NNNN_snake_name.sql`, applied in order.
-  Latest is `0042_task_subtasks.sql`.
+  Latest is `0061_colleen_strip_phases_tasks.sql`.
 - **Never edit an applied migration** — add a new one (`0043_...`).
 - Convention: `alter table public.x ...` + `create policy` + RLS enable +
   triggers + enums with `create type`. Run as a single script.

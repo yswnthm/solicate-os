@@ -5,8 +5,7 @@ import {
   createSupabaseServerClientWithToken,
   getAccessToken,
 } from "@/lib/supabase/server";
-import { getActiveModels } from "@/lib/ai";
-import { getTemplateBySlug } from "@/lib/ai/template-store";
+
 import { decodeCursor, encodeCursor, keysetFilter, toKeyset } from "@/lib/pagination";
 
 function throwOnError(error: { message: string } | null) {
@@ -675,47 +674,7 @@ export async function searchRecords(query: string) {  if (!query.trim()) return 
   };
 }
 
-// Options for the AI Capture page. Not cached — the form should always show
-// the current project/phase catalog the moment a capture starts.
-export async function getCaptureFormOptions() {
-  const supabase = await createSupabaseServerClient();
-  const [projects, phases, clients, people, models, template] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("id, name, status, people!projects_person_id_fkey(id, name)")
-      .in("status", ["active", "paused"])
-      .order("name"),
-    supabase
-      .from("phases")
-      .select("id, project_id, name, position, status")
-      .order("position"),
-    supabase.from("people").select("id, name").is("archived_at", null).eq("kind", "business").order("name"),
-    supabase.from("people").select("id, name").is("archived_at", null).order("name"),
-    getActiveModels(),
-    getTemplateBySlug("capture-analyze"),
-  ]);
-  [projects, phases, clients, people].forEach((r) => throwOnError(r.error));
 
-  return {
-    projects: (projects.data ?? []).map((p) => ({
-      id: String(p.id),
-      name: String(p.name),
-      client: String((p.people as { name?: unknown } | null | undefined)?.name ?? "") || null,
-      phases: (phases.data ?? [])
-        .filter((ph) => ph.project_id === p.id)
-        .map((ph) => ({
-          id: String(ph.id),
-          name: String(ph.name),
-          position: Number(ph.position),
-          status: String(ph.status),
-        })),
-    })),
-    clients: (clients.data ?? []).map((c) => ({ id: String(c.id), name: String(c.name) })),
-    people: (people.data ?? []).map((p) => ({ id: String(p.id), name: String(p.name) })),
-    models: models.map((m) => ({ id: m.model_id, provider: m.provider, display_name: m.display_name })),
-    default_model: template?.active.default_model ?? "",
-  };
-}
 
 // ─── Finance Ledger Queries ────────────────────────────────────────────────────
 
@@ -869,62 +828,7 @@ export async function getProjectTransactions(projectId: string) {
   return data ?? [];
 }
 
-/** Form options for the Finance Capture page. */
-export async function getFinanceCaptureOptions() {
-  const supabase = await createSupabaseServerClient();
-  const [projects, phases, people, transactions, invoices, categories, paymentMethods, models] =
-    await Promise.all([
-      supabase.from("projects").select("id, name, code, people!projects_person_id_fkey(name)").neq("status", "archived").order("name"),
-      supabase.from("phases").select("id, name, position, status, project_id").neq("status", "cancelled").order("position"),
-      supabase.from("people").select("id, name, is_partner").order("name"),
-      supabase
-        .from("transactions")
-        .select(`id, type, amount, transaction_date, status, invoice_status, invoice_number, notes,
-                 from_person:people!transactions_from_person_id_fkey(id, name),
-                 to_person:people!transactions_to_person_id_fkey(id, name),
-                 transaction_allocations(project_id, phase_id, amount)`)
-        .order("transaction_date", { ascending: false })
-        .limit(30),
-      supabase
-        .from("transactions")
-        .select("id, amount, invoice_status, invoice_number, transaction_date, from_person:people!transactions_from_person_id_fkey(id, name)")
-        .eq("type", "income")
-        .eq("invoice_status", "sent")
-        .order("transaction_date", { ascending: false }),
-      supabase.from("finance_categories").select("id, name, transaction_type, is_default").order("position"),
-      supabase.from("payment_methods").select("id, name, is_default"),
-      getActiveModels(),
-    ]);
 
-  const template = await getTemplateBySlug("finance-capture-analyze");
-
-  return {
-    projects: (projects.data ?? []).map((p) => ({
-      id: String(p.id),
-      name: String(p.name),
-      code: p.code ? String(p.code) : null,
-      client: String((p.people as { name?: unknown } | null | undefined)?.name ?? "") || null,
-    })),
-    phases: (phases.data ?? []).map((ph) => ({
-      id: String(ph.id),
-      name: String(ph.name),
-      position: Number(ph.position),
-      status: String(ph.status),
-      project_id: String(ph.project_id),
-    })),
-    people: (people.data ?? []).map((p) => ({
-      id: String(p.id),
-      name: String(p.name),
-      is_partner: Boolean(p.is_partner),
-    })),
-    recentTransactions: transactions.data ?? [],
-    openInvoices: invoices.data ?? [],
-    categories: categories.data ?? [],
-    paymentMethods: paymentMethods.data ?? [],
-    models: models.map((m) => ({ id: m.model_id, provider: m.provider, display_name: m.display_name })),
-    default_model: template?.active.default_model ?? "",
-  };
-}
 
 /** Categories and payment methods for settings pages. */
 export async function getFinanceSettings() {

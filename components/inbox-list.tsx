@@ -1,23 +1,15 @@
 "use client";
 
-import { useEffect, useOptimistic, useTransition, useState } from "react";
-import Link from "next/link";
+import { useOptimistic, useTransition, useState, useEffect, useRef } from "react";
+import { MoreHorizontal, Edit2, FolderPlus, Trash2 } from "lucide-react";
 
 import { dismissInboxEntry, fileInboxEntryToProject } from "@/features/actions";
-import { approveInboxDraft, draftInboxTriage, getInboxTriagePrompt, getModelPickerOptions, type ModelPickerOptions } from "@/features/ai-actions";
-import { StatusPill } from "@/components/status-pill";
 import { Modal } from "@/components/modal";
-import { PromptModal } from "@/components/prompt-viewer";
-import { EditEntryButton } from "@/components/editing/edit-buttons";
-import { ModelPicker } from "@/components/model-picker";
+import { EditEntryModal } from "@/components/editing/entity-edit-modals";
 import { formatDateTime } from "@/lib/utils";
-import type { TriageDraft } from "@/lib/ai/schemas";
 
 type InboxState = { entries: any[] };
 type Removed = { id: string };
-type ReviewState = { id: string } | null;
-
-const ENTRY_TYPES = ["note", "meeting", "decision", "document", "update", "milestone", "capture"];
 
 type InboxProject = {
   id: string;
@@ -37,79 +29,27 @@ export function InboxList({ entries, projects }: InboxState & { projects: InboxP
   );
   const [, startTransition] = useTransition();
 
-  const [drafting, setDrafting] = useState<Removed | null>(null);
-  const [review, setReview] = useState<ReviewState>(null);
-  const [draft, setDraft] = useState<TriageDraft | null>(null);
-  const [draftError, setDraftError] = useState<string | null>(null);
   const [fileTo, setFileTo] = useState<any | null>(null);
+  const [editingEntry, setEditingEntry] = useState<any | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  const [prompt, setPrompt] = useState<string | null>(null);
-  const [promptOpen, setPromptOpen] = useState(false);
-  const [promptBusy, setPromptBusy] = useState(false);
-
-  const [modelOptions, setModelOptions] = useState<ModelPickerOptions>({ models: [], default_model: "" });
-  const [modelId, setModelId] = useState("");
-
-  useEffect(() => {
-    getModelPickerOptions("inbox-triage")
-      .then(setModelOptions)
-      .catch(() => {});
-  }, []);
-
-  const onGetPrompt = async (itemId: string) => {
-    setPromptBusy(true);
-    setDraftError(null);
-    setPrompt(null);
-    setPromptOpen(true);
-    try {
-      setPrompt(await getInboxTriagePrompt("entry", itemId));
-    } catch (e) {
-      setDraftError(e instanceof Error ? e.message : "Failed to build the prompt.");
-      setPromptOpen(false);
-    } finally {
-      setPromptBusy(false);
-    }
-  };
-
-  const run = (removed: Removed, formData: FormData, action: (fd: FormData) => Promise<void>) => {
-    addOptimistic(removed);
+  const runDismiss = (entryId: string) => {
+    addOptimistic({ id: entryId });
+    setActiveMenuId(null);
     startTransition(async () => {
-      await action(formData);
+      const fd = new FormData();
+      fd.append("entry_id", entryId);
+      await dismissInboxEntry(fd);
     });
   };
 
-  const onDraft = async (itemId: string) => {
-    setDrafting({ id: itemId });
-    setDraftError(null);
-    try {
-      const result = await draftInboxTriage("entry", itemId, modelId || undefined);
-      setDraft({ ...result, project_id: result.project_id ?? "" });
-      setReview({ id: itemId });
-    } catch (e) {
-      setDraftError(e instanceof Error ? e.message : "AI draft failed. Check GROQ_API_KEY.");
-    } finally {
-      setDrafting(null);
-    }
-  };
-
-  const approve = () => {
-    if (!review || !draft) return;
-    const payload: TriageDraft = {
-      title: draft.title.trim(),
-      type: draft.type,
-      project_id: draft.project_id || null,
-      body_md: draft.body_md.trim(),
-    };
-    if (!payload.title || !payload.body_md) return;
-    setReview(null);
-    setDraft(null);
-    addOptimistic({ id: review.id });
+  const runFileTo = (formData: FormData) => {
+    const entryId = String(formData.get("entry_id") ?? "");
+    if (!fileTo) return;
+    addOptimistic({ id: entryId });
+    setFileTo(null);
     startTransition(async () => {
-      try {
-        await approveInboxDraft("entry", review.id, payload);
-      } catch (e) {
-        setDraftError(e instanceof Error ? e.message : "Approve failed.");
-      }
+      await fileInboxEntryToProject(formData);
     });
   };
 
@@ -127,243 +67,85 @@ export function InboxList({ entries, projects }: InboxState & { projects: InboxP
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: 16,
+          gap: 12,
           background: "var(--glass-bg)",
-          border: "1px stroke var(--glass-border)",
+          border: "1px solid var(--glass-border)",
           borderRadius: 16,
         }}
       >
         <div
           style={{
-            width: 48,
-            height: 48,
+            width: 40,
+            height: 40,
             borderRadius: "50%",
             background: "var(--accent-soft)",
             color: "var(--accent)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 22,
+            fontSize: 18,
           }}
         >
           ✓
         </div>
         <div>
-          <h3 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700 }}>Inbox is clear</h3>
-          <p style={{ margin: 0, color: "var(--muted)", fontSize: 14 }}>
-            All incoming captures and quick notes are triaged. Use the quick capture bar above or launch a workflow below.
+          <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 600 }}>Inbox is empty</h3>
+          <p style={{ margin: 0, color: "var(--muted)", fontSize: 13 }}>
+            No saved ideas or notes.
           </p>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
-          <Link href="/inbox?tab=capture" className="button secondary small">
-            ⚡ AI Deep Capture →
-          </Link>
-          <Link href="/projects" className="button secondary small">
-            📁 View Projects →
-          </Link>
         </div>
       </div>
     );
   }
 
-  const runFileTo = (formData: FormData) => {
-    const entryId = String(formData.get("entry_id") ?? "");
-    if (!fileTo) return;
-    addOptimistic({ id: entryId });
-    setFileTo(null);
-    startTransition(async () => {
-      await fileInboxEntryToProject(formData);
-    });
-  };
-
-  const entryRowActions = (entry: any) => (
-    <div className="row-actions-always">
-      {entry.project_id && (
-        <Link className="button secondary small" href={`/projects/${entry.project_id}`}>
-          Open project
-        </Link>
-      )}
-      <EditEntryButton entry={entry} projects={projects} />
-      <button
-        className="button ghost small"
-        type="button"
-        onClick={() => onDraft(entry.id)}
-        disabled={drafting?.id === entry.id}
-        title="Draft a filed record with AI, then approve"
-      >
-        {drafting?.id === entry.id ? "Drafting…" : "✨ Draft"}
-      </button>
-      <button
-        className="button ghost small"
-        type="button"
-        onClick={() => onGetPrompt(entry.id)}
-        disabled={promptBusy}
-        title="Copy the AI prompt for ChatGPT"
-      >
-        Prompt
-      </button>
-      <button
-        className="button small"
-        type="button"
-        onClick={() => setFileTo(entry)}
-        title="File and route to a project"
-      >
-        File to…
-      </button>
-      <form className="inline-form" action={(fd) => run({ id: entry.id }, fd, dismissInboxEntry)}>
-        <input type="hidden" name="entry_id" value={entry.id} />
-        <button className="button ghost small" type="submit" title="Dismiss">
-          Dismiss
-        </button>
-      </form>
-    </div>
-  );
-
   return (
     <>
-      {draftError && (
-        <div className="notice" style={{ marginBottom: 16 }}>
-          {draftError}
-        </div>
+      <div className="list">
+        {optimistic.entries.map((entry: any) => (
+          <RowItem
+            key={entry.id}
+            entry={entry}
+            isMenuOpen={activeMenuId === entry.id}
+            onToggleMenu={() => setActiveMenuId(activeMenuId === entry.id ? null : entry.id)}
+            onCloseMenu={() => setActiveMenuId(null)}
+            onEdit={() => {
+              setActiveMenuId(null);
+              setEditingEntry(entry);
+            }}
+            onFile={() => {
+              setActiveMenuId(null);
+              setFileTo(entry);
+            }}
+            onDismiss={() => runDismiss(entry.id)}
+          />
+        ))}
+      </div>
+
+      {/* Edit Modal */}
+      {editingEntry && (
+        <EditEntryModal
+          entry={editingEntry}
+          projects={projects}
+          open={editingEntry !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditingEntry(null);
+          }}
+        />
       )}
 
-      {/* Model Picker moved to Modal */}
-
-      {optimistic.entries.length > 0 && (
-        <section className="section">
-          <div className="section-title">
-            <h2>Captures</h2>
-            <span>{optimistic.entries.length} untriaged</span>
-          </div>
-          <div className="list">
-            {optimistic.entries.map((entry: any) => (
-              <div className="row" key={entry.id}>
-                <StatusPill value={entry.type} />
-                <div className="row-main">
-                  <div className="row-title">{entry.title}</div>
-                  <div className="row-meta">
-                    {entry.projects?.name ?? "No project"} · {formatDateTime(entry.occurred_at)}
-                  </div>
-                </div>
-                {entryRowActions(entry)}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <Modal
-        isOpen={drafting !== null || (review !== null && draft !== null)}
-        onClose={() => {
-          setReview(null);
-          setDraft(null);
-          setDrafting(null);
-        }}
-        title="Review AI draft"
-      >
-        {modelOptions.models.length > 0 && (
-          <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid var(--line)" }}>
-            <ModelPicker
-              models={modelOptions.models}
-              value={modelId}
-              onChange={setModelId}
-              defaultModel={modelOptions.default_model}
-              fieldId="inbox-model"
-            />
-            {draft !== null && review !== null && (
-              <button className="button ghost small" onClick={() => onDraft(review.id)} disabled={drafting !== null} style={{ marginTop: 8 }}>
-                ↻ Redraft with selected model
-              </button>
-            )}
-          </div>
-        )}
-
-        {drafting !== null && (
-          <div className="empty" style={{ marginTop: 0 }}>Drafting record from inbox item...</div>
-        )}
-        {draft && (
-          <>
-            <p className="muted" style={{ marginBottom: 16 }}>
-              Drafted from the raw item. Edit anything — nothing is saved until you approve.
-            </p>
-            <div className="form">
-              <div className="field">
-                <label>Title</label>
-                <input
-                  value={draft.title}
-                  onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                />
-              </div>
-              <div className="form-grid">
-                <div className="field">
-                  <label>Type</label>
-                  <select
-                    value={draft.type}
-                    onChange={(e) => setDraft({ ...draft, type: e.target.value as TriageDraft["type"] })}
-                  >
-                    {ENTRY_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Project (optional)</label>
-                  <select
-                    value={draft.project_id ?? ""}
-                    onChange={(e) => setDraft({ ...draft, project_id: e.target.value })}
-                  >
-                    <option value="">No project</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {clientName(p.people) ? `${clientName(p.people)} / ` : ""}
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="field">
-                <label>Record body</label>
-                <textarea
-                  value={draft.body_md}
-                  onChange={(e) => setDraft({ ...draft, body_md: e.target.value })}
-                  style={{ minHeight: 120 }}
-                />
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="button" type="button" onClick={approve}>
-                  Approve &amp; file
-                </button>
-                <button
-                  className="button secondary"
-                  type="button"
-                  onClick={() => {
-                    setReview(null);
-                    setDraft(null);
-                  }}
-                >
-                  Discard
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </Modal>
+      {/* File To Project Modal */}
       <Modal
         isOpen={fileTo !== null}
         onClose={() => setFileTo(null)}
-        title={fileTo ? `File — ${fileTo.title.slice(0, 48)}` : "File capture"}
+        title={fileTo ? `File — ${fileTo.title.slice(0, 48)}` : "File note"}
       >
-        <p className="muted" style={{ marginBottom: 16 }}>
-          Route this capture to a project, or leave it unsorted. Either way it leaves the inbox.
+        <p className="muted" style={{ marginBottom: 16, fontSize: 13 }}>
+          Move this note to a project.
         </p>
         <form className="form" action={runFileTo}>
           <input type="hidden" name="entry_id" value={fileTo?.id ?? ""} />
           <div className="field">
-            <label>Destination project</label>
+            <label style={{ fontSize: 12 }}>Destination project</label>
             <select name="project_id" defaultValue={fileTo?.project_id ?? ""}>
               <option value="">Unsorted (no project)</option>
               {projects.map((p) => (
@@ -375,16 +157,167 @@ export function InboxList({ entries, projects }: InboxState & { projects: InboxP
             </select>
           </div>
           <button className="button" type="submit" style={{ marginTop: 8 }}>
-            File capture
+            File note
           </button>
         </form>
       </Modal>
-      <PromptModal
-        open={promptOpen}
-        onClose={() => setPromptOpen(false)}
-        title="Triage prompt"
-        prompt={prompt}
-      />
     </>
+  );
+}
+
+function RowItem({
+  entry,
+  isMenuOpen,
+  onToggleMenu,
+  onCloseMenu,
+  onEdit,
+  onFile,
+  onDismiss,
+}: {
+  entry: any;
+  isMenuOpen: boolean;
+  onToggleMenu: () => void;
+  onCloseMenu: () => void;
+  onEdit: () => void;
+  onFile: () => void;
+  onDismiss: () => void;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu on click outside
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onCloseMenu();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isMenuOpen, onCloseMenu]);
+
+  return (
+    <div className="row" style={{ padding: "14px 16px", position: "relative" }}>
+      <div className="row-main">
+        <div className="row-title" style={{ fontSize: 14, fontWeight: 500 }}>
+          {entry.title}
+        </div>
+        <div className="row-meta" style={{ fontSize: 12, marginTop: 4, opacity: 0.7 }}>
+          {entry.projects?.name ? `${entry.projects.name} · ` : ""}
+          {formatDateTime(entry.occurred_at)}
+        </div>
+      </div>
+
+      <div style={{ position: "relative" }} ref={menuRef}>
+        <button
+          type="button"
+          onClick={onToggleMenu}
+          aria-label="More actions"
+          style={{
+            background: "transparent",
+            border: "1px solid var(--line)",
+            borderRadius: 8,
+            width: 32,
+            height: 32,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--muted)",
+            cursor: "pointer",
+            transition: "all var(--transition)",
+          }}
+        >
+          <MoreHorizontal size={16} />
+        </button>
+
+        {isMenuOpen && (
+          <div
+            style={{
+              position: "absolute",
+              right: 0,
+              top: 38,
+              zIndex: 100,
+              background: "var(--card-bg, #161616)",
+              border: "1px solid var(--line)",
+              borderRadius: 12,
+              padding: 6,
+              width: 160,
+              boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+            }}
+          >
+            <button
+              type="button"
+              onClick={onEdit}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                fontSize: 13,
+                color: "var(--ink)",
+                background: "transparent",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+                textAlign: "left",
+                width: "100%",
+              }}
+            >
+              <Edit2 size={14} style={{ opacity: 0.7 }} />
+              Edit note
+            </button>
+
+            <button
+              type="button"
+              onClick={onFile}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                fontSize: 13,
+                color: "var(--ink)",
+                background: "transparent",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+                textAlign: "left",
+                width: "100%",
+              }}
+            >
+              <FolderPlus size={14} style={{ opacity: 0.7 }} />
+              File to project…
+            </button>
+
+            <div style={{ height: 1, background: "var(--line)", margin: "4px 0" }} />
+
+            <button
+              type="button"
+              onClick={onDismiss}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                fontSize: 13,
+                color: "var(--danger, #ef4444)",
+                background: "transparent",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+                textAlign: "left",
+                width: "100%",
+              }}
+            >
+              <Trash2 size={14} style={{ opacity: 0.8 }} />
+              Dismiss
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

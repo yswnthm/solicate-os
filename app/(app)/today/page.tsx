@@ -6,7 +6,6 @@ import { getTaskEditContext } from "@/features/update-actions";
 import { StatusPill } from "@/components/status-pill";
 import { requireActiveUser } from "@/lib/auth";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import { MorningBriefButton } from "@/components/morning-brief";
 import { EditTaskButton } from "@/components/editing/edit-buttons";
 
 export default async function TodayPage() {
@@ -22,10 +21,6 @@ export default async function TodayPage() {
           <p>{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} · Your agency command center.</p>
         </div>
         <div className="page-header-actions">
-          <MorningBriefButton />
-          <Link href="/capture" className="button secondary">
-            + Capture
-          </Link>
         </div>
       </div>
 

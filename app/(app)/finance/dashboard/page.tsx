@@ -1,7 +1,6 @@
 import { requireActiveUser } from "@/lib/auth";
-import { getFinanceDashboard, getFinanceCaptureOptions } from "@/features/queries";
+import { getFinanceDashboard } from "@/features/queries";
 import { FinanceDashboard } from "@/components/finance/finance-dashboard";
-import { CollapsibleFinanceCapture } from "@/components/capture/collapsible-finance-capture";
 
 export const metadata = {
   title: "Finance Dashboard — Solicate OS",
@@ -9,15 +8,7 @@ export const metadata = {
 
 export default async function FinanceDashboardPage() {
   await requireActiveUser();
-  const [data, options] = await Promise.all([
-    getFinanceDashboard(),
-    getFinanceCaptureOptions()
-  ]);
+  const data = await getFinanceDashboard();
 
-  return (
-    <>
-      <CollapsibleFinanceCapture options={options} />
-      <FinanceDashboard data={data} />
-    </>
-  );
+  return <FinanceDashboard data={data} />;
 }
