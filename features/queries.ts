@@ -24,12 +24,15 @@ const getActiveClientsCached = unstable_cache(
     const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
       .from("people")
-      .select("id, name, kind, website_url, summary")
+      .select("id, name, kind, website_url, summary, relationships!relationships_client_id_fkey(type), projects!projects_person_id_fkey(name)")
       .is("archived_at", null)
-      .eq("kind", "business")
       .order("name");
     throwOnError(response.error);
-    return response.data ?? [];
+    const data = response.data?.filter((p: any) => 
+      p.kind === "business" || 
+      p.relationships.some((r: any) => r.type === "client" || r.type === "lead")
+    ) ?? [];
+    return data;
   },
   ["get-active-clients"],
   { revalidate: 60, tags: ["clients"] },
@@ -51,6 +54,24 @@ const getProjectsCached = unstable_cache(
     return response.data ?? [];
   },
   ["get-projects"],
+  { revalidate: 60, tags: ["projects"] },
+);
+
+export async function getAllProjects() {
+  return getAllProjectsCached(await getAccessToken());
+}
+
+const getAllProjectsCached = unstable_cache(
+  async (accessToken: string | null) => {
+    const supabase = createSupabaseServerClientWithToken(accessToken);
+    const response = await supabase
+      .from("projects")
+      .select("id, name, code, status, target_date, updated_at, started_on, summary, objective, person_id, people!projects_person_id_fkey(id, name)")
+      .order("updated_at", { ascending: false });
+    throwOnError(response.error);
+    return response.data ?? [];
+  },
+  ["get-all-projects"],
   { revalidate: 60, tags: ["projects"] },
 );
 
@@ -83,7 +104,7 @@ const getPeopleCached = unstable_cache(
     const supabase = createSupabaseServerClientWithToken(accessToken);
     const response = await supabase
       .from("people")
-      .select("id, name, email, phone, is_partner, summary")
+      .select("id, name, email, phone, is_partner, summary, projects!projects_person_id_fkey(name)")
       .is("archived_at", null)
       .order("is_partner", { ascending: false })
       .order("name");

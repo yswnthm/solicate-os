@@ -34,10 +34,6 @@ export function NewProjectButton({ clients }: { clients: any[] }) {
           </div>
           <div className="form-grid">
             <div className="field">
-              <label>Code</label>
-              <input name="code" placeholder="SOL-026" />
-            </div>
-            <div className="field">
               <label>Target date</label>
               <input name="target_date" type="date" />
             </div>

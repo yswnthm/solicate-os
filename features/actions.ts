@@ -87,6 +87,48 @@ export async function createPerson(formData: FormData) {
   redirect("/people");
 }
 
+export async function createUnifiedPerson(formData: FormData) {
+  const { user } = await requireActiveUser();
+  const supabase = await createSupabaseServerClient();
+  
+  const kind = z.enum(["business", "individual"]).parse(text(formData.get("kind")) || "individual");
+  const is_client = formData.get("is_client") === "on";
+
+  const { data, error } = await supabase.from("people").insert({
+    name: z.string().min(1).parse(text(formData.get("name"))),
+    kind,
+    email: optional(formData.get("email")),
+    phone: optional(formData.get("phone")),
+    website_url: optional(formData.get("website_url")),
+    is_partner: formData.get("is_partner") === "on",
+    summary: text(formData.get("summary")),
+    created_by_id: user.id,
+  }).select("id").single();
+
+  if (error) throw new Error(error.message);
+
+  if (is_client) {
+    const { error: relError } = await supabase.from("relationships").insert({
+      client_id: data.id,
+      type: "client",
+      created_by_id: user.id,
+    });
+    if (relError) throw new Error(relError.message);
+  }
+
+  revalidatePath("/people");
+  revalidateTag("people");
+  revalidatePath("/clients");
+  revalidateTag("clients");
+  revalidatePath("/relationships");
+  
+  if (is_client || kind === "business") {
+    redirect(`/clients/${data.id}`);
+  } else {
+    redirect(`/people/${data.id}`);
+  }
+}
+
 export async function linkPersonToClient(formData: FormData) {
   await requireActiveUser();
   const clientId = id(formData.get("client_id"));

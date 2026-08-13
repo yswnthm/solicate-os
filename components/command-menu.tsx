@@ -460,10 +460,6 @@ function CreateForm({
             <label htmlFor="palette-project-name">Project name</label>
             <input id="palette-project-name" name="name" placeholder="Website redesign" required />
           </div>
-          <div className="field">
-            <label htmlFor="palette-project-code">Code (optional)</label>
-            <input id="palette-project-code" name="code" placeholder="SOL-026" />
-          </div>
           <button className="button" type="submit" style={{ marginTop: 8 }}>
             Create project
           </button>

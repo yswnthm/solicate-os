@@ -54,7 +54,6 @@ export default async function ProjectInfoPage({
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
             <div>
               <h3 style={{ margin: 0, fontSize: 16 }}>{clientPerson?.name || "Client"}</h3>
-              {project.code && <p className="row-meta" style={{ margin: "2px 0 0" }}>Code: {project.code}</p>}
             </div>
             {clientPerson && <EditPersonButton person={clientPerson} label="Edit client info" />}
           </div>

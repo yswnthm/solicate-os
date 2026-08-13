@@ -140,8 +140,7 @@ export function EditProjectModal({
 }) {
   const fields: FieldConfig[] = [
     { kind: "select", name: "person_id", label: "Client", options: clients.map((c) => ({ value: c.id, label: c.name })), placeholder: "Choose client", required: true, width: "half", autoFocus: true },
-    { kind: "text", name: "name", label: "Project name", required: true, width: "half" },
-    { kind: "text", name: "code", label: "Code", hint: "Must be unique", width: "half" },
+    { kind: "text", name: "name", label: "Project Name", hint: "Required", required: true, width: "full" },
     { kind: "select", name: "status", label: "Status", options: PROJECT_STATUS_OPTIONS, width: "half" },
     { kind: "date", name: "started_on", label: "Start date", width: "half" },
     { kind: "date", name: "target_date", label: "Target date", width: "half" },
@@ -175,8 +174,7 @@ export function EditProjectModal({
       title="Edit project"
       record={{
         person_id: project.person_id,
-        name: project.name,
-        code: project.code ?? "",
+        name: project.name ?? "",
         status: project.status,
         started_on: project.started_on ?? "",
         target_date: project.target_date ?? "",
