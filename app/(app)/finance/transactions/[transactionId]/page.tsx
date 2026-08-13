@@ -49,10 +49,10 @@ export default async function TransactionDetailPage({ params }: { params: Promis
       </PageHeader>
 
       <main className="page-main">
-        <div className="two-col-layout" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
+        <div className="two-col-layout">
           <section className="card" style={{ padding: "1.5rem" }}>
             <h2 style={{ fontSize: "1.1rem", marginBottom: "1rem" }}>Details</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "0.75rem", fontSize: "0.95rem" }}>
+            <div className="tx-property-grid">
               <div className="muted">Status</div>
               <div style={{ textTransform: "capitalize" }}>{tx.status}</div>
               
@@ -73,7 +73,7 @@ export default async function TransactionDetailPage({ params }: { params: Promis
             </div>
 
             <h2 style={{ fontSize: "1.1rem", marginBottom: "1rem", marginTop: "2rem" }}>Invoice Info</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "0.75rem", fontSize: "0.95rem" }}>
+            <div className="tx-property-grid">
               <div className="muted">Inv. Status</div>
               <div style={{ textTransform: "capitalize" }}>{tx.invoice_status || "—"}</div>
               

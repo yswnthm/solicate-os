@@ -12,7 +12,7 @@ export default async function InboxPage() {
     getActiveProjectsForSelect(),
     supabase
       .from("entries")
-      .select("id, title, type, body_md, occurred_at, project_id, decision_outcome, projects(name)")
+      .select("id, title, type, body_md, occurred_at, project_id, decision_outcome, decision_state, phase_id, projects(name)")
       .eq("triage_state", "filed")
       .eq("type", "capture")
       .order("occurred_at", { ascending: false })

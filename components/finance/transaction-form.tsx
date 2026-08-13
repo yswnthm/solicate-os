@@ -35,7 +35,7 @@ export function TransactionForm({
   };
 
   return (
-    <form className="form" onSubmit={handleSubmit} style={{ minWidth: "400px" }}>
+    <form className="form finance-form" onSubmit={handleSubmit}>
       <div className="form-grid">
         <div className="field">
           <label htmlFor="tx-type">Type</label>

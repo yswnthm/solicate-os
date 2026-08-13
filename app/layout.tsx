@@ -1,13 +1,31 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
 import { ToastProvider } from "@/components/editing/toast";
 import { ThemeProvider } from "@/components/theme-provider";
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
+};
+
 export const metadata: Metadata = {
   title: { default: "Solicate OS", template: "%s · Solicate OS" },
   description: "Internal agency operating system for Solicate.",
   robots: { index: false, follow: false },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Solicate OS",
+  },
 };
 
 export default function RootLayout({

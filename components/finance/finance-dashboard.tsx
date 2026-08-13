@@ -71,7 +71,7 @@ export function FinanceDashboard({ data }: { data: DashboardData }) {
         <section className="dashboard-section col-span-6 card" style={{ margin: 0, padding: 0 }}>
           <h2 style={{ fontSize: "1.1rem", marginBottom: "1rem", borderBottom: "1px solid var(--line-2)", paddingBottom: "8px" }}>Invoice Pipeline</h2>
           
-          <div className="pipeline-stages" style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
+          <div className="pipeline-stages">
             <div className="pipeline-stage" style={{ flex: 1, padding: "1rem", border: "1px solid var(--line-2)", borderRadius: "12px" }}>
               <div className="muted" style={{ fontSize: "0.85rem", textTransform: "uppercase" }}>Preparing</div>
               <div suppressHydrationWarning style={{ fontSize: "1.5rem", fontWeight: "600", marginTop: "0.25rem" }}>

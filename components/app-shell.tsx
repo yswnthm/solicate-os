@@ -8,6 +8,7 @@ import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { NavLink } from "@/components/nav-link";
 import { SidebarToggle } from "@/components/sidebar-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { getActiveClients, getProjects } from "@/features/queries";
 
 export async function AppShell({
@@ -72,6 +73,9 @@ export async function AppShell({
 
       {/* Global Capture FAB */}
       <CaptureFAB projects={projects} />
+
+      {/* Mobile Fixed Bottom Navigation */}
+      <MobileBottomNav inboxCount={inboxCount} />
 
       {/* Main column */}
       <div className="shell-main">

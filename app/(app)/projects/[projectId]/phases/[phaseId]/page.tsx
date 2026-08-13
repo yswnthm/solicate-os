@@ -31,9 +31,9 @@ export default async function PhaseDashboardPage({
   return (
     <div className="stack" style={{ gap: 24 }}>
       {/* ─── Hero Overview Card ─── */}
-      <div className="card" style={{ padding: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 20 }}>
-          <div style={{ flex: 1, minWidth: 280 }}>
+      <div className="card phase-hero-card" style={{ padding: 24 }}>
+        <div className="phase-hero-grid">
+          <div className="phase-hero-content">
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
               <StatusPill value={phase.status} />
               <PhaseHealthPill phase={phase} tasks={tasks} />
@@ -48,7 +48,7 @@ export default async function PhaseDashboardPage({
             )}
           </div>
 
-          <div style={{ minWidth: 260, background: "var(--surface-2)", padding: 16, borderRadius: "var(--radius-md)" }}>
+          <div className="phase-hero-progress">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 600 }}>Phase Completion</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>{progress}%</span>

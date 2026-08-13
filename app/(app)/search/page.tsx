@@ -20,7 +20,7 @@ export default async function SearchPage({
       <PageHeader title="Search" description="Find the original record, not a summary." />
 
       <form action="/search" style={{ marginBottom: 28 }}>
-        <div className="form-grid" style={{ alignItems: "end" }}>
+        <div className="form-grid search-form-grid">
           <div className="field">
             <label htmlFor="q">Search project memory</label>
             <input

@@ -197,28 +197,8 @@ export function CaptureFAB({ projects = [] }: { projects?: any[] }) {
       <button
         onClick={() => setOpen(true)}
         aria-label="New capture (C)"
-        title="New capture  (C)"
-        style={{
-          position: "fixed",
-          bottom: 32,
-          right: 32,
-          width: 56,
-          height: 56,
-          borderRadius: "50%",
-          background: "var(--accent)",
-          color: "#000",
-          border: "none",
-          cursor: "pointer",
-          fontSize: 28,
-          fontWeight: 300,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06)",
-          zIndex: 9998,
-          transition: "transform 0.15s ease, box-shadow 0.15s ease",
-          lineHeight: 1,
-        }}
+        title="New capture (C)"
+        className="capture-fab-btn"
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)";
           (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)";
@@ -235,32 +215,9 @@ export function CaptureFAB({ projects = [] }: { projects?: any[] }) {
       {open && (
         <div
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.65)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "0 24px",
-            animation: "fadeIn 0.15s ease",
-          }}
+          className="capture-modal-backdrop"
         >
-          <div
-            style={{
-              background: "var(--card-bg, #111)",
-              borderRadius: 22,
-              width: "100%",
-              maxWidth: 540,
-              boxShadow: "0 40px 100px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)",
-              border: "1px solid var(--glass-border)",
-              overflow: "hidden",
-              animation: "slideUp 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
-            }}
-          >
+          <div className="capture-modal-card">
             {/* Top bar */}
             <div
               style={{

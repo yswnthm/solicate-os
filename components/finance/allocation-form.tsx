@@ -52,7 +52,7 @@ export function AllocationForm({
   const projectPhases = phases.filter((p) => p.project_id === projectId);
 
   return (
-    <form className="form" onSubmit={handleSubmit} style={{ minWidth: "350px" }}>
+    <form className="form finance-form" onSubmit={handleSubmit}>
       <div className="field">
         <label htmlFor="alloc-amount">Amount (₹)</label>
         <input

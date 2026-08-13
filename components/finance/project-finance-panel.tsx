@@ -39,8 +39,8 @@ export function ProjectFinancePanel({
 
   return (
     <div className="project-finance-panel">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.5rem" }}>
-        <div className="stats-grid" style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+      <div className="project-finance-header">
+        <div className="stats-grid project-stats-grid">
           <div className="stat-card">
             <div className="stat-label">Allocated Income</div>
             <div className="stat-value" style={{ color: "var(--success)" }}>{formatCurrency(totalIncome)}</div>
@@ -55,7 +55,7 @@ export function ProjectFinancePanel({
           </div>
         </div>
         
-        <div style={{ marginLeft: "2rem", display: "flex", gap: "0.5rem" }}>
+        <div className="project-finance-controls">
           <select value={filterPhase} onChange={(e) => setFilterPhase(e.target.value)} className="input" style={{ width: "auto" }}>
             <option value="all">All Phases</option>
             {phases.map(ph => <option key={ph.id} value={ph.id}>{ph.name}</option>)}
