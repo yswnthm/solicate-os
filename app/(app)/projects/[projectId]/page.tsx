@@ -25,7 +25,16 @@ export default async function ProjectOverviewPage({
   if (!project) notFound();
 
   const hasPhases = data.phases.length > 0;
-  const unphasedTasks = data.tasks.filter((t: any) => (hasPhases ? !t.phase_id : true));
+  const openUnphasedTasks = data.tasks.filter(
+    (t: any) => (hasPhases ? !t.phase_id : true) && t.status !== "done" && t.status !== "cancelled"
+  );
+  const completedTasks = data.tasks
+    .filter((t: any) => t.status === "done")
+    .sort((a: any, b: any) => {
+      const timeA = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+      const timeB = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+      return timeB - timeA;
+    });
   
   const inboxEntries = data.entries.filter((e: any) => e.triage_state === "inbox");
   const sortedCaptures = data.entries.filter((e: any) => e.triage_state === "filed" && e.type === "capture");
@@ -118,10 +127,10 @@ export default async function ProjectOverviewPage({
         )}
       </Section>
 
-      {/* Execution / Tasks */}
+      {/* Execution / Open Tasks */}
       <Section
         title={hasPhases ? "Ungrouped tasks" : "Tasks"}
-        count={unphasedTasks.length}
+        count={openUnphasedTasks.length}
         action={
           <ModalTrigger buttonLabel="+ New task" title="New task" buttonClass="button ghost small">
             <form className="form" action={createTask}>
@@ -180,16 +189,27 @@ export default async function ProjectOverviewPage({
           </ModalTrigger>
         }
       >
-        {unphasedTasks.length ? (
+        {openUnphasedTasks.length ? (
           <div className="todo-list">
-            {unphasedTasks.map((task: any) => (
+            {openUnphasedTasks.map((task: any) => (
               <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} users={data.users} />
             ))}
           </div>
         ) : (
-          <div className="empty">No tasks outside a phase — phase them so execution stays scoped.</div>
+          <div className="empty">{hasPhases ? "No open tasks outside a phase." : "No open tasks."}</div>
         )}
       </Section>
+
+      {/* Completed Tasks (Collapsible, Default Closed) */}
+      {completedTasks.length > 0 && (
+        <Section title="Completed tasks" count={completedTasks.length} defaultOpen={false}>
+          <div className="todo-list">
+            {completedTasks.map((task: any) => (
+              <TaskRow key={task.id} task={task} projectId={projectId} phases={data.phases} users={data.users} />
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Sorted Inbox (Filed Captures & Notes) */}
       <EntriesSection
