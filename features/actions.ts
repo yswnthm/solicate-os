@@ -186,7 +186,7 @@ export async function updateProjectStatus(formData: FormData) {
 
 export async function createTask(formData: FormData) {
   const { user } = await requireActiveUser();
-  const projectId = id(formData.get("project_id"));
+  const projectId = optional(formData.get("project_id"));
   const title = z.string().min(1).parse(text(formData.get("title")));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("tasks").insert({
@@ -200,14 +200,14 @@ export async function createTask(formData: FormData) {
     created_by_id: user.id,
   });
   if (error) throw new Error(error.message);
-  revalidatePath(projectPath(projectId));
+  if (projectId) revalidatePath(projectPath(projectId));
   revalidatePath("/today");
 }
 
 export async function updateTaskStatus(formData: FormData) {
   await requireActiveUser();
   const taskId = id(formData.get("task_id"));
-  const projectId = id(formData.get("project_id"));
+  const projectId = optional(formData.get("project_id"));
   const status = z.enum(["todo", "in_progress", "blocked", "done", "cancelled"]).parse(
     text(formData.get("status")),
   );
@@ -221,7 +221,7 @@ export async function updateTaskStatus(formData: FormData) {
   }
   const { error } = await supabase.from("tasks").update(updates).eq("id", taskId);
   if (error) throw new Error(error.message);
-  revalidatePath(projectPath(projectId));
+  if (projectId) revalidatePath(projectPath(projectId));
   revalidatePath("/today");
 }
 

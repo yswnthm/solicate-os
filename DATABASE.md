@@ -1,179 +1,88 @@
-# Database Guide for AI Agents
+# Solicate OS — AI Agent Database Guide
 
-Operational reference for reading and modifying the Solicate OS database. This is
-the file to consult whenever you need to query, create, update, or delete data.
+Operational reference for AI agents reading and modifying the Solicate OS database.
 
-> **Hard rule: never paste secrets into code, commits, logs, or chat.**
-> Credentials live **only** in `.env.local` (gitignored). This repo is **public**
-> on GitHub — any key committed here is immediately exposed.
+> **Hard Rule:** Never paste secrets into code, commits, logs, or chat. Credentials live strictly in `.env.local` (gitignored).
 
 ---
 
-## 1. Connection
+## 1. Connection & RLS
 
-- Project ref / URL: `NEXT_PUBLIC_SUPABASE_URL` in `.env.local` (a `*.supabase.co` URL).
-- The app reads its key from `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (anon key).
-- Read `.env.local` at the repo root to obtain the current URL + anon key at runtime.
-- Service-role key (full admin, bypasses RLS): get it from Supabase Dashboard →
-  Project Settings → API keys. Do **not** add it to `.env.local` unless you're
-  willing to treat that file as strictly local, and never commit it.
+* **Runtime API:** Read `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from `.env.local`.
+* **Access Model:** Row-Level Security (RLS) is enabled on all tables. Unauthenticated queries return `[]` (empty list), **not** an error.
+* **Direct Postgres / psql (Bypasses RLS — for admin scripts & migrations):**
+  ```bash
+  PGPASSWORD=$(grep SUPABASE_DB_PASSWORD .env.local | cut -d= -f2) \
+    psql "postgresql://postgres.krfqsroptgwnmqoqvjle@aws-1-ap-south-1.pooler.supabase.com:5432/postgres"
+  ```
+* **App Context:** `app_users` table gates active internal users via `public.is_active_internal_user()`.
 
-### Postgres / psql (bypasses RLS — use for admin reads & fixes)
+---
 
-- The DB password lives in `.env.local` as `SUPABASE_DB_PASSWORD`. The project
-  is linked in `supabase/.temp/linked-project.json` (ref `krfqsroptgwnmqoqvjle`,
-  pooler host `aws-1-ap-south-1.pooler.supabase.com`). Never paste the password
-  into docs, chat, or commits — always read it from `.env.local`.
-- The Supabase CLI is already logged in and linked, so `supabase db push` works
-  once the password has been cached (`supabase link --project-ref <ref>` will
-  prompt for it). Direct psql (pooler, Postgres-level, no RLS):
+## 2. Table Inventory & Schema Reference
 
-```bash
-PGPASSWORD=$(grep SUPABASE_DB_PASSWORD .env.local | cut -d= -f2) \
-  psql "postgresql://postgres.krfqsroptgwnmqoqvjle@aws-1-ap-south-1.pooler.supabase.com:5432/postgres"
-```
+### Operational & Relationship Core
 
-How the app connects (server components): `lib/supabase/server.ts` →
-`createSupabaseServerClient()` (cookie session) and
-`createSupabaseServerClientWithToken(token)` (JWT-header client for `unstable_cache`).
+| Table | Purpose | Key Columns & Foreign Keys |
+| :--- | :--- | :--- |
+| **`app_users`** | Internal team members | `id`, `display_name`, `is_active`, `role` (`owner\|admin\|member`), `workspace_id` |
+| **`people`** | Contacts, partners, clients | `id`, `name`, `email`, `phone`, `is_partner` (bool), `archived_at` |
+| **`relationships`** | People connections | `person_id` → `people(id)`, `type` (`client\|lead\|partner\|team\|internal`), `status` (`active\|paused\|completed\|archived`) |
+| **`projects`** | Client / internal engagements | `id`, `name`, `code`, `status` (`active\|paused\|completed\|archived`), `person_id` → `people(id)`, `summary`, `objective`, `started_on`, `archived_at` |
+| **`project_participants`** | People on a project | `project_id` → `projects(id)`, `person_id` → `people(id)`, `role` (`lead\|owner\|partner\|contractor\|advisor\|client_contact`), `financial_arrangement`, `payment_status` |
+| **`phases`** | Sequential project phases | `id`, `project_id` → `projects(id)`, `name`, `position` (int), `status` (`planned\|active\|on_hold\|completed\|cancelled`), `started_on`, `completed_at`, `scope_deliverables`, `proposal_pricing` |
+| **`tasks`** | Actionable work items | `id`, `project_id` (nullable for global agency tasks), `phase_id` → `phases(id)`, `title`, `description_md`, `status` (`todo\|in_progress\|blocked\|done\|cancelled`), `priority` (`low\|normal\|high\|urgent`), `assignee_id` → `app_users(id)`, `due_at`, `completed_at`, `position` |
+| **`task_subtasks`** | Task checklist items | `id`, `task_id` → `tasks(id)`, `title`, `notes`, `done` (bool), `position` (int) |
+| **`entries`** | Notes, docs, decisions, captures | `id`, `project_id` (nullable), `phase_id`, `type` (`note\|meeting\|decision\|document\|update\|milestone\|capture`), `triage_state` (`inbox\|filed\|dismissed`), `decision_outcome`, `decision_state` (`active\|superseded\|reversed`), `occurred_at` |
 
-## 2. Access model — read this before querying anything
+### Finance Ledger
 
-- **RLS is enforced.** Every table has row-level security. Unauthenticated /
-  anon-key requests return `[]` (empty), **not** an error — an empty result is
-  *never proof that rows don't exist*.
-- To actually see data you need either:
-  - A signed-in user session (the app's cookies), or
-  - The **service-role key** passed as `Authorization: Bearer <service_role>`, or
-  - A **direct Postgres connection** (psql / `supabase db`), which bypasses RLS
-    entirely — see §1 for the pooler connection using `SUPABASE_DB_PASSWORD`.
-- `public.is_active_internal_user()` gates most tables (auth.uid() is an active
-  internal user). Workspaces (migration 0029/0030) add a second layer of scoping
-  via `current_workspace_id()`.
+| Table | Purpose | Key Columns & Constraints |
+| :--- | :--- | :--- |
+| **`transactions`** | Master income / expense ledger | `id`, `type` (`income\|expense`), `amount` (numeric > 0), `currency_code`, `invoice_status` (`preparing\|sent\|cleared` for income only), `invoice_number`, `occurred_at` |
+| **`transaction_allocations`** | Split of transaction to projects | `id`, `transaction_id` → `transactions(id)`, `project_id` → `projects(id)`, `phase_id` → `phases(id)`, `amount` (sum <= transaction.amount) |
 
-### Quick check queries (REST, curl)
+### Audit Trail & Triggers
 
-```bash
-URL=$(grep NEXT_PUBLIC_SUPABASE_URL .env.local | cut -d= -f2)
-KEY=$(grep NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY .env.local | cut -d= -f2)
+| Table | Purpose | Key Columns |
+| :--- | :--- | :--- |
+| **`activity_events`** | User-facing activity feed | `project_id`, `actor_id` → `app_users(id)`, `record_type`, `record_id`, `event_type`, `summary`, `occurred_at` |
+| **`record_history`** | Automated field-level diffs | `entity_type` (`task\|phase\|transaction\|project`), `entity_id`, `changed_by_id` → `app_users(id)`, `diff` (jsonb) |
 
-# Signed-in session (RLS-scoped) — pass the user's JWT:
-curl -s "$URL/rest/v1/tasks?select=id,title,status&limit=5" \
-  -H "apikey: $KEY" -H "Authorization: Bearer <USER_JWT>"
+---
 
-# Admin (service-role, bypasses RLS). Replace SR with the dashboard key.
-curl -s "$URL/rest/v1/tasks?select=id,title,status&limit=5" \
-  -H "apikey: $SR" -H "Authorization: Bearer $SR"
-```
+## 3. Standard AI Operational SOPs
 
-Filters: `?col=eq.value&col=neq.value&order=col.asc.nullslast`. Row-level:
-`&limit=1&select=id`. Supabase REST docs apply.
+### SOP 1: Triaging Inbox Captures
+1. Captures arrive with `type = 'capture'` and `triage_state = 'inbox'`.
+2. When triaged to a project: update `triage_state = 'filed'`, set `project_id = <target_id>`, and update `type` to `'note'`, `'document'`, or `'decision'` if applicable.
+3. When converted to a task: insert row in `tasks` with `origin_entry_id = <entry_id>`, then set entry `triage_state = 'filed'`.
 
-## 3. Making changes — order of preference
+### SOP 2: Task Status & Completed Checks
+* **Constraint:** A task with `status = 'done'` **must** have `completed_at IS NOT NULL`. A task with `status != 'done'` must have `completed_at = NULL`.
+* Setting status to done:
+  ```sql
+  UPDATE public.tasks SET status = 'done', completed_at = NOW() WHERE id = '<task_id>';
+  ```
 
-1. **App server actions** (`features/actions.ts`) — *preferred.* They enforce auth,
-   RLS, validation (zod), audit triggers, and activity logging for you. Call
-   `revalidatePath(...)` after writes. Example: `createTask(formData)`,
-   `updateTaskStatus(formData)`, `addSubtask(formData)`.
-2. **New migration** for schema/backfill (see §5). Apply via the SQL editor or
-   `supabase db push` after `supabase link --project-ref <ref>`.
-3. **Direct SQL/service-role** only for admin data fixes that have no action —
-   and follow the delete rules in §4.
+### SOP 3: Phase Management & Task Alignment
+1. **Scope Integrity:** Tasks representing core phase deliverables carry `phase_id`. General roadmap/strategy tasks should have `phase_id = NULL`.
+2. **Completing a Phase:**
+   ```sql
+   UPDATE public.phases SET status = 'completed', completed_at = NOW() WHERE id = '<phase_id>';
+   ```
+3. Always log a milestone entry in `entries` when a major phase completes.
 
-Every write should set `created_by_id` / `updated_by_id` (trigger
-`set_updated_meta()` handles `updated_at` + `updated_by_id` on update).
+### SOP 4: Direct SQL & Migration Safety
+1. **Wrap in Transactions:** Always execute multi-statement updates inside `BEGIN; ... COMMIT;`.
+2. **Handle Audit Trigger Fallback:** In non-JWT migration scripts, `auth.uid()` is null. The `log_record_history()` function automatically falls back to `(SELECT id FROM public.app_users WHERE is_active = true ORDER BY created_at LIMIT 1)`.
+3. **Foreign Key Cascade Order on Delete:** `task_subtasks` → `tasks` → `activity_events` → `phases` → `projects`.
 
-## 4. Deleting data — safety rules
+---
 
-- **Prefer soft delete.** `clients`, `people`, `projects` use `archived_at`;
-  set it instead of deleting where possible.
-- **SELECT before DELETE.** Always run the `select id` version of the filter
-  first, read the row count, then delete the exact ids.
-- Never bulk-delete without a `limit`/`in` on explicit ids.
-- `tasks`, `task_subtasks`, `entries`, `activity_events` etc. are hard-deletable
-  in the app via their delete actions — but foreign-key children (`task_subtasks`
-  before `tasks`, `activity_events`, `record_history`) must go first.
-- No transactions over REST. For multi-table changes, run them as a single SQL
-  block in the SQL editor inside `begin; ... commit;`.
+## 4. Cache Invalidation Rule
 
-## 5. Schema workflow / migrations
-
-- Migrations live in `supabase/migrations/NNNN_snake_name.sql`, applied in order.
-  Latest is `0061_colleen_strip_phases_tasks.sql`.
-- **Never edit an applied migration** — add a new one (`0043_...`).
-- Convention: `alter table public.x ...` + `create policy` + RLS enable +
-  triggers + enums with `create type`. Run as a single script.
-
-## 6. Table inventory
-
-Core relationships/operational tables:
-
-| Table | Purpose | Key columns / FKs |
-| --- | --- | --- |
-| `app_users` | Internal users | `display_name`, `is_active`, `role` (`user_role`), `workspace_id` |
-| `workspaces` | Multi-user tenant | from migration 0029 |
-| `clients` / `client_people` | Legacy client hierarchy (superseded by `relationships`) | `kind`, `status` |
-| `people` | People: contacts, partners, team | `kind` (`people_kind`), `is_partner`, `archived_at` |
-| `relationships` | Client/lead/partner/team connections | `client_id`/`person_id` → `people`, `type` (`relationship_type`), `status` |
-| `projects` | Engagements | `name`, `code`, `status` (`project_status`), `person_id` → `people`, `objective`, `summary` |
-| `project_participants` | People on a project | `person_id` → `people`, `role` (`participant_role`), `financial_arrangement`, `payment_status`, `communication_mode` |
-| `phases` | Project phases | `project_id`, `position`, `name`, `status` (`phase_status`), `started_on`, `target_date`, scope/proposal JSON fields |
-| `tasks` | Work items | `project_id`, `phase_id`, `title`, `status` (`task_status`: todo/in_progress/blocked/done/cancelled), `priority` (`task_priority`: low/normal/high/urgent), `assignee_id` → `app_users`, `due_at`, `completed_at` |
-| `task_subtasks` | Checklist items under a task | `task_id`, `title`, `done`, `position` (migration 0042) |
-| `entries` | Records: notes/meetings/decisions/docs | `project_id` (optional), `phase_id`, `type` (`entry_type`), `triage_state` (inbox/filed/dismissed), `decision_outcome`, `decision_state`, `occurred_at` |
-| `activity_events` | Audit trail | `project_id`, `actor_id` → `app_users`, `record_type`, `record_id`, `event_type`, `summary` |
-| `entity_links` | Related-record links | from migration 0031 |
-| `record_history` | Field-level change history | from migration 0031 |
-
-AI / capture:
-
-| Table | Purpose |
-| --- | --- |
-| `ai_models` | Model registry (provider `ai_provider`: groq/gemini) |
-| `ai_templates` / `ai_template_versions` | Prompt templates |
-| `ai_summaries` | Stale-able project summaries |
-| `semantic_chunks` | Embeddings / semantic memory (migration 0021) |
-| `capture_sessions` / `capture_actions` | Capture inbox pipeline |
-| `message_drafts` | Drafted outbound messages |
-
-Finance (migration 0024+):
-
-| Table | Purpose |
-| --- | --- |
-| `transactions` | Invoices/payments/expenses; `type`, `amount`, `currency_code`, guards `guard_transaction_amount` |
-| `transaction_allocations` | Split of a transaction across projects; guard `guard_allocation_amount` |
-| `finance_items` / `finance_categories` / `payment_methods` | Ledger support; deprecated in favor of `transactions` (migration 0034) |
-
-Views: `v_project_finance` (finance joined to projects), `finance_rollup`,
-`status_rollup`, `decision_log`.
-
-Removed/legacy: `conversations`, `conversation_participants`, `messages`
-(dropped in 0039), `issues` (consolidated into `tasks` in 0040).
-
-## 7. Enum reference (relevant values)
-
-- `task_status`: `todo | in_progress | blocked | done | cancelled`
-- `task_priority`: `low | normal | high | urgent`
-- `project_status`: `active | paused | completed | archived`
-- `phase_status`: `planned | active | on_hold | completed | cancelled`
-- `entry_type`: `note | meeting | decision | document | update | milestone | capture`
-- `relationship_type`: `client | lead | partner | team | internal`
-- `user_role`: `owner | admin | member`
-
-## 8. Worked example (Stillness)
-
-- Stillness project id: `1ce4a5c0-0000-4000-8000-000000000021`
-  (seeded in migration `0005_stillness_import.sql`).
-- To list its tasks (admin only): query `tasks` with
-  `project_id=eq.1ce4a5c0-0000-4000-8000-000000000021`, join `phases` and
-  `app_users!tasks_assignee_id_fkey` (note: `app_users` needs the FK hint —
-  `tasks` has 3 FKs to `app_users`).
-
-## 9. Golden rules
-
-1. Never commit or print secrets. `.env.local` is gitignored — keep it that way.
-2. Empty query results from anon key ≠ missing data (RLS). Use a session JWT or
-   service-role key for real verification.
-3. Prefer app actions → migrations → direct SQL, in that order.
-4. Soft-delete before hard-delete. Select before delete.
-5. Always `revalidatePath(...)` after writes so cached pages refresh.
+After executing server actions or API writes, always trigger cache invalidation so the Next.js frontend updates:
+* `revalidatePath("/projects/[projectId]")`
+* `revalidatePath("/today")`
+* `revalidateTag("inbox")` (for capture mutations)
