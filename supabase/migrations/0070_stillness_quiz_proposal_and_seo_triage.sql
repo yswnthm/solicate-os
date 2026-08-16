@@ -1,4 +1,4 @@
--- 0070: Stillness — Log Interactive Diagnostic Quiz Proposal & Update Phase 3 SEO Tasks
+-- 0070: Stillness - Log Interactive Diagnostic Quiz Proposal & Update Phase 3 SEO Tasks
 
 BEGIN;
 
@@ -9,8 +9,8 @@ INSERT INTO public.entries (
   '1ce4a5c0-0000-4000-8000-000000002040',
   '1ce4a5c0-0000-4000-8000-000000000021',
   'document',
-  'Proposal: Interactive Diagnostic Quiz Integration (₹11k–₹14k)',
-  '**Interactive 15-Question Diagnostic Quiz Integration Proposal**\n\n* **Delivered to Komal:** 13 Aug 2026 as PDF\n* **Build Approach:** Custom native WordPress development (replaces third-party SaaS embed to maintain exact Stillness styling, typography, and animation standards).\n* **Core Architecture:**\n  1. Dedicated landing page ("Take the 2-Minute Diagnostic")\n  2. 15 single-choice questions with smooth progression & live scoring\n  3. Lead capture gate (First Name + Email)\n  4. 4 Dynamic result screens (Types A, B, C, D) with tie-breaker logic on Q15\n\n* **Pricing Options:**\n  - **Option A (Core):** ₹11,000 (Leads saved inside website database)\n  - **Option B (Connected):** ₹14,000 (Leads automatically synced & tagged in email marketing tool)\n  - **Optional Add-Ons (9 available):** Blended results, practitioner note, result-matched email sequences, SEO landing page, etc.\n\n* **Source Document:** `clients/stillness-co/work/proposals/interactive-diagnostic-quiz.html`\n* **Status:** Awaiting client decision / kickoff.',
+  'Proposal: Interactive Diagnostic Quiz Integration (11k - 14k)',
+  '**Interactive 15-Question Diagnostic Quiz Integration Proposal**\n\n* **Delivered to Komal:** 13 Aug 2026 as PDF\n* **Build Approach:** Custom native WordPress development (replaces third-party SaaS embed to maintain exact Stillness styling, typography, and animation standards).\n* **Core Architecture:**\n  1. Dedicated landing page ("Take the 2-Minute Diagnostic")\n  2. 15 single-choice questions with smooth progression & live scoring\n  3. Lead capture gate (First Name + Email)\n  4. 4 Dynamic result screens (Types A, B, C, D) with tie-breaker logic on Q15\n\n* **Pricing Options:**\n  - **Option A (Core):** 11,000 INR (Leads saved inside website database)\n  - **Option B (Connected):** 14,000 INR (Leads automatically synced & tagged in email marketing tool)\n  - **Optional Add-Ons (9 available):** Blended results, practitioner note, result-matched email sequences, SEO landing page, etc.\n\n* **Source Document:** `clients/stillness-co/work/proposals/interactive-diagnostic-quiz.html`\n* **Status:** Awaiting client decision / kickoff.',
   '2026-08-13 08:33:00+00',
   'filed',
   (SELECT id FROM public.app_users WHERE is_active = true ORDER BY created_at LIMIT 1)
@@ -24,8 +24,8 @@ INSERT INTO public.tasks (
 ) VALUES (
   '1ce4a5c0-0000-4000-8000-000000003040',
   '1ce4a5c0-0000-4000-8000-000000000021',
-  'Awaiting Komal decision on Interactive Diagnostic Quiz proposal (Option A: ₹11k / Option B: ₹14k)',
-  'Delivered proposal PDF on 13 Aug 2026. Awaiting Komal selection of Option A (Core ₹11k) vs Option B (Connected ₹14k) and kickoff confirmation.',
+  'Awaiting Komal decision on Interactive Diagnostic Quiz proposal (Option A: 11k / Option B: 14k)',
+  'Delivered proposal PDF on 13 Aug 2026. Awaiting Komal selection of Option A (Core 11k) vs Option B (Connected 14k) and kickoff confirmation.',
   'todo',
   'normal',
   1,
@@ -41,7 +41,7 @@ SET status = 'done',
 WHERE id = 'bef84497-1e45-4586-ab86-96bc54176582'; -- Page triage index cleanup plan
 
 UPDATE public.tasks
-SET title = 'Index cleanup — Solicate staging & utility pass (17 noindex + 20 trashed)',
+SET title = 'Index cleanup: Solicate staging & utility pass (17 noindex + 20 trashed)',
     status = 'done',
     completed_at = COALESCE(completed_at, NOW())
 WHERE id = '1ce4a5c0-0000-4000-8000-000000003004';
