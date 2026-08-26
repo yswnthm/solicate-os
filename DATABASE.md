@@ -86,3 +86,43 @@ After executing server actions or API writes, always trigger cache invalidation 
 * `revalidatePath("/projects/[projectId]")`
 * `revalidatePath("/today")`
 * `revalidateTag("inbox")` (for capture mutations)
+
+---
+
+## 5. Solicate Internal Schema (`solicate.*`)
+
+A dedicated schema modeling **Solicate itself** as a first-class entity — completely separate from client data. No RLS: these are internal agency records. AI agents should query this schema for context on positioning, services, team, and growth phase before drafting proposals or content.
+
+> **Rule:** Never mix `solicate.*` tables with client data. Cross-references are only via FK into `public.people` (partners) and `public.app_users` (internal users).
+
+### Tables
+
+| Table | Purpose | Key Columns |
+| :--- | :--- | :--- |
+| **`solicate.profile`** | Singleton agency identity row | `name`, `tagline`, `founded_on`, `target_market`, `north_star`, `brand_voice` (empty until filled), `website_url` |
+| **`solicate.phases`** | Agency growth eras | `position` (int), `name`, `status` (`planned\|active\|completed`), `started_on`, `target_date`, `description`, `success_definition` |
+| **`solicate.services`** | Service lines Solicate offers | `name`, `slug` (unique key), `status` (`active\|experimental\|planned\|deprecated`), `pricing_from`, `pricing_currency`, `model` (`retainer\|project\|phase_based\|hybrid`) |
+| **`solicate.team`** | Team + partner network | `name`, `role`, `role_type` (`founder\|employee\|partner\|contractor\|advisor`), `skills`, `status`, `person_id` → `public.people(id)`, `user_id` → `public.app_users(id)` |
+
+### Quick Queries (for agent context injection)
+
+```sql
+-- Full agency context
+SELECT name, tagline, target_market, north_star, brand_voice FROM solicate.profile LIMIT 1;
+
+-- Active growth phase
+SELECT name, description, success_definition FROM solicate.phases WHERE status = 'active' LIMIT 1;
+
+-- All active services
+SELECT name, slug, description, pricing_from, pricing_currency, model FROM solicate.services WHERE status = 'active' ORDER BY name;
+
+-- Active team
+SELECT name, role, role_type, skills FROM solicate.team WHERE status = 'active' ORDER BY joined_on;
+```
+
+### Current State (as of Aug 2026)
+
+* **Phase:** Phase 1 — Foundation (`active`)
+* **Services:** organic growth & authority · ecommerce catalog & content · web & digital presence
+* **Team:** Yeswanth (Founder) · Sakshi (Partner)
+* **Brand Voice:** Empty — fill when ready before agent-assisted content drafting.
