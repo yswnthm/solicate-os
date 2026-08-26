@@ -51,6 +51,7 @@ export async function AppShell({
             Inbox
           </NavLink>
           <NavLink href="/projects">Projects</NavLink>
+          <NavLink href="/solicate">Agency</NavLink>
           <NavLink href="/people">People & Relationships</NavLink>
           <NavLink href="/finance">Finance</NavLink>
 
