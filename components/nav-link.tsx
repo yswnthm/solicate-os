@@ -19,6 +19,7 @@ const NAV_CONFIG: Record<string, { icon: LucideIcon; shortcut?: string }> = {
   "/today": { icon: CalendarDays, shortcut: "G T" },
   "/inbox": { icon: Inbox, shortcut: "G I" },
   "/projects": { icon: FolderKanban, shortcut: "G P" },
+  "/solicate": { icon: Building2, shortcut: "G A" },
   "/clients": { icon: Building2, shortcut: "G C" },
   "/people": { icon: Users, shortcut: "G U" },
   "/finance": { icon: Wallet, shortcut: "G F" },
