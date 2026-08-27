@@ -60,9 +60,35 @@ export async function getSolicateTeam() {
 const getSolicateTeamCached = unstable_cache(
   async (accessToken: string | null) => {
     const supabase = createSupabaseServerClientWithToken(accessToken);
-    const { data, error } = await supabase.schema('solicate').from("team").select("*, public_people:person_id(name), public_app_users:user_id(display_name)").order("joined_on");
+    const { data: teamMembers, error } = await supabase
+      .schema("solicate")
+      .from("team")
+      .select("*")
+      .order("joined_on");
     throwOnError(error);
-    return data ?? [];
+
+    if (!teamMembers || teamMembers.length === 0) return [];
+
+    const personIds = teamMembers.map((m: any) => m.person_id).filter(Boolean);
+    const userIds = teamMembers.map((m: any) => m.user_id).filter(Boolean);
+
+    const [peopleRes, usersRes] = await Promise.all([
+      personIds.length
+        ? supabase.from("people").select("id, name").in("id", personIds)
+        : Promise.resolve({ data: [] }),
+      userIds.length
+        ? supabase.from("app_users").select("id, display_name").in("id", userIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const peopleMap = new Map((peopleRes.data ?? []).map((p: any) => [p.id, p]));
+    const usersMap = new Map((usersRes.data ?? []).map((u: any) => [u.id, u]));
+
+    return teamMembers.map((m: any) => ({
+      ...m,
+      public_people: m.person_id ? peopleMap.get(m.person_id) ?? null : null,
+      public_app_users: m.user_id ? usersMap.get(m.user_id) ?? null : null,
+    }));
   },
   ["get-solicate-team"],
   { revalidate: 60, tags: ["solicate"] },
