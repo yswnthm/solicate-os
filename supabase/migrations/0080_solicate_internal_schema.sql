@@ -204,7 +204,7 @@ INSERT INTO solicate.team (
   'founder',
   'strategy, organic growth, web development, next.js, supabase, client management, content direction',
   'active',
-  '2026-01-01',
+  '2026-01-02',
   'founder and primary operator. handles strategy, client delivery, tech infrastructure, and sales.'
 ),
 (
@@ -218,6 +218,18 @@ INSERT INTO solicate.team (
   'active',
   '2026-02-08',
   $str$referral partner and design collaborator. primary relay for stillness co client. partner commission: split per phase decided by solicate based on work done. ₹10,000 redesign share cleared for stillness phase 1.$str$
+),
+(
+  'f3a8c912-0000-4000-8000-00000000c9cf',
+  '2f9e3d70-0000-4000-8000-000000000011',  -- Navi person record
+  null,
+  'Navi',
+  'Referral & Business Partner',
+  'partner',
+  'community building, atlantic canada network, plus-size fashion, local business connections, client introductions',
+  'active',
+  '2026-08-25',
+  $str$55/45 revenue split (solicate 55 / navi 45) on all clients referred by navi. currency: CAD. navi pitches and introduces — solicate delivers strategy and execution. agreed verbally via whatsapp aug 25, 2026. navi also a client (cyc/cycf etsy + instagram project ongoing).$str$
 )
 ON CONFLICT (id) DO UPDATE SET
   name       = EXCLUDED.name,
