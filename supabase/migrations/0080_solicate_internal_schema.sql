@@ -40,7 +40,7 @@ INSERT INTO solicate.profile (
   '839f3512-6097-6d96-9248-01fc2afebeda',
   'Solicate',
   'organic growth and digital presence for small businesses in atlantic canada and beyond',
-  '2026-01-01',
+  '2026-01-02',
   $str$small and growing businesses — individual practitioners, healthcare providers, local service brands, and ecommerce operators — who need real digital traction without an in-house team. primarily atlantic canada (ns, pei, nb) with remote reach globally.$str$,
   $str$become the most trusted growth partner for independent and small businesses in atlantic canada. known for deep strategy, honest execution, and measurable outcomes. not an agency that disappears after launch.$str$,
   '',  -- brand voice: empty for now. fill before agent-assisted content drafting.
@@ -132,36 +132,36 @@ INSERT INTO solicate.services (
 ) VALUES
 (
   '17576752-89a1-4b9a-b3ad-9583ca535f90',
-  'organic growth & authority',
+  'Organic Growth & Positioning',
   'organic_growth',
   'active',
-  $str$30-day market discovery, positioning thesis, content engine, and lead mechanism for individual practitioners and small businesses. designed for clients who need to build real audience trust and inbound leads without paid ads. modeled from the colleen munn and remember when healthcare engagements.$str$,
+  $str$30-day market discovery, positioning thesis, SEO, content engine, and organic lead acquisition for independent practitioners and growing businesses.$str$,
   15000,
   'INR',
   'phase_based',
-  $str$month one = discovery + positioning. month two+ = distribution and flywheel. pricing scales with scope and market. compliance-aware for regulated industries (healthcare, finance).$str$
-),
-(
-  'c9f56b15-1439-7789-25a4-05bce04aa7aa',
-  'ecommerce catalog & content',
-  'ecomm_catalog',
-  'active',
-  $str$product catalog setup, seo descriptions, photography workflow, and marketplace listing management for ecommerce brands on etsy, woocommerce, and other platforms. modeled from the cycdesign engagement — accessories, apparel, and niche product brands.$str$,
-  5000,
-  'INR',
-  'phase_based',
-  $str$typically delivered in phases: phase 1 = catalog upload + seo pass. phase 2 = content engine + platform expansion. pricing per listing count and platform complexity.$str$
+  $str$Month 1 = Discovery & positioning thesis. Month 2+ = Distribution & organic lead flywheel. Compliance-aware for regulated domains.$str$
 ),
 (
   '7501a450-ee94-dea5-d2d2-235617ea7bb6',
-  'web & digital presence',
-  'web_presence',
+  'Web Architecture & Design',
+  'web_architecture',
   'active',
-  $str$website build or redesign, local seo foundation, google business profile, and online presence setup for businesses that need to exist and convert online. modeled from the stillness co and pro health innovations engagements.$str$,
+  $str$High-performance digital presence: custom Next.js/WordPress websites, conversion-focused landing pages, visual branding, and local SEO foundation.$str$,
   20000,
   'INR',
   'project',
-  $str$includes design, development, seo foundation, and handoff. add-ons: ongoing seo retainer, content updates, quiz or lead capture integrations.$str$
+  $str$End-to-end design, development, SEO baseline, and handoff. Add-ons include ongoing maintenance retainers and lead funnel integration.$str$
+),
+(
+  'c9f56b15-1439-7789-25a4-05bce04aa7aa',
+  'Digital Operations & Infrastructure',
+  'digital_operations',
+  'active',
+  $str$Custom CRM setup, database architecture, automated operational workflows, and analytics tracking to streamline agency and client workflows.$str$,
+  10000,
+  'INR',
+  'phase_based',
+  $str$System integrations, data pipelines, automated reporting, and client management tooling.$str$
 )
 ON CONFLICT (slug) DO UPDATE SET
   name             = EXCLUDED.name,
