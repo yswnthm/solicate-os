@@ -116,6 +116,39 @@ export async function createSolicateService(values: Record<string, any>): Promis
   }
 }
 
+export async function createSolicatePhase(values: Record<string, any>): Promise<EditResult> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const name = values.name ? String(values.name).trim() : "";
+    const description = values.description ? String(values.description).trim() : null;
+    const status = values.status ? String(values.status).trim() : "planned";
+    const position = values.position ? parseInt(String(values.position), 10) : 1;
+    const startedOn = values.started_on ? String(values.started_on).trim() : null;
+    const targetDate = values.target_date ? String(values.target_date).trim() : null;
+    const successDefinition = values.success_definition ? String(values.success_definition).trim() : null;
+
+    const { error } = await supabase
+      .schema("solicate")
+      .from("phases")
+      .insert({
+        name,
+        description,
+        status,
+        position,
+        started_on: startedOn,
+        target_date: targetDate,
+        success_definition: successDefinition,
+      });
+
+    if (error) return { ok: false, error: error.message };
+
+    invalidateSolicateCache();
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Failed to create phase." };
+  }
+}
+
 export async function updateSolicatePhase(id: string, values: Record<string, any>): Promise<EditResult> {
   try {
     const supabase = await createSupabaseServerClient();

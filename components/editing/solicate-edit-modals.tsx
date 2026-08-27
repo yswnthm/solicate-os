@@ -6,6 +6,7 @@ import {
   updateSolicateProfile,
   updateSolicateService,
   createSolicateService,
+  createSolicatePhase,
   updateSolicatePhase,
   updateSolicateTeam,
   createSolicateTask,
@@ -292,6 +293,78 @@ export function EditSolicatePhaseModal({
       fields={fields}
       successMessage="Growth era updated."
       onSave={async (values) => updateSolicatePhase(phase.id, values)}
+      fullWidth
+    />
+  );
+}
+
+export function NewSolicatePhaseButton({
+  label = "+ New phase",
+  className = "button ghost small",
+  nextPosition = 1,
+}: {
+  label?: string;
+  className?: string;
+  nextPosition?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={className}>
+        {label}
+      </button>
+      <NewSolicatePhaseModal open={open} onOpenChange={setOpen} nextPosition={nextPosition} />
+    </>
+  );
+}
+
+export function NewSolicatePhaseModal({
+  open,
+  onOpenChange,
+  nextPosition = 1,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  nextPosition?: number;
+}) {
+  const fields: FieldConfig[] = [
+    { kind: "text", name: "name", label: "Phase Name", required: true, width: "half", placeholder: "e.g. Phase 4 — Scale & Retainers", autoFocus: true },
+    { kind: "number", name: "position", label: "Position", width: "half", min: 1 },
+    {
+      kind: "select",
+      name: "status",
+      label: "Status",
+      options: [
+        { value: "planned", label: "Planned" },
+        { value: "active", label: "Active" },
+        { value: "completed", label: "Completed" },
+      ],
+      width: "half",
+    },
+    { kind: "date", name: "started_on", label: "Start Date", width: "half" },
+    { kind: "date", name: "target_date", label: "Target Completion Date", width: "half" },
+    { kind: "textarea", name: "description", label: "Phase Description", minHeight: 90, width: "full", placeholder: "What this era covers..." },
+    { kind: "textarea", name: "success_definition", label: "Success Definition & Milestone", minHeight: 90, width: "full" },
+  ];
+
+  return (
+    <EntityEditModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="New Growth Phase"
+      saveLabel="Create Phase"
+      record={{
+        name: "",
+        position: nextPosition,
+        status: "planned",
+        started_on: "",
+        target_date: "",
+        description: "",
+        success_definition: "",
+      }}
+      fields={fields}
+      successMessage="New phase created."
+      onSave={async (values) => createSolicatePhase(values)}
       fullWidth
     />
   );

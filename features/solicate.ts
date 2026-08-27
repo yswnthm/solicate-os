@@ -99,6 +99,38 @@ const getSolicatePhasesCached = unstable_cache(
   { revalidate: 60, tags: ["solicate"] },
 );
 
+export async function getSolicatePhase(phaseId: string): Promise<{
+  phase: SolicatePhase | null;
+  tasks: SolicateTask[];
+  phases: SolicatePhase[];
+  team: any[];
+}> {
+  const supabase = createSupabaseServerClientWithToken(await getAccessToken());
+  const [phaseRes, tasksRes, phasesRes, teamRes] = await Promise.all([
+    supabase.schema("solicate").from("phases").select("*").eq("id", phaseId).maybeSingle(),
+    supabase.schema("solicate").from("tasks").select("*, subtasks(*)").eq("phase_id", phaseId).order("created_at", { ascending: true }),
+    supabase.schema("solicate").from("phases").select("*").order("position"),
+    supabase.schema("solicate").from("team").select("id, name, role, role_type"),
+  ]);
+
+  throwOnError(phaseRes.error);
+  throwOnError(tasksRes.error);
+
+  const teamMap = new Map((teamRes.data ?? []).map((m: any) => [m.id, m]));
+  const tasks = (tasksRes.data ?? []).map((t: any) => ({
+    ...t,
+    assignee: t.assignee_id ? teamMap.get(t.assignee_id) ?? null : null,
+    subtasks: (t.subtasks ?? []).sort((a: any, b: any) => a.position - b.position),
+  })) as SolicateTask[];
+
+  return {
+    phase: phaseRes.data as SolicatePhase | null,
+    tasks,
+    phases: (phasesRes.data ?? []) as SolicatePhase[],
+    team: teamRes.data ?? [],
+  };
+}
+
 export async function getSolicateAllTasks(): Promise<SolicateTask[]> {
   return getSolicateAllTasksCached(await getAccessToken());
 }

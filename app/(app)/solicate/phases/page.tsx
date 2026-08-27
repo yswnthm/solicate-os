@@ -1,58 +1,73 @@
-import { getSolicatePhases } from "@/features/solicate";
+import Link from "next/link";
+import { getSolicatePhases, getSolicateAllTasks } from "@/features/solicate";
 import { Section } from "@/components/shared/section";
 import { StatusPill } from "@/components/status-pill";
-import { EditSolicatePhaseButton } from "@/components/editing/solicate-edit-modals";
+import { ProgressBar } from "@/components/shared/progress-bar";
+import { PhaseHealthPill } from "@/components/shared/health-pill";
+import { EditSolicatePhaseButton, NewSolicatePhaseButton } from "@/components/editing/solicate-edit-modals";
+import { formatDate } from "@/lib/utils";
 
 export const metadata = {
   title: "Agency Growth Eras | Solicate OS",
 };
 
 export default async function SolicatePhasesPage() {
-  const phases = await getSolicatePhases();
+  const [phases, allTasks] = await Promise.all([
+    getSolicatePhases(),
+    getSolicateAllTasks(),
+  ]);
 
   return (
     <div className="stack" style={{ gap: 24 }}>
       <Section
-        title="Agency Growth Eras & Roadmaps"
+        title="Phases"
         count={phases.length}
+        action={<NewSolicatePhaseButton nextPosition={phases.length + 1} />}
       >
         {phases.length ? (
           <div className="list">
-            {phases.map((p: any) => (
-              <div className="row" key={p.id} style={{ alignItems: "flex-start" }}>
-                <div className="row-main">
-                  <div className="row-title" style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
-                    <span>{p.name}</span>
-                  </div>
-                  <div className="row-meta" style={{ marginTop: 2 }}>
-                    {p.started_on ? `Started ${new Date(p.started_on).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : "Not started yet"}
-                    {p.target_date ? ` · Target: ${new Date(p.target_date).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : ""}
-                  </div>
-                  {p.description && (
-                    <div className="prose" style={{ fontSize: 13, marginTop: 6 }}>
-                      {p.description}
+            {phases.map((phase) => {
+              const phaseTasks = allTasks.filter((t) => t.phase_id === phase.id);
+              const phaseOpen = phaseTasks.filter(
+                (t) => t.status !== "done" && t.status !== "cancelled"
+              ).length;
+              const done = phaseTasks.filter((t) => t.status === "done" || t.status === "cancelled").length;
+              const progress = phaseTasks.length ? Math.round((done / phaseTasks.length) * 100) : 0;
+
+              return (
+                <div className="row" key={phase.id}>
+                  <StatusPill value={phase.status} />
+                  <div className="row-main">
+                    <div className="row-title">
+                      <Link href={`/solicate/phases/${phase.id}`}>
+                        {phase.position}. {phase.name}
+                      </Link>
                     </div>
-                  )}
-                  {p.success_definition && (
-                    <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: "var(--radius-sm)", background: "var(--surface-2)", border: "1px solid var(--line-2)" }}>
-                      <p className="metric-label" style={{ marginBottom: 4, color: "var(--muted)", fontSize: 11 }}>
-                        Success Definition & Milestone
-                      </p>
-                      <div style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.45 }}>
-                        {p.success_definition}
+                    <div className="row-meta" style={{ marginBottom: 8 }}>
+                      {phase.started_on ? `Started ${formatDate(phase.started_on)}` : "Not started"}
+                      {phase.target_date ? ` · Target ${formatDate(phase.target_date)}` : ""}
+                      {phaseOpen > 0 ? ` · ${phaseOpen} open task${phaseOpen === 1 ? "" : "s"}` : ""}
+                      {phase.description ? ` · ${phase.description.slice(0, 90)}` : ""}
+                    </div>
+                    <div style={{ maxWidth: 320 }}>
+                      <ProgressBar value={progress} />
+                      <div className="row-meta" style={{ marginTop: 4 }}>
+                        {done}/{phaseTasks.length} tasks done
                       </div>
                     </div>
-                  )}
+                  </div>
+                  <div className="row-actions-always">
+                    <PhaseHealthPill phase={phase} tasks={phaseTasks} />
+                    <EditSolicatePhaseButton phase={phase} />
+                  </div>
                 </div>
-                <div className="row-actions-always" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <StatusPill value={p.status} />
-                  <EditSolicatePhaseButton phase={p} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <div className="empty">No growth eras recorded.</div>
+          <div className="empty">
+            No phases yet — create one to give Solicate's growth eras their own scope and timeline.
+          </div>
         )}
       </Section>
     </div>
