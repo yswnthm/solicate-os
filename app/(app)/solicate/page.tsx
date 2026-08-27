@@ -1,7 +1,16 @@
-import { getSolicateProfile, getSolicatePhases, getSolicateServices, getSolicateTeam } from "@/features/solicate";
+import {
+  getSolicateProfile,
+  getSolicatePhases,
+  getSolicateServices,
+  getSolicateTeam,
+  getSolicateAllTasks,
+} from "@/features/solicate";
 import { Section } from "@/components/shared/section";
 import { StatusPill } from "@/components/status-pill";
-import { EditSolicateProfileButton } from "@/components/editing/solicate-edit-modals";
+import { ProgressBar } from "@/components/shared/progress-bar";
+import { EditSolicateProfileButton, EditSolicateTaskButton } from "@/components/editing/solicate-edit-modals";
+import { SolicateTaskRow } from "@/components/execution/solicate-task-row";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { ArrowRight, Compass, Users, Sparkles, Target, Layers, Calendar, Globe } from "lucide-react";
 
@@ -10,14 +19,29 @@ export const metadata = {
 };
 
 export default async function SolicateOverviewPage() {
-  const [profile, phases, services, team] = await Promise.all([
+  const [profile, phases, services, team, allTasks] = await Promise.all([
     getSolicateProfile(),
     getSolicatePhases(),
     getSolicateServices(),
     getSolicateTeam(),
+    getSolicateAllTasks(),
   ]);
 
-  const activePhase = phases.find((p: any) => p.status === "active") || phases[0];
+  const activePhase = phases.find((p) => p.status === "active") || phases[0];
+  const hasPhases = phases.length > 0;
+
+  // Filter tasks exactly like Project Overview
+  const openUnphasedTasks = allTasks.filter(
+    (t) => (hasPhases ? !t.phase_id : true) && t.status !== "done" && t.status !== "cancelled"
+  );
+
+  const completedTasks = allTasks
+    .filter((t) => t.status === "done")
+    .sort((a, b) => {
+      const timeA = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+      const timeB = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+      return timeB - timeA;
+    });
 
   return (
     <div className="stack" style={{ gap: 24 }}>
@@ -120,10 +144,10 @@ export default async function SolicateOverviewPage() {
               <span className="pill" style={{ fontSize: 11 }}>{team.length} People</span>
             </div>
             <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}>
-              Founder & Partner Lead
+              Founder & Partner Network
             </div>
             <p className="muted" style={{ fontSize: 12, margin: "4px 0 0", lineHeight: 1.4 }}>
-              Yeswanth (Growth) · Sakshi (Design).
+              Yeswanth · Sakshi · Navi.
             </p>
           </div>
           <div style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", display: "flex", alignItems: "center", gap: 4, marginTop: 12 }}>
@@ -178,7 +202,95 @@ export default async function SolicateOverviewPage() {
         )}
       </div>
 
-      {/* ─── 3. Strategic Directives ─── */}
+      {/* ─── 3. Phases Overview ─── */}
+      <Section title="Phases" count={phases.length}>
+        {phases.length ? (
+          <div className="list">
+            {phases.map((phase) => {
+              const phaseTasks = allTasks.filter((t) => t.phase_id === phase.id);
+              const phaseOpen = phaseTasks.filter((t) => t.status !== "done" && t.status !== "cancelled").length;
+              const phaseDone = phaseTasks.filter((t) => t.status === "done" || t.status === "cancelled").length;
+              const progress = phaseTasks.length ? Math.round((phaseDone / phaseTasks.length) * 100) : 0;
+
+              return (
+                <div className="row" key={phase.id}>
+                  <StatusPill value={phase.status} />
+                  <div className="row-main">
+                    <div className="row-title">
+                      <Link href="/solicate/phases">
+                        {phase.position}. {phase.name}
+                      </Link>
+                    </div>
+                    <div className="row-meta" style={{ marginBottom: 8 }}>
+                      {phase.started_on ? `Started ${formatDate(phase.started_on)}` : "Not started"}
+                      {phase.target_date ? ` · Target ${formatDate(phase.target_date)}` : ""}
+                      {phaseOpen > 0 ? ` · ${phaseOpen} open task${phaseOpen === 1 ? "" : "s"}` : ""}
+                      {phase.description ? ` · ${phase.description.slice(0, 90)}` : ""}
+                    </div>
+                    <div style={{ maxWidth: 280 }}>
+                      <ProgressBar value={progress} />
+                      <div className="row-meta" style={{ marginTop: 4 }}>
+                        {phaseDone}/{phaseTasks.length} tasks done
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="empty">No phases defined.</div>
+        )}
+      </Section>
+
+      {/* ─── 4. Ungrouped Tasks (Open Tasks) ─── */}
+      <Section
+        title={hasPhases ? "Ungrouped tasks" : "Tasks"}
+        count={openUnphasedTasks.length}
+        action={
+          <EditSolicateTaskButton
+            phases={phases}
+            team={team}
+            label="+ New task"
+            className="button ghost small"
+          />
+        }
+      >
+        {openUnphasedTasks.length ? (
+          <div className="todo-list">
+            {openUnphasedTasks.map((task) => (
+              <SolicateTaskRow
+                key={task.id}
+                task={task}
+                phases={phases}
+                team={team}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="empty">
+            {hasPhases ? "No open tasks outside a phase." : "No open tasks."}
+          </div>
+        )}
+      </Section>
+
+      {/* ─── 5. Completed Tasks (Collapsible) ─── */}
+      {completedTasks.length > 0 && (
+        <Section title="Completed tasks" count={completedTasks.length} defaultOpen={false}>
+          <div className="todo-list">
+            {completedTasks.map((task) => (
+              <SolicateTaskRow
+                key={task.id}
+                task={task}
+                phases={phases}
+                team={team}
+              />
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* ─── 6. Strategic Directives ─── */}
       <Section
         title="Strategy & AI Context"
         action={<EditSolicateProfileButton profile={profile} label="Edit Strategy" />}

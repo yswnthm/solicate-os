@@ -8,6 +8,8 @@ import {
   createSolicateService,
   updateSolicatePhase,
   updateSolicateTeam,
+  createSolicateTask,
+  updateSolicateTask,
 } from "@/features/actions-solicate";
 
 // ─── 1. Solicate Profile Edit Modal & Button ────────────────────────────────
@@ -373,6 +375,154 @@ export function EditSolicateTeamModal({
       fields={fields}
       successMessage="Team member updated."
       onSave={async (values) => updateSolicateTeam(member.id, values)}
+    />
+  );
+}
+
+export function EditSolicateTaskButton({
+  phase,
+  phases = [],
+  team = [],
+  task,
+  label,
+  className = "button ghost small",
+}: {
+  phase?: any;
+  phases?: any[];
+  team?: any[];
+  task?: any;
+  label?: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const isNew = !task;
+  return (
+    <>
+      <EditButton 
+        onClick={() => setOpen(true)} 
+        label={label || (isNew ? "+ New task" : "Edit")} 
+        className={className} 
+        title={isNew ? "New Task" : "Edit Task"} 
+      />
+      <EditSolicateTaskModal
+        phase={phase}
+        phases={phases}
+        team={team}
+        task={task}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
+  );
+}
+
+export function EditSolicateTaskModal({
+  phase,
+  phases = [],
+  team = [],
+  task,
+  open,
+  onOpenChange,
+}: {
+  phase?: any;
+  phases?: any[];
+  team?: any[];
+  task?: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const isNew = !task;
+  
+  const phaseOptions = [
+    { value: "", label: "No phase (Ungrouped)" },
+    ...phases.map((p) => ({ value: p.id, label: `${p.position}. ${p.name}` })),
+  ];
+
+  const assigneeOptions = [
+    { value: "", label: "Unassigned" },
+    ...team.map((m) => ({ value: m.id, label: m.name })),
+  ];
+
+  const fields: FieldConfig[] = [
+    { kind: "text", name: "title", label: "Task Title", required: true, width: "full", autoFocus: true },
+    ...(phases.length > 0
+      ? [
+          {
+            kind: "select" as const,
+            name: "phase_id",
+            label: "Phase",
+            options: phaseOptions,
+            width: "half" as const,
+          },
+        ]
+      : []),
+    ...(team.length > 0
+      ? [
+          {
+            kind: "select" as const,
+            name: "assignee_id",
+            label: "Assignee",
+            options: assigneeOptions,
+            width: "half" as const,
+          },
+        ]
+      : []),
+    {
+      kind: "select",
+      name: "status",
+      label: "Status",
+      options: [
+        { value: "todo", label: "To Do" },
+        { value: "in_progress", label: "In Progress" },
+        { value: "done", label: "Done" },
+        { value: "blocked", label: "Blocked" },
+        { value: "cancelled", label: "Cancelled" },
+      ],
+      width: "half",
+    },
+    {
+      kind: "select",
+      name: "priority",
+      label: "Priority",
+      options: [
+        { value: "low", label: "Low" },
+        { value: "normal", label: "Normal" },
+        { value: "high", label: "High" },
+        { value: "urgent", label: "Urgent" },
+      ],
+      width: "half",
+    },
+    { kind: "date", name: "due_at", label: "Due Date", width: "half" },
+    { kind: "textarea", name: "description_md", label: "Description / Notes", minHeight: 80, width: "full" },
+  ];
+
+  const defaultPhaseId = task?.phase_id ?? (phase?.id ?? "");
+  const defaultAssigneeId = task?.assignee_id ?? "";
+
+  return (
+    <EntityEditModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isNew ? "New Task" : "Edit Task"}
+      description={isNew ? "Add an operational or strategic task to Solicate." : "Update task details."}
+      record={{
+        title: task?.title ?? "",
+        phase_id: defaultPhaseId,
+        assignee_id: defaultAssigneeId,
+        status: task?.status ?? "todo",
+        priority: task?.priority ?? "normal",
+        due_at: task?.due_at ? new Date(task.due_at).toISOString().split('T')[0] : "",
+        description_md: task?.description_md ?? "",
+      }}
+      fields={fields}
+      successMessage={isNew ? "Task added." : "Task updated."}
+      onSave={async (values) => {
+        if (isNew) {
+          return createSolicateTask(values);
+        } else {
+          return updateSolicateTask(task.id, values);
+        }
+      }}
     />
   );
 }
